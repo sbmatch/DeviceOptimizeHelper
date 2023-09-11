@@ -210,7 +210,8 @@ public class Main {
                 setUserRestrictionReflect(UserManager.DISALLOW_CONFIG_MOBILE_NETWORKS, true); // 禁止数据网络
                 setUserRestrictionReflect(UserManager.DISALLOW_CONFIG_PRIVATE_DNS, true); // 禁止私人DNS
                 setUserRestrictionReflect(UserManager.DISALLOW_CREATE_WINDOWS, true); // 禁止创建某些类型的窗口
-                setUserRestrictionReflect(UserManager.DISALLOW_SHARE_LOCATION, true); // 禁止定位
+                setUserRestrictionReflect(UserManager.DISALLOW_SHARE_LOCATION, true); // 禁止分享定位
+                setUserRestrictionReflect(UserManager.DISALLOW_CONFIG_LOCATION, true); // 禁止配置定位
                 setUserRestrictionReflect(UserManager.DISALLOW_USB_FILE_TRANSFER, true); // 禁止通过USB传输文件
                 setUserRestrictionReflect(UserManager.DISALLOW_CONFIG_BRIGHTNESS, true); // 禁止更改亮度
                 setUserRestrictionReflect(UserManager.DISALLOW_ADD_USER, true); // 禁止添加用户（双开）
