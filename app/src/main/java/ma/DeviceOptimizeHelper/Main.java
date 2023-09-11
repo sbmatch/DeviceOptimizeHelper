@@ -30,6 +30,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+import dalvik.system.DexClassLoader;
+
 public class Main {
 
     private static  IAccountManager iAccountManager = IAccountManager.Stub.asInterface(getSystemService("account"));
@@ -38,14 +40,28 @@ public class Main {
     private static IDeviceIdleController iDeviceIdleController = IDeviceIdleController.Stub.asInterface(getSystemService("deviceidle"));
     private static Context context;
     private static final IAccountManagerResponse accountResponse = new accountManagerResponse();
-    private static ServiceThread serviceThread =  new ServiceThread("MaBaoGuo");
+
+    private static final int RESTRICTION_MODE_BLACK_LIST = 2;
+    private static final int RESTRICTION_MODE_DEFAULT = 0;
+    private static final int RESTRICTION_MODE_WHITE_LIST = 1;
+    private static ServiceThread serviceThread = new ServiceThread("MaBaoGuo");
+    private static MultiJarClassLoader classLoader;
+    private static ClassLoader parentClassloader;
     private static Handler handler;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws ClassCastException{
 
         Looper.prepare();
 
         context = retrieveSystemContext();
+
+        parentClassloader = context.getClassLoader();
+
+        classLoader = new MultiJarClassLoader(parentClassloader);
+
+        classLoader.addJar("/system_ext/framework/miui-framework.jar");
+        classLoader.addJar("/system/framework/services.jar");
+        classLoader.addJar("/system_ext/framework/miui-services.jar");
 
         serviceThread.start();
     }
@@ -111,7 +127,6 @@ public class Main {
             Set<String> keys = value.keySet();
             Message msg = Message.obtain();
             for (String key: keys){
-                System.out.print("key: "+key+", valve: "+value.get(key)+"\n");
                 if (key.contains(AccountManager.KEY_ACCOUNT_TYPE)){
                     msg.obj = value.get(key);
                     handler.sendMessage(msg);
@@ -173,7 +188,6 @@ public class Main {
                     }
                     System.out.print("共 "+userPowerSaveList.length+" 个用户级电池优化白名单已移除\n");
                 }
-
 
                 for (Account account: iAccountManager.getAccountsAsUser(null, getIdentifier(), "com.android.settings")){
                     removeAccount(account);
@@ -248,6 +262,69 @@ public class Main {
         }
     }
 
+
+    private static IBinder getEnterpriseServiceReflect(String serviceName){
+        try {
+            Class<?> cStub = classLoader.loadClass("com.miui.server.enterprise.EnterpriseManagerService");
+            Constructor<?> constructor = cStub.getDeclaredConstructor(Context.class);
+            constructor.setAccessible(true);
+            Object obj = constructor.newInstance(context);
+            Method getEnterpriseServiceMethod = cStub.getMethod("getService",String.class);
+
+            return (IBinder) getEnterpriseServiceMethod.invoke(obj ,serviceName);
+        }catch (SecurityException | ClassNotFoundException | InvocationTargetException |
+                NoSuchMethodException | IllegalAccessException | InstantiationException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static void setApplicationRestrictionReflect(int mode){
+        try {
+
+            Class<?> cStub =  classLoader.loadClass("com.miui.enterprise.IApplicationManager$Stub");
+            Method asInterface = cStub.getMethod("asInterface", IBinder.class);
+            Object obj = asInterface.invoke(null, getEnterpriseServiceReflect("application_manager"));
+
+            Method setApplicationRestrictionMethod =  obj.getClass().getMethod("setApplicationRestriction", int.class, int.class);
+            setApplicationRestrictionMethod.invoke(obj,mode, 0);
+
+        } catch (Exception e2) {
+            e2.printStackTrace();
+            throw new SecurityException(e2);
+        }
+    }
+
+
+    private static void setApplicationBlackListReflect(List<String> packages){
+        try {
+            Class<?> cStub =  classLoader.loadClass("com.miui.enterprise.IApplicationManager$Stub");
+            Method asInterface = cStub.getMethod("asInterface", IBinder.class);
+            Object obj = asInterface.invoke(null, getEnterpriseServiceReflect("application_manager"));
+
+            Method setApplicationRestrictionMethod =  obj.getClass().getMethod("setApplicationBlackList", List.class, int.class);
+            setApplicationRestrictionMethod.invoke(obj,packages, 0);
+
+        } catch (Exception e2) {
+            e2.printStackTrace();
+            throw new SecurityException(e2);
+        }
+    }
+
+    private static List<String> getApplicationBlackListReflect(){
+        try {
+            Class<?> cStub =  classLoader.loadClass("com.miui.enterprise.IApplicationManager$Stub");
+            Method asInterface = cStub.getMethod("asInterface", IBinder.class);
+            Object obj = asInterface.invoke(null, getEnterpriseServiceReflect("application_manager"));
+
+            Method getApplicationBlackListMethod =  obj.getClass().getMethod("getApplicationBlackList", int.class);
+
+            return (List<String>) getApplicationBlackListMethod.invoke(obj,getIdentifier());
+
+        } catch (Exception e2) {
+            e2.printStackTrace();
+            throw new SecurityException(e2);
+        }
+    }
 
     private static void setUserRestrictionReflect(String key, boolean value){
         try {
@@ -340,5 +417,39 @@ public class Main {
             throw new RuntimeException(e);
         }
     }
+
+
+    public static class MultiJarClassLoader extends ClassLoader {
+        private List<DexClassLoader> dexClassLoaders;
+
+        public MultiJarClassLoader(ClassLoader parentClassLoader) {
+            super(parentClassLoader);
+            dexClassLoaders = new ArrayList<>();
+        }
+
+        public void addJar(String jarPath) {
+            DexClassLoader dexClassLoader = new DexClassLoader(
+                    jarPath,
+                    null,
+                    null, // 额外的库路径，可以为 null
+                    getParent() // 父类加载器
+            );
+            dexClassLoaders.add(dexClassLoader);
+        }
+
+        @Override
+        protected Class<?> findClass(String className) throws ClassNotFoundException {
+            // 遍历所有的 DexClassLoader 实例，尝试加载类
+            for (DexClassLoader dexClassLoader : dexClassLoaders) {
+                try {
+                    return dexClassLoader.loadClass(className);
+                } catch (ClassNotFoundException ignored) {
+                    // 忽略类未找到的异常，继续下一个 DexClassLoader
+                }
+            }
+            throw new ClassNotFoundException("Class not found: " + className);
+        }
+    }
+
 
 }
