@@ -210,6 +210,7 @@ public class Main {
                 System.out.print(getUserRestrictionSize()+"\n");
 
                 setUserRestrictionReflect(UserManager.DISALLOW_OUTGOING_BEAM, true); // 禁止使用Beam
+                setUserRestrictionReflect(UserManager.DISALLOW_INSTALL_UNKNOWN_SOURCES, true); // 禁止安装未知来源应用
                 setUserRestrictionReflect(UserManager.DISALLOW_INSTALL_UNKNOWN_SOURCES_GLOBALLY, true); // 全局禁止安装未知来源应用
                 setUserRestrictionReflect(UserManager.DISALLOW_FACTORY_RESET,true); // 禁止恢复出厂设置
                 setUserRestrictionReflect(UserManager.DISALLOW_PRINTING,true); // 禁止打印机
