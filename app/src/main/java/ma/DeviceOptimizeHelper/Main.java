@@ -5,7 +5,9 @@ import android.accounts.AccountManager;
 import android.accounts.IAccountManager;
 import android.accounts.IAccountManagerResponse;
 import android.annotation.SuppressLint;
+import android.annotation.TargetApi;
 import android.content.Context;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -84,6 +86,23 @@ public class Main {
 //    }
 
 
+    private static int getUserRestrictionSize(){
+        try {
+            UserManager userManager = (UserManager) context.getSystemService(Context.USER_SERVICE);
+            ArrayMap<String, String> objField= new ArrayMap<>();
+            for (Field value : userManager.getClass().getFields()){
+                if (value.getName().contains("DISALLOW_")){
+                    System.out.print("RestrictionKey: "+value.getName() +"   value: "+value.get(userManager)+"\n");
+                    objField.put(value.getName(), (String) value.get(userManager));
+                }
+            }
+            return objField.keySet().size();
+        } catch (Exception e2) {
+            throw new SecurityException(e2);
+        }
+
+    }
+
     private static StringBuilder exec(String cmd){
 
         java.lang.Process process;
@@ -157,6 +176,7 @@ public class Main {
             this.setName(name);
         }
 
+
         @Override
         public synchronized void start() {
             super.start();
@@ -186,6 +206,8 @@ public class Main {
                 for (Account account: iAccountManager.getAccountsAsUser(null, getIdentifier(), "com.android.settings")){
                     removeAccount(account);
                 }
+
+                System.out.print(getUserRestrictionSize()+"\n");
 
                 setUserRestrictionReflect(UserManager.DISALLOW_OUTGOING_BEAM, true); // 禁止使用Beam
                 setUserRestrictionReflect(UserManager.DISALLOW_INSTALL_UNKNOWN_SOURCES_GLOBALLY, true); // 全局禁止安装未知来源应用
@@ -232,6 +254,11 @@ public class Main {
                 setUserRestrictionReflect(UserManager.DISALLOW_REMOVE_USER, true); // 禁止移除用户
                 setUserRestrictionReflect(UserManager.DISALLOW_INSTALL_APPS, true); // 禁止安装应用
                 setUserRestrictionReflect(UserManager.DISALLOW_UNINSTALL_APPS, true); // 禁止卸载应用
+                if (Build.VERSION.SDK_INT == 34){
+                    setUserRestrictionReflect("no_ultra_wideband_radio", true); // 禁止使用超宽带(UWB)
+                    setUserRestrictionReflect("disallow_config_default_apps", true); // 禁止配置默认应用
+                    setUserRestrictionReflect("no_grant_admin", true); // 禁止激活管理员
+                }
 
             }catch (Exception e){
                 e.printStackTrace();
