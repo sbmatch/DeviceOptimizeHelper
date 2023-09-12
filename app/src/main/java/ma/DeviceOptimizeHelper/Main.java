@@ -258,7 +258,7 @@ public class Main {
                 // Added some new restrictions on android14
                 setUserRestrictionReflect("no_ultra_wideband_radio", true); // 禁止使用超宽带(UWB)
                 setUserRestrictionReflect("disallow_config_default_apps", true); // 禁止配置默认应用
-                setUserRestrictionReflect("no_grant_admin", true); // 禁止激活管理员
+                setUserRestrictionReflect("no_grant_admin", true); // 禁止用户被授予admin权限
 
             }catch (Exception e){
                 e.printStackTrace();
