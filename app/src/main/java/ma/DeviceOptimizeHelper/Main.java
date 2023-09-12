@@ -193,15 +193,21 @@ public class Main {
                 setUserRestrictionReflect(UserManager.DISALLOW_PRINTING,true); // 禁止打印机
                 setUserRestrictionReflect(UserManager.DISALLOW_APPS_CONTROL,true); // 禁止控制应用(卸载，禁用，清除数据，强制停止，清除默认应用)
                 setUserRestrictionReflect(UserManager.DISALLOW_CONFIG_DATE_TIME,true); // 禁止手动更改时间与日期
-                // setUserRestrictionReflect("no_oem_unlock",true); // 禁止oem解锁
+                setUserRestrictionReflect("no_oem_unlock",true); // 禁止oem解锁
+                setUserRestrictionReflect(UserManager.DISALLOW_AUTOFILL, true); // 禁止自动填充
+                setUserRestrictionReflect(UserManager.DISALLOW_AMBIENT_DISPLAY, true); // 禁止主动显示
+                setUserRestrictionReflect("no_run_in_background",true); // 禁止后台运行
+                setUserRestrictionReflect(UserManager.DISALLOW_SAFE_BOOT, true); // 禁止安全启动
                 setUserRestrictionReflect("no_record_audio",true); // 禁止录音
                 setUserRestrictionReflect("no_camera", true); // 禁止相机
                 setUserRestrictionReflect(UserManager.DISALLOW_CAMERA_TOGGLE, true); // 禁止切换相机
                 setUserRestrictionReflect(UserManager.DISALLOW_BLUETOOTH, true); // 禁止蓝牙
                 setUserRestrictionReflect(UserManager.DISALLOW_CONFIG_BLUETOOTH, true); // 禁止更改蓝牙配置
+                setUserRestrictionReflect(UserManager.DISALLOW_BLUETOOTH_SHARING, true); // 禁止通过蓝牙分享
                 setUserRestrictionReflect(UserManager.DISALLOW_ADD_WIFI_CONFIG, true); // 禁止添加WiFi
                 setUserRestrictionReflect(UserManager.DISALLOW_CONFIG_WIFI, true); // 禁止配置WIFI
                 setUserRestrictionReflect(UserManager.DISALLOW_WIFI_DIRECT, true); // 禁止WIFI直连
+                setUserRestrictionReflect("no_wallpaper", true); // 禁止壁纸
                 setUserRestrictionReflect(UserManager.DISALLOW_SET_WALLPAPER,true); // 禁止设置壁纸
                 setUserRestrictionReflect(UserManager.DISALLOW_NETWORK_RESET,true); // 禁止重置网络
                 setUserRestrictionReflect(UserManager.DISALLOW_CONFIG_LOCALE,true); // 禁止更改语言
@@ -215,7 +221,7 @@ public class Main {
                 setUserRestrictionReflect(UserManager.DISALLOW_SMS,true); // 禁止使用短信
                 setUserRestrictionReflect(UserManager.DISALLOW_AIRPLANE_MODE, true); // 禁止飞行模式
                 setUserRestrictionReflect(UserManager.DISALLOW_OUTGOING_CALLS, true); // 禁止打电话(紧急电话除外)
-                setUserRestrictionReflect(UserManager.DISALLOW_CONFIG_MOBILE_NETWORKS, true); // 禁止数据网络
+                setUserRestrictionReflect(UserManager.DISALLOW_CONFIG_MOBILE_NETWORKS, true); // 禁止配置APN
                 setUserRestrictionReflect(UserManager.DISALLOW_CONFIG_PRIVATE_DNS, true); // 禁止私人DNS
                 setUserRestrictionReflect(UserManager.DISALLOW_CREATE_WINDOWS, true); // 禁止创建某些类型的窗口
                 setUserRestrictionReflect(UserManager.DISALLOW_SHARE_LOCATION, true); // 禁止分享定位
