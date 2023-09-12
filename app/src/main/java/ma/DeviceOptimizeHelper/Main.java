@@ -41,9 +41,6 @@ public class Main {
     private static Context context;
     private static final IAccountManagerResponse accountResponse = new accountManagerResponse();
 
-    private static final int RESTRICTION_MODE_BLACK_LIST = 2;
-    private static final int RESTRICTION_MODE_DEFAULT = 0;
-    private static final int RESTRICTION_MODE_WHITE_LIST = 1;
     private static ServiceThread serviceThread = new ServiceThread("MaBaoGuo");
     private static MultiJarClassLoader classLoader;
     private static ClassLoader parentClassloader;
@@ -58,10 +55,7 @@ public class Main {
         parentClassloader = context.getClassLoader();
 
         classLoader = new MultiJarClassLoader(parentClassloader);
-
-        classLoader.addJar("/system_ext/framework/miui-framework.jar");
         classLoader.addJar("/system/framework/services.jar");
-        classLoader.addJar("/system_ext/framework/miui-services.jar");
 
         serviceThread.start();
     }
@@ -262,70 +256,6 @@ public class Main {
         }
     }
 
-
-    private static IBinder getEnterpriseServiceReflect(String serviceName){
-        try {
-            Class<?> cStub = classLoader.loadClass("com.miui.server.enterprise.EnterpriseManagerService");
-            Constructor<?> constructor = cStub.getDeclaredConstructor(Context.class);
-            constructor.setAccessible(true);
-            Object obj = constructor.newInstance(context);
-            Method getEnterpriseServiceMethod = cStub.getMethod("getService",String.class);
-
-            return (IBinder) getEnterpriseServiceMethod.invoke(obj ,serviceName);
-        }catch (SecurityException | ClassNotFoundException | InvocationTargetException |
-                NoSuchMethodException | IllegalAccessException | InstantiationException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private static void setApplicationRestrictionReflect(int mode){
-        try {
-
-            Class<?> cStub =  classLoader.loadClass("com.miui.enterprise.IApplicationManager$Stub");
-            Method asInterface = cStub.getMethod("asInterface", IBinder.class);
-            Object obj = asInterface.invoke(null, getEnterpriseServiceReflect("application_manager"));
-
-            Method setApplicationRestrictionMethod =  obj.getClass().getMethod("setApplicationRestriction", int.class, int.class);
-            setApplicationRestrictionMethod.invoke(obj,mode, 0);
-
-        } catch (Exception e2) {
-            e2.printStackTrace();
-            throw new SecurityException(e2);
-        }
-    }
-
-
-    private static void setApplicationBlackListReflect(List<String> packages){
-        try {
-            Class<?> cStub =  classLoader.loadClass("com.miui.enterprise.IApplicationManager$Stub");
-            Method asInterface = cStub.getMethod("asInterface", IBinder.class);
-            Object obj = asInterface.invoke(null, getEnterpriseServiceReflect("application_manager"));
-
-            Method setApplicationRestrictionMethod =  obj.getClass().getMethod("setApplicationBlackList", List.class, int.class);
-            setApplicationRestrictionMethod.invoke(obj,packages, 0);
-
-        } catch (Exception e2) {
-            e2.printStackTrace();
-            throw new SecurityException(e2);
-        }
-    }
-
-    private static List<String> getApplicationBlackListReflect(){
-        try {
-            Class<?> cStub =  classLoader.loadClass("com.miui.enterprise.IApplicationManager$Stub");
-            Method asInterface = cStub.getMethod("asInterface", IBinder.class);
-            Object obj = asInterface.invoke(null, getEnterpriseServiceReflect("application_manager"));
-
-            Method getApplicationBlackListMethod =  obj.getClass().getMethod("getApplicationBlackList", int.class);
-
-            return (List<String>) getApplicationBlackListMethod.invoke(obj,getIdentifier());
-
-        } catch (Exception e2) {
-            e2.printStackTrace();
-            throw new SecurityException(e2);
-        }
-    }
-
     private static void setUserRestrictionReflect(String key, boolean value){
         try {
             @SuppressLint("PrivateApi")
@@ -376,30 +306,30 @@ public class Main {
 
     }
 
-    private static ArrayMap<String,List<String>> getNotificationPolicy(String name){
-        try {
-            @SuppressLint("PrivateApi")
-            Class<?> cStub =  Class.forName("android.app.INotificationManager$Stub");
-            Method asInterface = cStub.getMethod("asInterface", IBinder.class);
-            Object mNotificationManager = asInterface.invoke(null, getSystemService("notification"));
-            Object policyObject = mNotificationManager.getClass().getMethod("getNotificationPolicy", String.class).invoke(mNotificationManager,name);
-
-            List<String> policy= new ArrayList<>();
-            ArrayMap<String,List<String>> listArrayMap = new ArrayMap<>();
-
-            if (policyObject != null){
-                for (Field value : policyObject.getClass().getFields()){
-                    if (!value.getName().contains("CREATOR")){
-                        policy.add(value.getName()+":"+value.get(policyObject));
-                    }
-                }
-                listArrayMap.put(name,policy);
-            }
-            return listArrayMap;
-        } catch (Exception e2) {
-            throw new SecurityException(e2);
-        }
-    }
+//    private static ArrayMap<String,List<String>> getNotificationPolicy(String name){
+//        try {
+//            @SuppressLint("PrivateApi")
+//            Class<?> cStub =  Class.forName("android.app.INotificationManager$Stub");
+//            Method asInterface = cStub.getMethod("asInterface", IBinder.class);
+//            Object mNotificationManager = asInterface.invoke(null, getSystemService("notification"));
+//            Object policyObject = mNotificationManager.getClass().getMethod("getNotificationPolicy", String.class).invoke(mNotificationManager,name);
+//
+//            List<String> policy= new ArrayList<>();
+//            ArrayMap<String,List<String>> listArrayMap = new ArrayMap<>();
+//
+//            if (policyObject != null){
+//                for (Field value : policyObject.getClass().getFields()){
+//                    if (!value.getName().contains("CREATOR")){
+//                        policy.add(value.getName()+":"+value.get(policyObject));
+//                    }
+//                }
+//                listArrayMap.put(name,policy);
+//            }
+//            return listArrayMap;
+//        } catch (Exception e2) {
+//            throw new SecurityException(e2);
+//        }
+//    }
 
     private static Context retrieveSystemContext() {
         try {
