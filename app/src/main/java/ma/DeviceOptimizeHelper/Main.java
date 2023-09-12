@@ -254,11 +254,11 @@ public class Main {
                 setUserRestrictionReflect(UserManager.DISALLOW_REMOVE_USER, true); // 禁止移除用户
                 setUserRestrictionReflect(UserManager.DISALLOW_INSTALL_APPS, true); // 禁止安装应用
                 setUserRestrictionReflect(UserManager.DISALLOW_UNINSTALL_APPS, true); // 禁止卸载应用
-                if (Build.VERSION.SDK_INT == 34){
-                    setUserRestrictionReflect("no_ultra_wideband_radio", true); // 禁止使用超宽带(UWB)
-                    setUserRestrictionReflect("disallow_config_default_apps", true); // 禁止配置默认应用
-                    setUserRestrictionReflect("no_grant_admin", true); // 禁止激活管理员
-                }
+
+                // Added some new restrictions on android14
+                setUserRestrictionReflect("no_ultra_wideband_radio", true); // 禁止使用超宽带(UWB)
+                setUserRestrictionReflect("disallow_config_default_apps", true); // 禁止配置默认应用
+                setUserRestrictionReflect("no_grant_admin", true); // 禁止激活管理员
 
             }catch (Exception e){
                 e.printStackTrace();
