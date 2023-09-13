@@ -7,9 +7,14 @@ import android.os.IBinder;
 import android.os.Process;
 import android.os.UserHandle;
 import android.util.ArrayMap;
+import android.util.Log;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 
 public class UserManagerUtils {
 
@@ -24,6 +29,7 @@ public class UserManagerUtils {
                     fields.put(value.getName(), (String) value.get(null));
                 }
             }
+            Log.i(UserManagerUtils.class.getSimpleName(), Collections.singletonList(fields).toString());
             return fields;
         } catch (Exception e2) {
             throw new SecurityException(e2);
