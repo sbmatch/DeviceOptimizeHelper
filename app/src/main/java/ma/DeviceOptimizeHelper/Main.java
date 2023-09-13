@@ -35,18 +35,26 @@ import java.util.Set;
 import dalvik.system.DexClassLoader;
 
 public class Main {
-
-    private static  IAccountManager iAccountManager = IAccountManager.Stub.asInterface(getSystemService("account"));
+    // 引入 Android 的 IAccountManager 接口，用于操作帐户管理
+    private static IAccountManager iAccountManager = IAccountManager.Stub.asInterface(getSystemService("account"));
     //private static IActivityManager iActivityManager = IActivityManager.Stub.asInterface(getSystemService("activity"));
     //private static IDevicePolicyManager iDevicePolicyManager = IDevicePolicyManager.Stub.asInterface(getSystemService(Context.DEVICE_POLICY_SERVICE));
-    private static IDeviceIdleController iDeviceIdleController = IDeviceIdleController.Stub.asInterface(getSystemService("deviceidle"));
-    private static Context context;
-    private static final IAccountManagerResponse accountResponse = new accountManagerResponse();
 
+    // 引入 Android 的 IDeviceIdleController 接口，用于控制设备的空闲状态
+    private static IDeviceIdleController iDeviceIdleController = IDeviceIdleController.Stub.asInterface(getSystemService("deviceidle"));
+    // 用于保存 Android 上下文对象
+    private static Context context;
+    // 用于处理帐户管理响应的回调对象
+    private static final IAccountManagerResponse accountResponse = new accountManagerResponse();
+    // 创建一个线程对象，用于执行后台服务
     private static ServiceThread serviceThread = new ServiceThread("MaBaoGuo");
+    // 创建一个自定义的类加载器，用于加载外部 JAR 文件
     private static MultiJarClassLoader classLoader;
+    // 用于保存父类加载器
     private static ClassLoader parentClassloader;
+    // 用于处理消息的处理程序
     private static Handler handler;
+
 
     public static void main(String[] args) throws ClassCastException{
 
