@@ -1,19 +1,76 @@
 <resources>
-    <string name="app_name">My Application</string>
+    <string name="app_name">Android组策略管理器</string>
     <string name="title_activity_settings">Android组策略管理器</string>
 
-    <!-- Preference Titles -->
-    <string name="messages_header">Messages</string>
-    <string name="sync_header">Sync</string>
-
-    <!-- Messages Preferences -->
-    <string name="signature_title">Your signature</string>
-    <string name="reply_title">Default reply action</string>
-
-    <!-- Sync Preferences -->
-    <string name="sync_title">Sync email periodically</string>
-    <string name="attachment_title">Download incoming attachments</string>
-    <string name="attachment_summary_on">Automatically download attachments for incoming emails
-    </string>
-    <string name="attachment_summary_off">Only download attachments when manually requested</string>
+    <string name="no_add_clone_profile">禁止添加克隆配置文件</string>
+    <string name="no_set_user_icon">禁止设置用户头像</string>
+    <string name="no_usb_file_transfer">禁止通过USB传输文件</string>
+    <string name="no_data_roaming">禁止数据漫游时使用网络</string>
+    <string name="no_config_vpn">禁止配置VPN</string>
+    <string name="no_outgoing_calls">禁止拨打电话(紧急电话除外)</string>
+    <string name="no_wallpaper">禁止使用墙纸</string>
+    <string name="no_outgoing_beam">禁止使用Beam</string>
+    <string name="no_debugging_features">禁止USB调试</string>
+    <string name="no_airplane_mode">禁止飞行模式</string>
+    <string name="no_network_reset">禁止重置网络</string>
+    <string name="no_share_location">禁止位置共享</string>
+    <string name="no_user_switch">禁止切换用户</string>
+    <string name="no_control_apps">禁止控制应用: 禁止卸载, 禁用, 强制停止, 清除数据, 清除缓存</string>
+    <string name="no_sharing_admin_configured_wifi">禁止分享管理员配置的WIFI</string>
+    <string name="no_bluetooth">禁用蓝牙</string>
+    <string name="no_wifi_tethering">禁用WIFI热点</string>
+    <string name="no_install_apps">禁止安装应用</string>
+    <string name="no_install_unknown_sources">禁止主用户“安装未知来源应用”</string>
+    <string name="no_install_unknown_sources_globally">禁止所有用户“安装未知来源应用”</string>
+    <string name="no_uninstall_apps">禁止卸载应用</string>
+    <string name="no_add_managed_profile">禁止添加托管配置文件</string>
+    <string name="no_create_windows">禁止创建悬浮窗</string>
+    <string name="no_set_wallpaper">禁止设置墙纸</string>
+    <string name="no_content_capture">禁止截屏</string>
+    <string name="no_config_mobile_networks">禁止配置APN</string>
+    <string name="disallow_microphone_toggle">禁止切换麦克风</string>
+    <string name="no_change_wifi_state">禁止改变WIFI状态</string>
+    <string name="no_autofill">禁止自动填充</string>
+    <string name="no_config_bluetooth">禁止配置蓝牙</string>
+    <string name="no_bluetooth_sharing">禁止蓝牙分享</string>
+    <string name="no_sharing_into_profile">禁止分享文件到工作空间</string>
+    <string name="no_system_error_dialogs">禁止系统错误对话框</string>
+    <string name="disallow_camera_toggle">禁止切换相机</string>
+    <string name="no_config_cell_broadcasts">禁止配置小区广播</string>
+    <string name="no_adjust_volume">禁止调节音量</string>
+    <string name="no_add_wifi_config">禁止添加WIFI</string>
+    <string name="no_config_wifi">禁止配置WIFI</string>
+    <string name="no_wifi_direct">禁止WIFI直连</string>
+    <string name="no_safe_boot">禁用安全启动</string>
+    <string name="no_config_screen_timeout">禁止配置屏幕超时</string>
+    <string name="no_run_in_background">禁止后台运行</string>
+    <string name="no_remove_managed_profile">禁止删除托管配置文件</string>
+    <string name="no_printing">禁止打印</string>
+    <string name="no_add_user">禁止添加用户</string>
+    <string name="no_remove_user">禁止删除用户</string>
+    <string name="disallow_unmute_device">禁止取消全局静音</string>
+    <string name="no_config_credentials">禁止配置用户证书</string>
+    <string name="no_config_locale">禁止更改设备语言</string>
+    <string name="no_oem_unlock">禁止OEM解锁</string>
+    <string name="no_modify_accounts">禁止更改同步账户</string>
+    <string name="no_record_audio">禁止录音</string>
+    <string name="no_physical_media">禁止挂载物理外部介质</string>
+    <string name="no_config_brightness">禁止调节亮度</string>
+    <string name="no_cross_profile_copy_paste">禁止通过写入剪贴板</string>
+    <string name="no_ambient_display">禁止主动显示</string>
+    <string name="no_factory_reset">禁止恢复出厂设置</string>
+    <string name="no_unmute_microphone">禁止调整麦克风音量并静音麦克风</string>
+    <string name="no_config_tethering">禁止配置WIFI热点</string>
+    <string name="disallow_biometric">禁用生物识别</string>
+    <string name="no_config_location">禁止通过设置开关定位</string>
+    <string name="no_config_date_time">禁止配置时间与日期</string>
+    <string name="no_camera">禁用相机</string>
+    <string name="no_fun">禁止体验快乐</string>
+    <string name="no_sms">禁用短信</string>
+    <string name="no_content_suggestions">禁止获取屏幕上的文字内容</string>
+    <string name="disallow_config_private_dns">禁止配置私人DNS</string>
+    <string name="no_unified_password">禁止与主用户设置相同锁屏密码</string>
+    <string name="no_ultra_wideband_radio">禁止使用超宽带(UWB)</string>
+    <string name="disallow_config_default_apps">禁止配置默认应用</string>
+    <string name="no_grant_admin">禁止管理员向其他用户授予admin权限</string>
 </resources>
