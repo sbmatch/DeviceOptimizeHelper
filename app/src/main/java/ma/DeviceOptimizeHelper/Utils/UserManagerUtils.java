@@ -7,29 +7,23 @@ import android.os.IBinder;
 import android.os.Process;
 import android.os.UserHandle;
 import android.util.ArrayMap;
-import android.util.Log;
+import android.util.ArraySet;
 
-import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 
 public class UserManagerUtils {
 
-    public static ArrayMap<String, String> getALLUserRestrictionsForFramework(){
-
+    public static ArraySet<String> getALLUserRestrictionsReflectForUserManager(){
         try {
             @SuppressLint("PrivateApi")
             Class<?> cStub =  Class.forName("android.os.UserManager");
-            ArrayMap<String, String> fields= new ArrayMap<>();
+            ArraySet<String> fields= new ArraySet<>();
             for (Field value : cStub.getFields()){
                 if (value.getName().contains("DISALLOW_")){
-                    fields.put(value.getName(), (String) value.get(null));
+                    fields.add((String) value.get(null));
                 }
             }
-            Log.i(UserManagerUtils.class.getSimpleName(), Collections.singletonList(fields).toString());
             return fields;
         } catch (Exception e2) {
             throw new SecurityException(e2);
@@ -47,16 +41,17 @@ public class UserManagerUtils {
         } catch (Exception e2) {
             throw new RuntimeException(e2);
         }
-        System.out.println("setUserRestriction: "+key+" set to "+getUserRestrictionsReflect().getBoolean(key));
+        System.out.println("setUserRestriction: "+key+" set to "+isUserRestrictionsReflectForKey(key));
     }
 
-    public static Bundle getUserRestrictionsReflect(){
+    public static boolean isUserRestrictionsReflectForKey(String key){
         try {
             @SuppressLint("PrivateApi")
             Class<?> cStub =  Class.forName("android.os.IUserManager$Stub");
             Method asInterface = cStub.getMethod("asInterface", IBinder.class);
             Object obj = asInterface.invoke(null, ServiceManager.getSystemService("user"));
-            return (Bundle) obj.getClass().getMethod("getUserRestrictions",int.class).invoke(obj, getIdentifier());
+            Bundle userRestrictions = (Bundle) obj.getClass().getMethod("getUserRestrictions",int.class).invoke(obj, getIdentifier());
+            return userRestrictions.getBoolean(key);
         } catch (Exception e2) {
             throw new RuntimeException(e2);
         }
