@@ -156,7 +156,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
             CommandExecutor.executeCommand(command + " " + value, true, new CommandExecutor.CommandCallback() {
                 @Override
                 public void onSuccess(String output) {
-                    Toast.makeText(context, "已启用全部限制策略", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(context, "任务执行完毕", Toast.LENGTH_SHORT).show();
                 }
 
                 @Override
@@ -256,7 +256,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                                     CommandExecutor.executeCommand(command + key + " false", true, new CommandExecutor.CommandCallback() {
                                         @Override
                                         public void onSuccess(String output) {
-                                            Toast.makeText(context, "已禁用", Toast.LENGTH_SHORT).show();
+                                            Toast.makeText(context, "已禁用此限制策略", Toast.LENGTH_SHORT).show();
                                         }
 
                                         @Override
@@ -277,7 +277,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                                     CommandExecutor.executeCommand(command + key + " true", true, new CommandExecutor.CommandCallback() {
                                         @Override
                                         public void onSuccess(String output) {
-                                            Toast.makeText(context, "已启用", Toast.LENGTH_SHORT).show();
+                                            Toast.makeText(context, "已启用此限制策略", Toast.LENGTH_SHORT).show();
                                         }
 
                                         @Override
@@ -324,7 +324,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                         CommandExecutor.executeCommand(command, true, new CommandExecutor.CommandCallback() {
                             @Override
                             public void onSuccess(String output) {
-                                Toast.makeText(context, "已授权 root 权限", Toast.LENGTH_SHORT).show();
+
                             }
 
                             @Override
