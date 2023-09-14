@@ -10,7 +10,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven { url 'https://maven.aliyun.com/repository/jcenter' }
     }
 }
-rootProject.name = "My Application"
+rootProject.name = "DeviceOptimizeHelper"
 include ':app'

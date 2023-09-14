@@ -1,61 +1,78 @@
 package ma.DeviceOptimizeHelper;
 
-import static ma.DeviceOptimizeHelper.Utils.ServiceManager.getSystemService;
-
 import android.accounts.Account;
 import android.accounts.AccountManager;
 import android.accounts.IAccountManager;
 import android.accounts.IAccountManagerResponse;
 import android.annotation.SuppressLint;
+import android.annotation.TargetApi;
 import android.content.Context;
-import android.os.Binder;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.IBinder;
 import android.os.IDeviceIdleController;
 import android.os.Looper;
 import android.os.Message;
+import android.os.Process;
 import android.os.RemoteException;
+import android.os.UserHandle;
+import android.os.UserManager;
+import android.util.ArrayMap;
+import android.util.ArraySet;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
-import ma.DeviceOptimizeHelper.Utils.UserManagerUtils;
+import dalvik.system.DexClassLoader;
 
 public class Main {
+    // 引入 Android 的 IAccountManager 接口，用于操作帐户管理
+    private static IAccountManager iAccountManager = IAccountManager.Stub.asInterface(getSystemService("account"));
+    //private static IActivityManager iActivityManager = IActivityManager.Stub.asInterface(getSystemService("activity"));
+    //private static IDevicePolicyManager iDevicePolicyManager = IDevicePolicyManager.Stub.asInterface(getSystemService(Context.DEVICE_POLICY_SERVICE));
 
-    private static  IAccountManager iAccountManager = IAccountManager.Stub.asInterface(getSystemService("account"));
+    // 引入 Android 的 IDeviceIdleController 接口，用于控制设备的空闲状态
     private static IDeviceIdleController iDeviceIdleController = IDeviceIdleController.Stub.asInterface(getSystemService("deviceidle"));
+    // 用于保存 Android 上下文对象
     private static Context context;
+    // 用于处理帐户管理响应的回调对象
     private static final IAccountManagerResponse accountResponse = new accountManagerResponse();
-
+    // 创建一个线程对象，用于执行后台服务
     private static ServiceThread serviceThread = new ServiceThread("MaBaoGuo");
+    // 创建一个自定义的类加载器，用于加载外部 JAR 文件
+    private static MultiJarClassLoader classLoader;
+    // 用于保存父类加载器
+    private static ClassLoader parentClassloader;
+    // 用于处理消息的处理程序
     private static Handler handler;
 
-    public static void main(String[] args) {
 
-        // 必须使用root权限执行
-        if (Binder.getCallingUid() == 0 || Binder.getCallingUid() == 1000){
-            Looper.prepare();
-            if (args.length == 0){
-                context = retrieveSystemContext();
-                serviceThread.start();
-            }else if (args.length == 2){
-                String name = args[0];
-                boolean value = Boolean.parseBoolean(args[1]);
-                UserManagerUtils.setUserRestrictionReflect(name, value);
-            }
-        }else {
-            System.err.print("      You must execute with root privileges\n");
-        }
+    public static void main(String[] args) throws ClassCastException{
 
+        Looper.prepare();
+
+        context = retrieveSystemContext();
+
+        parentClassloader = context.getClassLoader();
+
+        classLoader = new MultiJarClassLoader(parentClassloader);
+        classLoader.addJar("/system/framework/services.jar");
+
+        serviceThread.start();
     }
 
 
     private static void removeAccount(Account account) throws RemoteException {
-        iAccountManager.removeAccountAsUser(accountResponse , account, false, UserManagerUtils.getIdentifier());
+        iAccountManager.removeAccountAsUser(accountResponse , account, false, getIdentifier());
     }
 
 //    private static void launchMainActivity() {
@@ -76,6 +93,49 @@ public class Main {
 //
 //    }
 
+
+    private static int getUserRestrictionSize(){
+        try {
+            UserManager userManager = (UserManager) context.getSystemService(Context.USER_SERVICE);
+            ArrayMap<String, String> objField= new ArrayMap<>();
+            for (Field value : userManager.getClass().getFields()){
+                if (value.getName().contains("DISALLOW_")){
+                    System.out.print("RestrictionKey: "+value.getName() +"   value: "+value.get(userManager)+"\n");
+                    objField.put(value.getName(), (String) value.get(userManager));
+                }
+            }
+            return objField.keySet().size();
+        } catch (Exception e2) {
+            throw new SecurityException(e2);
+        }
+
+    }
+
+    private static StringBuilder exec(String cmd){
+
+        java.lang.Process process;
+        BufferedReader successResult;
+        BufferedReader errorResult;
+        StringBuilder successMsg = new StringBuilder();
+        StringBuilder errorMsg = new StringBuilder();
+
+        try {
+            process = Runtime.getRuntime().exec(cmd);
+            successResult = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            errorResult = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+            String line;
+            while (( line = successResult.readLine()) != null) {
+                successMsg.append(line).append("\n");
+            }
+            while (( line = errorResult.readLine()) != null) {
+                errorMsg.append(line).append("\n");
+            }
+
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        return successMsg;
+    }
 
     static class accountManagerResponse extends IAccountManagerResponse.Stub{
 
@@ -151,9 +211,63 @@ public class Main {
                     System.out.print("共 "+userPowerSaveList.length+" 个用户级电池优化白名单已移除\n");
                 }
 
-                for (Account account: iAccountManager.getAccountsAsUser(null, 0 , "com.android.settings")){
+                for (Account account: iAccountManager.getAccountsAsUser(null, getIdentifier(), "com.android.settings")){
                     removeAccount(account);
                 }
+
+                System.out.print(getUserRestrictionSize()+"\n");
+
+                setUserRestrictionReflect(UserManager.DISALLOW_OUTGOING_BEAM, true); // 禁止使用Beam
+                setUserRestrictionReflect(UserManager.DISALLOW_INSTALL_UNKNOWN_SOURCES, true); // 禁止安装未知来源应用
+                setUserRestrictionReflect(UserManager.DISALLOW_INSTALL_UNKNOWN_SOURCES_GLOBALLY, true); // 全局禁止安装未知来源应用
+                setUserRestrictionReflect(UserManager.DISALLOW_FACTORY_RESET,true); // 禁止恢复出厂设置
+                setUserRestrictionReflect(UserManager.DISALLOW_PRINTING,true); // 禁止打印机
+                setUserRestrictionReflect(UserManager.DISALLOW_APPS_CONTROL,true); // 禁止控制应用(卸载，禁用，清除数据，强制停止，清除默认应用)
+                setUserRestrictionReflect(UserManager.DISALLOW_CONFIG_DATE_TIME,true); // 禁止手动更改时间与日期
+                setUserRestrictionReflect("no_oem_unlock",true); // 禁止oem解锁
+                setUserRestrictionReflect(UserManager.DISALLOW_AUTOFILL, true); // 禁止自动填充
+                setUserRestrictionReflect(UserManager.DISALLOW_AMBIENT_DISPLAY, true); // 禁止主动显示
+                setUserRestrictionReflect("no_run_in_background",true); // 禁止后台运行
+                setUserRestrictionReflect(UserManager.DISALLOW_SAFE_BOOT, true); // 禁止安全启动
+                setUserRestrictionReflect("no_record_audio",true); // 禁止录音
+                setUserRestrictionReflect("no_camera", true); // 禁止相机
+                setUserRestrictionReflect(UserManager.DISALLOW_CAMERA_TOGGLE, true); // 禁止切换相机
+                setUserRestrictionReflect(UserManager.DISALLOW_BLUETOOTH, true); // 禁止蓝牙
+                setUserRestrictionReflect(UserManager.DISALLOW_CONFIG_BLUETOOTH, true); // 禁止更改蓝牙配置
+                setUserRestrictionReflect(UserManager.DISALLOW_BLUETOOTH_SHARING, true); // 禁止通过蓝牙分享
+                setUserRestrictionReflect(UserManager.DISALLOW_ADD_WIFI_CONFIG, true); // 禁止添加WiFi
+                setUserRestrictionReflect(UserManager.DISALLOW_CONFIG_WIFI, true); // 禁止配置WIFI
+                setUserRestrictionReflect(UserManager.DISALLOW_WIFI_DIRECT, true); // 禁止WIFI直连
+                setUserRestrictionReflect("no_wallpaper", true); // 禁止壁纸
+                setUserRestrictionReflect(UserManager.DISALLOW_SET_WALLPAPER,true); // 禁止设置壁纸
+                setUserRestrictionReflect(UserManager.DISALLOW_NETWORK_RESET,true); // 禁止重置网络
+                setUserRestrictionReflect(UserManager.DISALLOW_CONFIG_LOCALE,true); // 禁止更改语言
+                setUserRestrictionReflect(UserManager.DISALLOW_ADJUST_VOLUME, true); // 禁止更改声音且强制静音
+                setUserRestrictionReflect(UserManager.DISALLOW_CONTENT_CAPTURE, true); // 禁止屏幕捕获
+                setUserRestrictionReflect(UserManager.DISALLOW_CONFIG_CELL_BROADCASTS, true); // 禁止配置小区广播
+                setUserRestrictionReflect(UserManager.DISALLOW_CONFIG_SCREEN_TIMEOUT,true); // 禁止更改屏幕超时
+                setUserRestrictionReflect(UserManager.DISALLOW_CONFIG_CREDENTIALS,true); // 禁止更改用户凭据
+                setUserRestrictionReflect(UserManager.DISALLOW_WIFI_TETHERING, true); // 禁止WiFI热点
+                setUserRestrictionReflect(UserManager.DISALLOW_CONFIG_TETHERING, true); // 禁止更改WIFI热点配置
+                setUserRestrictionReflect(UserManager.DISALLOW_SMS,true); // 禁止使用短信
+                setUserRestrictionReflect(UserManager.DISALLOW_AIRPLANE_MODE, true); // 禁止飞行模式
+                setUserRestrictionReflect(UserManager.DISALLOW_OUTGOING_CALLS, true); // 禁止打电话(紧急电话除外)
+                setUserRestrictionReflect(UserManager.DISALLOW_CONFIG_MOBILE_NETWORKS, true); // 禁止配置APN
+                setUserRestrictionReflect(UserManager.DISALLOW_CONFIG_PRIVATE_DNS, true); // 禁止私人DNS
+                setUserRestrictionReflect(UserManager.DISALLOW_CREATE_WINDOWS, true); // 禁止创建某些类型的窗口
+                setUserRestrictionReflect(UserManager.DISALLOW_SHARE_LOCATION, true); // 禁止分享定位
+                setUserRestrictionReflect(UserManager.DISALLOW_CONFIG_LOCATION, true); // 禁止配置定位
+                setUserRestrictionReflect(UserManager.DISALLOW_USB_FILE_TRANSFER, true); // 禁止通过USB传输文件
+                setUserRestrictionReflect(UserManager.DISALLOW_CONFIG_BRIGHTNESS, true); // 禁止更改亮度
+                setUserRestrictionReflect(UserManager.DISALLOW_ADD_USER, true); // 禁止添加用户（双开）
+                setUserRestrictionReflect(UserManager.DISALLOW_REMOVE_USER, true); // 禁止移除用户
+                setUserRestrictionReflect(UserManager.DISALLOW_INSTALL_APPS, true); // 禁止安装应用
+                setUserRestrictionReflect(UserManager.DISALLOW_UNINSTALL_APPS, true); // 禁止卸载应用
+
+                // Added some new restrictions on android14
+                setUserRestrictionReflect("no_ultra_wideband_radio", true); // 禁止使用超宽带(UWB)
+                setUserRestrictionReflect("disallow_config_default_apps", true); // 禁止配置默认应用
+                setUserRestrictionReflect("no_grant_admin", true); // 禁止用户被授予admin权限
 
             }catch (Exception e){
                 e.printStackTrace();
@@ -164,21 +278,75 @@ public class Main {
 
     }
 
+    private static int getIdentifier(){
 
-//    private static ArraySet<String> getAllowInPowerSave(){
-//
-//        try{
-//            @SuppressLint("PrivateApi")
-//            Class<?> clazz = Class.forName("com.android.server.SystemConfig");
-//            Object obj = clazz.getMethod("getInstance").invoke(null);
-//            Method getAllowInPowerSaveMethod = clazz.getMethod("getAllowInPowerSave");
-//            return (ArraySet<String>) getAllowInPowerSaveMethod.invoke(obj);
-//        }catch (NullPointerException | InvocationTargetException | ClassNotFoundException |
-//                NoSuchMethodException | IllegalAccessException e){
-//            throw new RuntimeException(e);
-//        }
-//
-//    }
+        try {
+            return (int) UserHandle.class.getMethod("getIdentifier").invoke(Process.myUserHandle());
+        }catch (Throwable e){
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static IBinder getSystemService(String name){
+        try {
+            @SuppressLint({"PrivateApi", "DiscouragedPrivateApi"})
+            Method getServiceMethod = Class.forName("android.os.ServiceManager").getDeclaredMethod("getService", String.class);
+            getServiceMethod.setAccessible(true);
+            return (IBinder) getServiceMethod.invoke(null, name);
+        } catch (NullPointerException | IllegalAccessException | InvocationTargetException | ClassNotFoundException | NoSuchMethodException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static void setUserRestrictionReflect(String key, boolean value){
+        try {
+            @SuppressLint("PrivateApi")
+            Class<?> cStub =  Class.forName("android.os.IUserManager$Stub");
+            Method asInterface = cStub.getMethod("asInterface", IBinder.class);
+            Object obj = asInterface.invoke(null, getSystemService("user"));
+
+            Method setUserRestrictionMethod =  obj.getClass().getMethod("setUserRestriction",String.class, boolean.class, int.class);
+
+            if (getUserRestrictionsReflect().getBoolean(key)){
+                setUserRestrictionMethod.invoke(obj,key,false,getIdentifier());
+            }else {
+                setUserRestrictionMethod.invoke(obj,key,value,getIdentifier());
+            }
+
+        } catch (Exception e2) {
+            throw new RuntimeException(e2);
+        }
+        System.out.println("setUserRestriction: "+key+" set to "+getUserRestrictionsReflect().getBoolean(key));
+    }
+
+    private static Bundle getUserRestrictionsReflect(){
+        try {
+            @SuppressLint("PrivateApi")
+            Class<?> cStub =  Class.forName("android.os.IUserManager$Stub");
+            Method asInterface = cStub.getMethod("asInterface", IBinder.class);
+            Object obj = asInterface.invoke(null, getSystemService("user"));
+
+            return (Bundle) obj.getClass().getMethod("getUserRestrictions",int.class).invoke(obj,getIdentifier());
+        } catch (Exception e2) {
+            throw new RuntimeException(e2);
+        }
+    }
+
+
+    private static ArraySet<String> getAllowInPowerSave(){
+
+        try{
+            @SuppressLint("PrivateApi")
+            Class<?> clazz = Class.forName("com.android.server.SystemConfig");
+            Object obj = clazz.getMethod("getInstance").invoke(null);
+            Method getAllowInPowerSaveMethod = clazz.getMethod("getAllowInPowerSave");
+            return (ArraySet<String>) getAllowInPowerSaveMethod.invoke(obj);
+        }catch (NullPointerException | InvocationTargetException | ClassNotFoundException |
+                NoSuchMethodException | IllegalAccessException e){
+            throw new RuntimeException(e);
+        }
+
+    }
 
 //    private static ArrayMap<String,List<String>> getNotificationPolicy(String name){
 //        try {
@@ -205,7 +373,6 @@ public class Main {
 //        }
 //    }
 
-
     private static Context retrieveSystemContext() {
         try {
             @SuppressLint("PrivateApi")
@@ -223,38 +390,38 @@ public class Main {
         }
     }
 
-//
-//    public static class MultiJarClassLoader extends ClassLoader {
-//        private List<DexClassLoader> dexClassLoaders;
-//
-//        public MultiJarClassLoader(ClassLoader parentClassLoader) {
-//            super(parentClassLoader);
-//            dexClassLoaders = new ArrayList<>();
-//        }
-//
-//        public void addJar(String jarPath) {
-//            DexClassLoader dexClassLoader = new DexClassLoader(
-//                    jarPath,
-//                    null,
-//                    null, // 额外的库路径，可以为 null
-//                    getParent() // 父类加载器
-//            );
-//            dexClassLoaders.add(dexClassLoader);
-//        }
-//
-//        @Override
-//        protected Class<?> findClass(String className) throws ClassNotFoundException {
-//            // 遍历所有的 DexClassLoader 实例，尝试加载类
-//            for (DexClassLoader dexClassLoader : dexClassLoaders) {
-//                try {
-//                    return dexClassLoader.loadClass(className);
-//                } catch (ClassNotFoundException ignored) {
-//                    // 忽略类未找到的异常，继续下一个 DexClassLoader
-//                }
-//            }
-//            throw new ClassNotFoundException("Class not found: " + className);
-//        }
-//    }
+
+    public static class MultiJarClassLoader extends ClassLoader {
+        private List<DexClassLoader> dexClassLoaders;
+
+        public MultiJarClassLoader(ClassLoader parentClassLoader) {
+            super(parentClassLoader);
+            dexClassLoaders = new ArrayList<>();
+        }
+
+        public void addJar(String jarPath) {
+            DexClassLoader dexClassLoader = new DexClassLoader(
+                    jarPath,
+                    null,
+                    null, // 额外的库路径，可以为 null
+                    getParent() // 父类加载器
+            );
+            dexClassLoaders.add(dexClassLoader);
+        }
+
+        @Override
+        protected Class<?> findClass(String className) throws ClassNotFoundException {
+            // 遍历所有的 DexClassLoader 实例，尝试加载类
+            for (DexClassLoader dexClassLoader : dexClassLoaders) {
+                try {
+                    return dexClassLoader.loadClass(className);
+                } catch (ClassNotFoundException ignored) {
+                    // 忽略类未找到的异常，继续下一个 DexClassLoader
+                }
+            }
+            throw new ClassNotFoundException("Class not found: " + className);
+        }
+    }
 
 
 }
