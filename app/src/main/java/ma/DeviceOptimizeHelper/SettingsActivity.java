@@ -221,13 +221,21 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
             preferenceScreen = getPreferenceManager().createPreferenceScreen(requireContext());
             getALLUserRestrictions = UserManagerUtils.getALLUserRestrictionsReflectForUserManager();
 
+// 创建一个 Handler 对象，将它关联到指定线程的 Looper 上
+// 这里的 serviceThread2 是一个线程对象，通过 getLooper() 获取它的消息循环
             handler = new Handler(serviceThread2.getLooper(), msg -> {
+
 
                 String key = (String) msg.obj;
 
+
+
                 try {
+
                     switch (msg.arg1){
+
                         case 0:
+
                             switch (msg.what){
                                 case 2:
                                     CommandExecutor.executeCommand(command+key +" false", true);
@@ -248,15 +256,25 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                                     break;
                                 default:
                             }
+                            // 当 arg1 的值为 0 时，执行命令 command+msg.obj+" false"
+                            // 这似乎是将 msg.obj 作为参数添加到 command 后，并设置为 false
+                            CommandExecutor.executeCommand(command + msg.obj + " false", true);
+                            break;
+                        case 1:
+                            // 当 arg1 的值为 1 时，执行命令 command+msg.obj+" true"
+                            // 这似乎是将 msg.obj 作为参数添加到 command 后，并设置为 true
+                            CommandExecutor.executeCommand(command + msg.obj + " true", true);
+
                             break;
                         default:
+                            // 如果 arg1 的值不是 0 或 1，则不执行任何操作
                     }
-                }catch (RuntimeException e){
+                } catch (RuntimeException e) {
                     e.printStackTrace();
                 } catch (RemoteException e) {
                     throw new RuntimeException(e);
                 }
-
+                // 处理消息成功，返回 true
                 return true;
             });
 
@@ -273,7 +291,6 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
                 // 添加开关变化监听器
                 switchPreferenceCompat.setOnPreferenceChangeListener((preference, newValue) -> {
-
                     Message message = Message.obtain();
                     message.obj = preference.getKey();
                     message.arg1 = (boolean) newValue ? 1 : 0;
