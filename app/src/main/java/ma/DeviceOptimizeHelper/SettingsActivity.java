@@ -6,6 +6,7 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.content.res.Resources;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -19,7 +20,9 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.preference.Preference;
+import androidx.preference.PreferenceCategory;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceScreen;
 import androidx.preference.SwitchPreferenceCompat;
@@ -89,6 +92,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
     public static class HeaderFragment extends PreferenceFragmentCompat {
 
+        @SuppressLint("ResourceAsColor")
         @Override
         public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
 
@@ -109,10 +113,11 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                     String command = "app_process -Djava.class.path="+getApkPath(requireContext())+"  /system/bin  " + Main.class.getName() + " "+preference.getKey() +" "+newValue;
                     // 执行命令
                     CommandExecutor.executeCommand(command, true);
-
                     return true;
                 });
+
                 preferenceScreen.addPreference(switchPreferenceCompat);
+
             }
             setPreferenceScreen(preferenceScreen); // 将这些都显示出来
         }
