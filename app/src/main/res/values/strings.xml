@@ -1,7 +1,6 @@
 <resources>
     <string name="app_name">Android组策略管理器</string>
     <string name="title_activity_settings">Android组策略管理器</string>
-
     <string name="no_add_clone_profile">禁止添加克隆配置文件</string>
     <string name="no_set_user_icon">禁止设置用户头像</string>
     <string name="no_usb_file_transfer">禁止通过USB传输文件</string>
@@ -73,4 +72,5 @@
     <string name="no_ultra_wideband_radio">禁止使用超宽带(UWB)</string>
     <string name="disallow_config_default_apps">禁止配置默认应用</string>
     <string name="no_grant_admin">禁止管理员向其他用户授予admin权限</string>
+    <string name="no_cellular_2g">禁止2G网络(防伪基站)</string>
 </resources>

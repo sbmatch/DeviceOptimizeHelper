@@ -1,14 +1,14 @@
 package ma.DeviceOptimizeHelper;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.content.res.Resources;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.Message;
-import android.util.ArrayMap;
-import android.widget.Toast;
+import android.util.ArraySet;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
@@ -18,7 +18,7 @@ import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceScreen;
 import androidx.preference.SwitchPreferenceCompat;
 
-import java.util.Locale;
+import java.lang.reflect.Field;
 
 import ma.DeviceOptimizeHelper.Utils.CommandExecutor;
 import ma.DeviceOptimizeHelper.Utils.UserManagerUtils;
@@ -50,8 +50,8 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
         ActionBar actionBar = getSupportActionBar();
         if (actionBar != null) {
             actionBar.setDisplayHomeAsUpEnabled(false);
+            actionBar.setBackgroundDrawable(null);
         }
-
         handler = new Handler(Looper.myLooper());
     }
 
@@ -82,26 +82,20 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
     public static class HeaderFragment extends PreferenceFragmentCompat {
 
+        @SuppressLint("ResourceAsColor")
         @Override
         public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
 
             PreferenceScreen preferenceScreen = getPreferenceManager().createPreferenceScreen(requireContext());
-            ArrayMap<String, String> getALLUserRestrictions = UserManagerUtils.getALLUserRestrictionsForFramework();
-
+            ArraySet<String> getALLUserRestrictions = UserManagerUtils.getALLUserRestrictionsReflectForUserManager();
             // 动态创建SwitchPreferenceCompat, 属于是有多少就创建多少
-            for (String key : getALLUserRestrictions.keySet()) {
-
-                Locale currentLocale = getResources().getConfiguration().getLocales().get(0);
+            for (String key : getALLUserRestrictions) {
 
                 SwitchPreferenceCompat switchPreferenceCompat = new SwitchPreferenceCompat(requireContext());
-                switchPreferenceCompat.setKey(getALLUserRestrictions.get(key));
-                switchPreferenceCompat.setTitle(getALLUserRestrictions.get(key));
-                if (currentLocale.getLanguage().equals("zh")){
-                    int summaryResId = getResources().getIdentifier(getALLUserRestrictions.get(key),"string",requireContext().getPackageName());
-                    switchPreferenceCompat.setSummary(summaryResId);
-                }else {
-                    switchPreferenceCompat.setSummary(key);
-                }
+                switchPreferenceCompat.setKey(key);
+                switchPreferenceCompat.setTitle(key);
+                // 添加限制策略的描述 目前支持中，英文
+                switchPreferenceCompat.setSummary(getResIdReflect(key));
 
                 // 添加开关变化监听器
                 switchPreferenceCompat.setOnPreferenceChangeListener((preference, newValue) -> {
@@ -109,15 +103,25 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                     String command = "app_process -Djava.class.path="+getApkPath(requireContext())+"  /system/bin  " + Main.class.getName() + " "+preference.getKey() +" "+newValue;
                     // 执行命令
                     CommandExecutor.executeCommand(command, true);
-
-                    Toast.makeText(requireContext(), preference.getKey() + " set to "+ newValue, Toast.LENGTH_SHORT).show();
-
                     return true;
                 });
-                preferenceScreen.addPreference(switchPreferenceCompat);
-            }
 
+                preferenceScreen.addPreference(switchPreferenceCompat);
+
+            }
             setPreferenceScreen(preferenceScreen); // 将这些都显示出来
+        }
+    }
+
+    private static int getResIdReflect(String key){
+        try{
+
+            Class<?> clazz = R.string.class;
+            Field field = clazz.getField(key);
+            return field.getInt(null);
+        }catch (Resources.NotFoundException | NoSuchFieldException | IllegalAccessException e){
+            e.printStackTrace();
+            throw new RuntimeException(e);
         }
     }
 
