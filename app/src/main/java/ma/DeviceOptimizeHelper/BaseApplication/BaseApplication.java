@@ -4,6 +4,8 @@ import android.app.Application;
 import android.content.Context;
 import android.os.Build;
 
+import com.rosan.dhizuku.api.Dhizuku;
+
 import org.lsposed.hiddenapibypass.HiddenApiBypass;
 
 public class BaseApplication extends Application {
@@ -13,5 +15,6 @@ public class BaseApplication extends Application {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             HiddenApiBypass.addHiddenApiExemptions("");
         }
+        Dhizuku.init(base);
     }
 }
