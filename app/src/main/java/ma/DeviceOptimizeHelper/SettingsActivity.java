@@ -7,8 +7,11 @@ import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.Looper;
+import android.os.HandlerThread;
+import android.os.Message;
 import android.util.ArraySet;
+import android.view.Menu;
+import android.view.MenuItem;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
@@ -26,6 +29,14 @@ import ma.DeviceOptimizeHelper.Utils.UserManagerUtils;
 public class SettingsActivity extends AppCompatActivity implements PreferenceFragmentCompat.OnPreferenceStartFragmentCallback {
 
     private static final String TITLE_TAG = "settingsActivityTitle";
+    public static PreferenceScreen preferenceScreen;
+    public static ArraySet<SwitchPreferenceCompat> switchPreferenceCompatArraySet = new ArraySet<>();
+    private static ArraySet<String> getALLUserRestrictions;
+    public static SwitchPreferenceCompat switchPreferenceCompat;
+
+    private static String command;
+    private static SettingsActivity.ServiceThread2 serviceThread2 = new ServiceThread2("你干嘛哎呦");
+
     private static Handler handler;
 
     @Override
@@ -52,7 +63,11 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
             actionBar.setDisplayHomeAsUpEnabled(false);
             actionBar.setBackgroundDrawable(null);
         }
-        handler = new Handler(Looper.myLooper());
+
+        command = "app_process -Djava.class.path="+getApkPath(SettingsActivity.this)+"  /system/bin  " + Main.class.getName() + " ";
+
+        serviceThread2.start();
+
     }
 
     @Override
@@ -63,11 +78,62 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
     }
 
     @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        menu.add(Menu.NONE,10000,0,"启用所有策略");
+        menu.add(Menu.NONE,10001,1,"禁用所有策略");
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        switch (item.getItemId()){
+            case 10000:
+               oneKeyChange(true);
+               handler.post(new Runnable() {
+                   @Override
+                   public void run() {
+                       runOnUiThread(new Runnable() {
+                           @Override
+                           public void run() {
+                               for (SwitchPreferenceCompat compat: switchPreferenceCompatArraySet){
+                                   compat.setChecked(true);
+                               }
+                           }
+                       });
+                   }
+               });
+                break;
+            case 10001:
+                oneKeyChange(false);
+                handler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                for (SwitchPreferenceCompat compat: switchPreferenceCompatArraySet){
+                                    compat.setChecked(false);
+                                }
+                            }
+                        });
+                    }
+                });
+                break;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    @Override
     public boolean onSupportNavigateUp() {
         if (getSupportFragmentManager().popBackStackImmediate()) {
             return true;
         }
         return super.onSupportNavigateUp();
+    }
+
+    private static void oneKeyChange(boolean z){
+        String value  = z ? "true" : "false";
+        CommandExecutor.executeCommand(command +" "+value, true);
     }
 
     /**
@@ -81,17 +147,33 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
     }
 
     public static class HeaderFragment extends PreferenceFragmentCompat {
-        PreferenceScreen preferenceScreen;
+
         @SuppressLint("ResourceAsColor")
         @Override
         public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
 
             preferenceScreen = getPreferenceManager().createPreferenceScreen(requireContext());
-            ArraySet<String> getALLUserRestrictions = UserManagerUtils.getALLUserRestrictionsReflectForUserManager();
+            getALLUserRestrictions = UserManagerUtils.getALLUserRestrictionsReflectForUserManager();
+
+            handler = new Handler(serviceThread2.getLooper(), msg -> {
+
+                switch (msg.arg1){
+                    case 0:
+                        CommandExecutor.executeCommand(command+msg.obj +" false", true);
+                        break;
+                    case 1:
+                        CommandExecutor.executeCommand(command+msg.obj +" true", true);
+                        break;
+                    default:
+                }
+
+                return true;
+            });
+
             // 动态创建SwitchPreferenceCompat, 属于是有多少就创建多少
             for (String key : getALLUserRestrictions) {
 
-                SwitchPreferenceCompat switchPreferenceCompat = new SwitchPreferenceCompat(requireContext());
+                switchPreferenceCompat = new SwitchPreferenceCompat(requireContext());
                 switchPreferenceCompat.setKey(key);
                 switchPreferenceCompat.setTitle(key);
                 // 从系统中获取策略限制的启用状态
@@ -100,20 +182,30 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 switchPreferenceCompat.setSummary(getResIdReflect(key));
 
                 // 添加开关变化监听器
-                switchPreferenceCompat.setOnPreferenceChangeListener((preference, newValue) -> {
-                    // 拼接命令
-                    String command = "app_process -Djava.class.path="+getApkPath(requireContext())+"  /system/bin  " + Main.class.getName() + " "+preference.getKey() +" "+newValue;
-                    // 执行命令
-                    CommandExecutor.executeCommand(command, true);
-                    return true;
+                switchPreferenceCompat.setOnPreferenceClickListener(preference -> {
+
+                    Message message = Message.obtain();
+                    message.obj = preference.getKey();
+                    message.arg1 = switchPreferenceCompat.isChecked() ? 1 : 0;
+                    handler.sendMessage(message);
+
+                    return false;
                 });
-
+                switchPreferenceCompatArraySet.add(switchPreferenceCompat);
                 preferenceScreen.addPreference(switchPreferenceCompat);
-
             }
+
+
             setPreferenceScreen(preferenceScreen); // 将这些都显示出来
         }
 
+    }
+
+
+    private  static class ServiceThread2 extends HandlerThread {
+        public ServiceThread2(String name) {
+            super(name);
+        }
     }
 
     private static int getResIdReflect(String key){
