@@ -145,22 +145,30 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
             preferenceScreen = getPreferenceManager().createPreferenceScreen(requireContext());
             getALLUserRestrictions = UserManagerUtils.getALLUserRestrictionsReflectForUserManager();
 
+// 创建一个 Handler 对象，将它关联到指定线程的 Looper 上
+// 这里的 serviceThread2 是一个线程对象，通过 getLooper() 获取它的消息循环
             handler = new Handler(serviceThread2.getLooper(), msg -> {
-
                 try {
+                    // 根据消息的 arg1 字段的值执行不同的操作
                     switch (msg.arg1){
+                        // TODO 不用arg1，改用有意义的变量名，你操作下，我不好debug
                         case 0:
-                            CommandExecutor.executeCommand(command+msg.obj +" false", true);
+                            // 当 arg1 的值为 0 时，执行命令 command+msg.obj+" false"
+                            // 这似乎是将 msg.obj 作为参数添加到 command 后，并设置为 false
+                            CommandExecutor.executeCommand(command + msg.obj + " false", true);
                             break;
                         case 1:
-                            CommandExecutor.executeCommand(command+msg.obj +" true", true);
+                            // 当 arg1 的值为 1 时，执行命令 command+msg.obj+" true"
+                            // 这似乎是将 msg.obj 作为参数添加到 command 后，并设置为 true
+                            CommandExecutor.executeCommand(command + msg.obj + " true", true);
                             break;
                         default:
+                            // 如果 arg1 的值不是 0 或 1，则不执行任何操作
                     }
-                }catch (RuntimeException e){
+                } catch (RuntimeException e) {
                     e.printStackTrace();
                 }
-
+                // 处理消息成功，返回 true
                 return true;
             });
 
@@ -177,13 +185,13 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
                 // 添加开关变化监听器
                 switchPreferenceCompat.setOnPreferenceChangeListener((preference, newValue) -> {
-
                     Message message = Message.obtain();
                     message.obj = preference.getKey();
                     message.arg1 = (boolean) newValue ? 1 : 0;
                     handler.sendMessage(message);
 
                     try {
+                        Log.d("执行指令", "onCreatePreferences: "+message.obj.toString()+" "+command);
                         CommandExecutor.executeCommand(command, true);
                     }catch (RuntimeException e){
                         isAllowSwitch = false;

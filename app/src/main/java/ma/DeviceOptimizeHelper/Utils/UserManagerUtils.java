@@ -46,16 +46,23 @@ public class UserManagerUtils {
 
     public static boolean isUserRestrictionsReflectForKey(String key){
         try {
+            // 通过反射获取 android.os.IUserManager$Stub 类
             @SuppressLint("PrivateApi")
-            Class<?> cStub =  Class.forName("android.os.IUserManager$Stub");
+            Class<?> cStub = Class.forName("android.os.IUserManager$Stub");
+            // 获取 asInterface 方法，用于创建 IUserManager 接口的实例
             Method asInterface = cStub.getMethod("asInterface", IBinder.class);
+            // 通过 ServiceManager 获取 IUserManager 实例
             Object obj = asInterface.invoke(null, ServiceManager.getSystemService("user"));
-            Bundle userRestrictions = (Bundle) obj.getClass().getMethod("getUserRestrictions",int.class).invoke(obj, getIdentifier());
+            // 调用 getUserRestrictions 方法获取用户限制
+            Bundle userRestrictions = (Bundle) obj.getClass().getMethod("getUserRestrictions", int.class).invoke(obj, getIdentifier());
+            // 根据给定的键获取用户限制的布尔值
             return userRestrictions.getBoolean(key);
         } catch (Exception e2) {
+            // 捕获异常并抛出运行时异常
             throw new RuntimeException(e2);
         }
     }
+
 
     public static int getIdentifier(){
 
