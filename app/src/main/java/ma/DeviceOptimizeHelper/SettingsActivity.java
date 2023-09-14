@@ -13,6 +13,7 @@ import android.os.Message;
 import android.util.ArrayMap;
 import android.util.ArraySet;
 import android.util.Log;
+import android.view.View;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -56,8 +57,8 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
         ActionBar actionBar = getSupportActionBar();
         if (actionBar != null) {
             actionBar.setDisplayHomeAsUpEnabled(false);
+            actionBar.setBackgroundDrawable(null);
         }
-
         handler = new Handler(Looper.myLooper());
     }
 
@@ -113,7 +114,6 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 });
                 preferenceScreen.addPreference(switchPreferenceCompat);
             }
-
             setPreferenceScreen(preferenceScreen); // 将这些都显示出来
         }
     }
