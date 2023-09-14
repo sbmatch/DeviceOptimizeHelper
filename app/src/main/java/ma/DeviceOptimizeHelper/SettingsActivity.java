@@ -99,14 +99,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 SwitchPreferenceCompat switchPreferenceCompat = new SwitchPreferenceCompat(requireContext());
                 switchPreferenceCompat.setKey(key);
                 switchPreferenceCompat.setTitle(key);
-
-                Locale currentLocale = getResources().getConfiguration().getLocales().get(0);
-                if (currentLocale.getLanguage().equals("zh")){
-                    @SuppressLint("DiscouragedApi")
-                    int summaryResId = getResources().getIdentifier(key,"string",requireContext().getPackageName());
-                    switchPreferenceCompat.setSummary(summaryResId);
-                }
-
+                // 添加限制策略的描述 目前支持中，英文
                 switchPreferenceCompat.setSummary(getResIdReflect(key));
 
                 // 添加开关变化监听器
