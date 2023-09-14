@@ -158,6 +158,9 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 compat.setChecked(z);
             }
         }catch (Exception e){
+
+            Toast.makeText(context, "尝试使用 root 权限执行失败", Toast.LENGTH_SHORT).show();
+
             if (userService != null){
 
                 StringBuilder setErrorList = new StringBuilder();
@@ -180,7 +183,9 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
                 String title = context.getString(getResIdReflect("set_error_count_title"));
 
-                new MaterialAlertDialogBuilder(context).setMessage(setErrorList).setTitle(String.format(title,i)).setPositiveButton("好的",null).create().show();
+                new MaterialAlertDialogBuilder(context).setMessage(setErrorList).setTitle(String.format(title,i)).setPositiveButton("Ok",null).create().show();
+            }else {
+                Toast.makeText(context, "尝试使用 Dhizuku 执行任务失败", Toast.LENGTH_SHORT).show();
             }
         }
     }
@@ -203,19 +208,23 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
             context = requireContext();
 
-            if (!Dhizuku.isPermissionGranted()){
-                new MaterialAlertDialogBuilder(requireContext()).setTitle("权限检查")
-                        .setMessage("本应用支持 root 和 Dhizuku 两种模式, 让我们试试申请Dhizuku权限, 如果可以请在接下来的权限申请对话框中允许授权")
-                        .setPositiveButton("好的",  (dialog, which) -> Dhizuku.requestPermission(new DhizukuRequestPermissionListener() {
-                            @Override
-                            public void onRequestPermission(int grantResult) {
-                                if (grantResult == PackageManager.PERMISSION_GRANTED) {
-                                    bindDhizukuservice();
+            try {
+                if (!Dhizuku.isPermissionGranted()){
+                    new MaterialAlertDialogBuilder(requireContext()).setTitle("权限检查")
+                            .setMessage("本应用支持 root 和 Dhizuku 两种模式, 让我们试试申请Dhizuku权限, 如果可以请在接下来的权限申请对话框中允许授权")
+                            .setPositiveButton("好的",  (dialog, which) -> Dhizuku.requestPermission(new DhizukuRequestPermissionListener() {
+                                @Override
+                                public void onRequestPermission(int grantResult) {
+                                    if (grantResult == PackageManager.PERMISSION_GRANTED) {
+                                        bindDhizukuservice();
+                                    }
                                 }
-                            }
-                        })).setNegativeButton("取消",null).create().show();
-            }else {
-                bindDhizukuservice();
+                            })).setNegativeButton("取消",null).create().show();
+                }else {
+                    bindDhizukuservice();
+                }
+            }catch (IllegalStateException e){
+                e.printStackTrace();
             }
 
             preferenceScreen = getPreferenceManager().createPreferenceScreen(requireContext());
