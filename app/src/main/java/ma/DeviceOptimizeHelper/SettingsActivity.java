@@ -1,10 +1,8 @@
 package ma.DeviceOptimizeHelper;
 
 import android.annotation.SuppressLint;
-import android.app.admin.DevicePolicyManager;
 import android.content.ComponentName;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.ServiceConnection;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
@@ -35,11 +33,12 @@ import com.rosan.dhizuku.api.DhizukuRequestPermissionListener;
 import com.rosan.dhizuku.api.DhizukuUserServiceArgs;
 import com.rosan.dhizuku.shared.DhizukuVariables;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
-import java.util.Objects;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 
 import ma.DeviceOptimizeHelper.Utils.CommandExecutor;
-import ma.DeviceOptimizeHelper.Utils.DhizukuUtils;
 import ma.DeviceOptimizeHelper.Utils.UserManagerUtils;
 import ma.DeviceOptimizeHelper.Utils.UserService;
 
@@ -54,8 +53,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
     private static String command;
     private static SettingsActivity.ServiceThread2 serviceThread2 = new ServiceThread2("你干嘛哎呦");
 
-    private static Context context;
-
+    public static Context context;
     private static Handler handler;
 
     @Override
@@ -83,7 +81,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
             actionBar.setBackgroundDrawable(null);
         }
 
-        command = "app_process -Djava.class.path="+getApkPath(this)+"  /system/bin  " + Main.class.getName() + " ";
+        command = "app_process -Djava.class.path="+getApkPath(this)+"  /system/bin   ma.DeviceOptimizeHelper.Main  ";
 
         // 开发者是个小黑子
         serviceThread2.start();
@@ -153,11 +151,20 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
         try {
             String value  = z ? "true" : "false";
-            CommandExecutor.executeCommand(command +" "+value, true);
+            CommandExecutor.executeCommand(command + " " + value, true, new CommandExecutor.CommandCallback() {
+                @Override
+                public void onSuccess(String output) {
+                    Toast.makeText(context, "任务执行完毕", Toast.LENGTH_SHORT).show();
+                }
+
+            });
             for (SwitchPreferenceCompat compat: switchPreferenceCompatArraySet){
                 compat.setChecked(z);
             }
         }catch (Exception e){
+
+            Toast.makeText(context, "尝试使用 root 权限执行失败", Toast.LENGTH_SHORT).show();
+
             if (userService != null){
 
                 StringBuilder setErrorList = new StringBuilder();
@@ -180,7 +187,9 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
                 String title = context.getString(getResIdReflect("set_error_count_title"));
 
-                new MaterialAlertDialogBuilder(context).setMessage(setErrorList).setTitle(String.format(title,i)).setPositiveButton("好的",null).create().show();
+                new MaterialAlertDialogBuilder(context).setMessage(setErrorList).setTitle(String.format(title,i)).setPositiveButton("Ok",null).create().show();
+            }else {
+                Toast.makeText(context, "尝试使用 Dhizuku 执行任务失败", Toast.LENGTH_SHORT).show();
             }
         }
     }
@@ -196,26 +205,30 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
     }
 
     public static class HeaderFragment extends PreferenceFragmentCompat {
-        boolean isAllowSwitch = true;
+
         @SuppressLint("ResourceAsColor")
         @Override
         public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
 
             context = requireContext();
 
-            if (!Dhizuku.isPermissionGranted()){
-                new MaterialAlertDialogBuilder(requireContext()).setTitle("权限检查")
-                        .setMessage("本应用支持 root 和 Dhizuku 两种模式, 让我们试试申请Dhizuku权限, 如果可以请在接下来的权限申请对话框中允许授权")
-                        .setPositiveButton("好的",  (dialog, which) -> Dhizuku.requestPermission(new DhizukuRequestPermissionListener() {
-                            @Override
-                            public void onRequestPermission(int grantResult) {
-                                if (grantResult == PackageManager.PERMISSION_GRANTED) {
-                                    bindDhizukuservice();
+            try {
+                if (!Dhizuku.isPermissionGranted()){
+                    new MaterialAlertDialogBuilder(requireContext()).setTitle("权限检查")
+                            .setMessage("本应用支持 root 和 Dhizuku 两种模式, 让我们试试申请Dhizuku权限, 如果可以请在接下来的权限申请对话框中允许授权")
+                            .setPositiveButton("好的",  (dialog, which) -> Dhizuku.requestPermission(new DhizukuRequestPermissionListener() {
+                                @Override
+                                public void onRequestPermission(int grantResult) {
+                                    if (grantResult == PackageManager.PERMISSION_GRANTED) {
+                                        bindDhizukuservice();
+                                    }
                                 }
-                            }
-                        })).setNegativeButton("取消",null).create().show();
-            }else {
-                bindDhizukuservice();
+                            })).setNegativeButton("取消",null).create().show();
+                }else {
+                    bindDhizukuservice();
+                }
+            }catch (IllegalStateException e){
+                e.printStackTrace();
             }
 
             preferenceScreen = getPreferenceManager().createPreferenceScreen(requireContext());
@@ -224,50 +237,47 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 // 创建一个 Handler 对象，将它关联到指定线程的 Looper 上
 // 这里的 serviceThread2 是一个线程对象，通过 getLooper() 获取它的消息循环
             handler = new Handler(serviceThread2.getLooper(), msg -> {
-
-
+                // 获取限制策略的键
                 String key = (String) msg.obj;
-
-
-
+                // 获取开关的值
+                int newValue = msg.arg1;
                 try {
-
-                    switch (msg.arg1){
-
-                        case 0:
-
+                    switch (newValue){
+                        // TODO 不用arg1，改用有意义的变量名，你操作下，我不好debug
+                        case 0: // 当 newValue 的值为 0 时，禁用指定的限制策略
                             switch (msg.what){
-                                case 2:
-                                    CommandExecutor.executeCommand(command+key +" false", true);
+                                case 2: // 使用 root 权限执行任务
+                                    CommandExecutor.executeCommand(command + key + " false", true, new CommandExecutor.CommandCallback() {
+                                        @Override
+                                        public void onSuccess(String output) {
+                                            Toast.makeText(context, "已禁用此限制策略", Toast.LENGTH_SHORT).show();
+                                        }
+
+                                    });
                                     break;
-                                case 3:
+                                case 3: // 使用 dhizuku 提供的权限执行任务
                                     userService.clearUserRestriction(DhizukuVariables.COMPONENT_NAME, key);
                                     break;
                                 default:
                             }
                             break;
-                        case 1:
+                        case 1: // 当 newValue 的值为 1 时，启用指定的限制策略
                             switch (msg.what){
                                 case 2:
-                                    CommandExecutor.executeCommand(command+key +" true", true);
+                                    CommandExecutor.executeCommand(command + key + " true", true, new CommandExecutor.CommandCallback() {
+                                        @Override
+                                        public void onSuccess(String output) {
+                                            Toast.makeText(context, "已启用此限制策略", Toast.LENGTH_SHORT).show();
+                                        }
+                                    });
                                     break;
                                 case 3:
                                     userService.addUserRestriction(DhizukuVariables.COMPONENT_NAME, key);
                                     break;
                                 default:
                             }
-                            // 当 arg1 的值为 0 时，执行命令 command+msg.obj+" false"
-                            // 这似乎是将 msg.obj 作为参数添加到 command 后，并设置为 false
-                            CommandExecutor.executeCommand(command + msg.obj + " false", true);
-                            break;
-                        case 1:
-                            // 当 arg1 的值为 1 时，执行命令 command+msg.obj+" true"
-                            // 这似乎是将 msg.obj 作为参数添加到 command 后，并设置为 true
-                            CommandExecutor.executeCommand(command + msg.obj + " true", true);
-
-                            break;
                         default:
-                            // 如果 arg1 的值不是 0 或 1，则不执行任何操作
+                            // 如果 newValue 的值不是 0 或 1，则不执行任何操作
                     }
                 } catch (RuntimeException e) {
                     e.printStackTrace();
@@ -277,6 +287,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 // 处理消息成功，返回 true
                 return true;
             });
+
 
             // 动态创建SwitchPreferenceCompat, 属于是有多少就创建多少
             for (String key : getALLUserRestrictions) {
@@ -290,33 +301,44 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 switchPreferenceCompat.setSummary(getResIdReflect(key));
 
                 // 添加开关变化监听器
-                switchPreferenceCompat.setOnPreferenceChangeListener((preference, newValue) -> {
-                    Message message = Message.obtain();
-                    message.obj = preference.getKey();
-                    message.arg1 = (boolean) newValue ? 1 : 0;
-
-                    try {
-                        message.what = 2;
-                        CommandExecutor.executeCommand(command, true);
-                    }catch (RuntimeException e){
-                        if (userService != null){
-                            message.what = 3;
-                        }else {
-                            isAllowSwitch = false;
-                        }
-                    }
-
-                    handler.sendMessage(message);
-
-                    return isAllowSwitch;
-                });
+                switchPreferenceCompat.setOnPreferenceChangeListener(preferenceChangeListener);
                 switchPreferenceCompatArraySet.add(switchPreferenceCompat);
                 preferenceScreen.addPreference(switchPreferenceCompat);
             }
 
-
             setPreferenceScreen(preferenceScreen); // 将这些都显示出来
         }
+
+        public static Preference.OnPreferenceChangeListener preferenceChangeListener = new Preference.OnPreferenceChangeListener() {
+            @Override
+            public boolean onPreferenceChange(@NonNull Preference preference, Object newValue) {
+
+                Message message = Message.obtain();
+                message.obj = preference.getKey(); // 获取限制策略的键
+                message.arg1 = (boolean) newValue ? 1 : 0;
+
+                try {
+                    CommandExecutor.executeCommand(command, true, new CommandExecutor.CommandCallback() {
+                        @Override
+                        public void onSuccess(String output) {
+                            message.what = 2; // 如果使用root执行默认任务成功则将任务以root权限执行
+                        }
+                    });
+
+                }catch (Exception e){
+                    if (userService != null){ // 设备没有root， 或者未授权root 则尝试使用 dhizuku 执行任务
+                        message.what = 3; // 如果 shizuku 服务存活 则尝试使用 dhizuku 执行任务
+                    }
+                    Toast.makeText(context, "未授权root权限", Toast.LENGTH_SHORT).show();
+                    return false;
+
+                }
+
+                handler.sendMessage(message); // 发送消息
+
+                return true;
+            }
+        };
 
     }
 

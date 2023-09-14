@@ -175,18 +175,18 @@ public class Main {
                 if (sysPowerSaveList.length > 0){
                     for (String sPwt : sysPowerSaveList){
                         iDeviceIdleController.removeSystemPowerWhitelistApp(sPwt);
-                        System.err.print("正在移除系统级优化白名单: "+sPwt+"\n");
+                        Log.i("Main","正在移除系统级优化白名单: "+sPwt+"\n");
                     }
-                    System.out.print("共 "+sysPowerSaveList.length+" 个系统级电池优化白名单已移除\n");
+                    Log.i("Main","共 "+sysPowerSaveList.length+" 个系统级电池优化白名单已移除\n");
                 }
 
                 String[] userPowerSaveList = iDeviceIdleController.getUserPowerWhitelist();
                 if (userPowerSaveList.length > 0){
                     for (String uPws: userPowerSaveList){
                         iDeviceIdleController.removePowerSaveWhitelistApp(uPws);
-                        System.out.print("正在移除用户级优化白名单: "+uPws+"\n");
+                        Log.i("Main","正在移除用户级优化白名单: "+uPws+"\n");
                     }
-                    System.out.print("共 "+userPowerSaveList.length+" 个用户级电池优化白名单已移除\n");
+                    Log.i("Main","共 "+userPowerSaveList.length+" 个用户级电池优化白名单已移除\n");
                 }
 
                 for (Account account: iAccountManager.getAccountsAsUser(null, getIdentifier(), "com.android.settings")){
@@ -236,7 +236,7 @@ public class Main {
         } catch (Exception e2) {
             throw new RuntimeException(e2);
         }
-        System.out.println("setUserRestriction: "+key+" set to "+getUserRestrictionsReflect().getBoolean(key));
+        Log.i("Main","setUserRestriction: "+key+" set to "+getUserRestrictionsReflect().getBoolean(key));
     }
 
     private static Bundle getUserRestrictionsReflect(){
