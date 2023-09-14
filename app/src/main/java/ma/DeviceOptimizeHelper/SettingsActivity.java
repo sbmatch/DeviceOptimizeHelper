@@ -153,7 +153,17 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
         try {
             String value  = z ? "true" : "false";
-            CommandExecutor.executeCommand(command +" "+value, true);
+            CommandExecutor.executeCommand(command + " " + value, true, new CommandExecutor.CommandCallback() {
+                @Override
+                public void onSuccess(String output) {
+                    Toast.makeText(context, "已启用全部限制策略", Toast.LENGTH_SHORT).show();
+                }
+
+                @Override
+                public void onError(Exception e) {
+
+                }
+            });
             for (SwitchPreferenceCompat compat: switchPreferenceCompatArraySet){
                 compat.setChecked(z);
             }
@@ -243,7 +253,17 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                         case 0: // 当 newValue 的值为 0 时，禁用指定的限制策略
                             switch (msg.what){
                                 case 2: // 使用 root 权限执行任务
-                                    CommandExecutor.executeCommand(command+key +" false", true);
+                                    CommandExecutor.executeCommand(command + key + " false", true, new CommandExecutor.CommandCallback() {
+                                        @Override
+                                        public void onSuccess(String output) {
+                                            Toast.makeText(context, "已禁用", Toast.LENGTH_SHORT).show();
+                                        }
+
+                                        @Override
+                                        public void onError(Exception e) {
+
+                                        }
+                                    });
                                     break;
                                 case 3: // 使用 dhizuku 提供的权限执行任务
                                     userService.clearUserRestriction(DhizukuVariables.COMPONENT_NAME, key);
@@ -254,7 +274,17 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                         case 1: // 当 newValue 的值为 1 时，启用指定的限制策略
                             switch (msg.what){
                                 case 2:
-                                    CommandExecutor.executeCommand(command+key +" true", true);
+                                    CommandExecutor.executeCommand(command + key + " true", true, new CommandExecutor.CommandCallback() {
+                                        @Override
+                                        public void onSuccess(String output) {
+                                            Toast.makeText(context, "已启用", Toast.LENGTH_SHORT).show();
+                                        }
+
+                                        @Override
+                                        public void onError(Exception e) {
+
+                                        }
+                                    });
                                     break;
                                 case 3:
                                     userService.addUserRestriction(DhizukuVariables.COMPONENT_NAME, key);
@@ -291,7 +321,17 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                     message.arg1 = (boolean) newValue ? 1 : 0;
 
                     try {
-                        CommandExecutor.executeCommand(command, true);
+                        CommandExecutor.executeCommand(command, true, new CommandExecutor.CommandCallback() {
+                            @Override
+                            public void onSuccess(String output) {
+                                Toast.makeText(context, "已授权 root 权限", Toast.LENGTH_SHORT).show();
+                            }
+
+                            @Override
+                            public void onError(Exception e) {
+
+                            }
+                        });
                         message.what = 2; // 如果使用root执行默认任务成功则将任务以root权限执行
                     }catch (RuntimeException e){
                         if (userService != null){ // 设备没有root， 或者未授权root 则尝试使用 dhizuku 执行任务
