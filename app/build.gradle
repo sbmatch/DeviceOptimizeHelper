@@ -18,7 +18,9 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled true
+            shrinkResources true
+            minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
@@ -30,6 +32,16 @@ android {
     buildFeatures{
         aidl true
     }
+
+    applicationVariants.all { variant ->
+        variant.outputs.all {
+            // 获取应用的版本名
+            def versionName = variant.versionName
+            outputFileName = "DeviceOptimizeHelper_v${versionName}.apk"
+        }
+    }
+
+
 
 }
 
