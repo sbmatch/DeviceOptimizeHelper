@@ -46,13 +46,15 @@ public class CommandExecutor {
 
             // 等待读取线程执行完毕
             outputThread.join();
-        } catch (IOException | InterruptedException e) {
+        } catch (Exception e) {
             e.printStackTrace();
-        }finally {
-            process.destroy();
-            Log.i(CommandExecutor.class.getSimpleName(),output.toString().trim());
+            throw new RuntimeException(e);
         }
-
-        return output.toString().trim();
+        if (process.getErrorStream() != null){
+            Log.i(CommandExecutor.class.getSimpleName(),output.toString().trim());
+            return output.toString().trim();
+        }else {
+            throw new RuntimeException("快给我太极急支糖浆");
+        }
     }
 }

@@ -10,6 +10,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
 import android.util.ArraySet;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 
@@ -21,7 +22,10 @@ import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceScreen;
 import androidx.preference.SwitchPreferenceCompat;
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
 import java.lang.reflect.Field;
+import java.util.Objects;
 
 import ma.DeviceOptimizeHelper.Utils.CommandExecutor;
 import ma.DeviceOptimizeHelper.Utils.UserManagerUtils;
@@ -89,35 +93,9 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
         switch (item.getItemId()){
             case 10000:
                oneKeyChange(true);
-               handler.post(new Runnable() {
-                   @Override
-                   public void run() {
-                       runOnUiThread(new Runnable() {
-                           @Override
-                           public void run() {
-                               for (SwitchPreferenceCompat compat: switchPreferenceCompatArraySet){
-                                   compat.setChecked(true);
-                               }
-                           }
-                       });
-                   }
-               });
                 break;
             case 10001:
                 oneKeyChange(false);
-                handler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                for (SwitchPreferenceCompat compat: switchPreferenceCompatArraySet){
-                                    compat.setChecked(false);
-                                }
-                            }
-                        });
-                    }
-                });
                 break;
         }
         return super.onOptionsItemSelected(item);
@@ -133,7 +111,17 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
     private static void oneKeyChange(boolean z){
         String value  = z ? "true" : "false";
-        CommandExecutor.executeCommand(command +" "+value, true);
+        try {
+            CommandExecutor.executeCommand(command +" "+value, true);
+            for (SwitchPreferenceCompat compat: switchPreferenceCompatArraySet){
+                compat.setChecked(z);
+            }
+        }catch (RuntimeException e){
+
+            if (Objects.requireNonNull(e.getCause()).toString().contains("Permission denied")) {
+                new MaterialAlertDialogBuilder(preferenceScreen.getContext()).setTitle("你干🦄").setMessage("没有 root 权限暂时用不了哦🤣👉🤡").setNegativeButton("好的", null).create().show();
+            }
+        }
     }
 
     /**
@@ -147,7 +135,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
     }
 
     public static class HeaderFragment extends PreferenceFragmentCompat {
-
+        boolean isAllowSwitch = true;
         @SuppressLint("ResourceAsColor")
         @Override
         public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
@@ -157,14 +145,18 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
             handler = new Handler(serviceThread2.getLooper(), msg -> {
 
-                switch (msg.arg1){
-                    case 0:
-                        CommandExecutor.executeCommand(command+msg.obj +" false", true);
-                        break;
-                    case 1:
-                        CommandExecutor.executeCommand(command+msg.obj +" true", true);
-                        break;
-                    default:
+                try {
+                    switch (msg.arg1){
+                        case 0:
+                            CommandExecutor.executeCommand(command+msg.obj +" false", true);
+                            break;
+                        case 1:
+                            CommandExecutor.executeCommand(command+msg.obj +" true", true);
+                            break;
+                        default:
+                    }
+                }catch (RuntimeException e){
+                    e.printStackTrace();
                 }
 
                 return true;
@@ -182,14 +174,21 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 switchPreferenceCompat.setSummary(getResIdReflect(key));
 
                 // 添加开关变化监听器
-                switchPreferenceCompat.setOnPreferenceClickListener(preference -> {
+                switchPreferenceCompat.setOnPreferenceChangeListener((preference, newValue) -> {
 
                     Message message = Message.obtain();
                     message.obj = preference.getKey();
-                    message.arg1 = switchPreferenceCompat.isChecked() ? 1 : 0;
+                    message.arg1 = (boolean) newValue ? 1 : 0;
                     handler.sendMessage(message);
 
-                    return false;
+                    try {
+                        CommandExecutor.executeCommand(command, true);
+                    }catch (RuntimeException e){
+                        isAllowSwitch = false;
+                        new MaterialAlertDialogBuilder(requireActivity()).setTitle("抓到虫子啦"+"🐞").setMessage(e.fillInStackTrace()+"").setNegativeButton("好的",null).create().show();
+                    }
+
+                    return isAllowSwitch;
                 });
                 switchPreferenceCompatArraySet.add(switchPreferenceCompat);
                 preferenceScreen.addPreference(switchPreferenceCompat);
