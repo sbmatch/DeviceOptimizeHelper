@@ -224,29 +224,25 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 // 创建一个 Handler 对象，将它关联到指定线程的 Looper 上
 // 这里的 serviceThread2 是一个线程对象，通过 getLooper() 获取它的消息循环
             handler = new Handler(serviceThread2.getLooper(), msg -> {
-
-
+                // 获取限制策略的键
                 String key = (String) msg.obj;
-
-
-
+                // 获取开关的值
+                int newValue = msg.arg1;
                 try {
-
-                    switch (msg.arg1){
-
-                        case 0:
-
+                    switch (newValue){
+                        // TODO 不用arg1，改用有意义的变量名，你操作下，我不好debug
+                        case 0: // 当 newValue 的值为 0 时，禁用指定的限制策略
                             switch (msg.what){
-                                case 2:
+                                case 2: // 使用 root 权限执行任务
                                     CommandExecutor.executeCommand(command+key +" false", true);
                                     break;
-                                case 3:
+                                case 3: // 使用 dhizuku 提供的权限执行任务
                                     userService.clearUserRestriction(DhizukuVariables.COMPONENT_NAME, key);
                                     break;
                                 default:
                             }
                             break;
-                        case 1:
+                        case 1: // 当 newValue 的值为 1 时，启用指定的限制策略
                             switch (msg.what){
                                 case 2:
                                     CommandExecutor.executeCommand(command+key +" true", true);
@@ -256,18 +252,8 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                                     break;
                                 default:
                             }
-                            // 当 arg1 的值为 0 时，执行命令 command+msg.obj+" false"
-                            // 这似乎是将 msg.obj 作为参数添加到 command 后，并设置为 false
-                            CommandExecutor.executeCommand(command + msg.obj + " false", true);
-                            break;
-                        case 1:
-                            // 当 arg1 的值为 1 时，执行命令 command+msg.obj+" true"
-                            // 这似乎是将 msg.obj 作为参数添加到 command 后，并设置为 true
-                            CommandExecutor.executeCommand(command + msg.obj + " true", true);
-
-                            break;
                         default:
-                            // 如果 arg1 的值不是 0 或 1，则不执行任何操作
+                            // 如果 newValue 的值不是 0 或 1，则不执行任何操作
                     }
                 } catch (RuntimeException e) {
                     e.printStackTrace();
@@ -292,21 +278,21 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 // 添加开关变化监听器
                 switchPreferenceCompat.setOnPreferenceChangeListener((preference, newValue) -> {
                     Message message = Message.obtain();
-                    message.obj = preference.getKey();
+                    message.obj = preference.getKey(); // 获取限制策略的键
                     message.arg1 = (boolean) newValue ? 1 : 0;
 
                     try {
-                        message.what = 2;
                         CommandExecutor.executeCommand(command, true);
+                        message.what = 2; // 如果使用root执行默认任务成功则将任务以root权限执行
                     }catch (RuntimeException e){
-                        if (userService != null){
-                            message.what = 3;
+                        if (userService != null){ // 设备没有root， 或者未授权root 则尝试使用 dhizuku 执行任务
+                            message.what = 3; // 如果 shizuku 服务存活 则尝试使用 dhizuku 执行任务
                         }else {
-                            isAllowSwitch = false;
+                            isAllowSwitch = false; // 两种权限都没有则拒绝改变开关状态
                         }
                     }
 
-                    handler.sendMessage(message);
+                    handler.sendMessage(message); // 发送消息
 
                     return isAllowSwitch;
                 });
