@@ -66,6 +66,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
         command = "app_process -Djava.class.path="+getApkPath(SettingsActivity.this)+"  /system/bin  " + Main.class.getName() + " ";
 
+        // 开发者是个小黑子
         serviceThread2.start();
 
     }
@@ -88,6 +89,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         switch (item.getItemId()){
             case 10000:
+                // 启用全部
                oneKeyChange(true);
                handler.post(new Runnable() {
                    @Override
