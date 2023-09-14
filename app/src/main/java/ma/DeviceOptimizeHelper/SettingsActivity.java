@@ -81,12 +81,12 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
     }
 
     public static class HeaderFragment extends PreferenceFragmentCompat {
-
+        PreferenceScreen preferenceScreen;
         @SuppressLint("ResourceAsColor")
         @Override
         public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
 
-            PreferenceScreen preferenceScreen = getPreferenceManager().createPreferenceScreen(requireContext());
+            preferenceScreen = getPreferenceManager().createPreferenceScreen(requireContext());
             ArraySet<String> getALLUserRestrictions = UserManagerUtils.getALLUserRestrictionsReflectForUserManager();
             // 动态创建SwitchPreferenceCompat, 属于是有多少就创建多少
             for (String key : getALLUserRestrictions) {
@@ -94,6 +94,8 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 SwitchPreferenceCompat switchPreferenceCompat = new SwitchPreferenceCompat(requireContext());
                 switchPreferenceCompat.setKey(key);
                 switchPreferenceCompat.setTitle(key);
+                // 从系统中获取策略限制的启用状态
+                switchPreferenceCompat.setChecked(UserManagerUtils.isUserRestrictionsReflectForKey(key));
                 // 添加限制策略的描述 目前支持中，英文
                 switchPreferenceCompat.setSummary(getResIdReflect(key));
 
@@ -111,6 +113,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
             }
             setPreferenceScreen(preferenceScreen); // 将这些都显示出来
         }
+
     }
 
     private static int getResIdReflect(String key){
