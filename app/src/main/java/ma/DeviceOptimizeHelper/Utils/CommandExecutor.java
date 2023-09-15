@@ -3,6 +3,7 @@ package ma.DeviceOptimizeHelper.Utils;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 
 public class CommandExecutor {
 
@@ -34,13 +35,18 @@ public class CommandExecutor {
                     Process process;
                     if (useRoot) {
                         if (switchToSystem) {
-                            process = Runtime.getRuntime().exec("su -c 'setprop service.adb.root 1; setprop ro.debuggable 1; setprop ro.secure 0; exec " + command + "'");
+                            process = Runtime.getRuntime().exec(new String[]{"su","system"});
                         } else {
-                            process = Runtime.getRuntime().exec("su -c " + command);
+                            process = Runtime.getRuntime().exec(new String[]{"su"});
                         }
                     } else {
-                        process = Runtime.getRuntime().exec(command);
+                        process = Runtime.getRuntime().exec(new String[]{"sh"});
                     }
+
+                    OutputStream outputStream = process.getOutputStream();
+                    outputStream.write((command+"\n").getBytes());
+                    outputStream.flush();
+                    outputStream.close();
 
                     BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
                     BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));

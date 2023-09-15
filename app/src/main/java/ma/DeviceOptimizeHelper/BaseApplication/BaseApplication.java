@@ -31,9 +31,9 @@ public class BaseApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
-        Thread.setDefaultUncaughtExceptionHandler((t, e) -> {
-            handleCrash(e);
-        });
+//        Thread.setDefaultUncaughtExceptionHandler((t, e) -> {
+//            handleCrash(e);
+//        });
     }
 
     private void handleCrash(Throwable throwable) {
