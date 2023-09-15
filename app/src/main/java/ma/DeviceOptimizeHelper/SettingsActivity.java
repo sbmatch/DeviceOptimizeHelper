@@ -209,9 +209,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
         @SuppressLint("ResourceAsColor")
         @Override
         public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
-
             context = requireContext();
-
             try {
                 if (!Dhizuku.isPermissionGranted()){
                     new MaterialAlertDialogBuilder(requireContext()).setTitle("权限检查")
@@ -237,18 +235,19 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 // 创建一个 Handler 对象，将它关联到指定线程的 Looper 上
 // 这里的 serviceThread2 是一个线程对象，通过 getLooper() 获取它的消息循环
             handler = new Handler(serviceThread2.getLooper(), msg -> {
+                String TAG = "Handler操作";
                 // 获取限制策略的键
                 String key = (String) msg.obj;
                 // 获取开关的值
                 int newValue = msg.arg1;
                 try {
                     switch (newValue){
-                        // TODO 不用arg1，改用有意义的变量名
-                        // TODO 不用what，改用有意义的变量名
                         // TODO 注释不同value的操作，便于后续开发维护
                         case 0: // 当 newValue 的值为 0 时，禁用指定的限制策略
                             switch (msg.what){
                                 case 2: // 使用 root 权限执行任务
+                                    // Log.d(TAG, "指令：" + command + key + " false");
+                                    // Log.d(TAG, "Key: " + key);
                                     CommandExecutor.executeCommand(command + key + " false", true, new CommandExecutor.CommandCallback() {
                                         @Override
                                         public void onSuccess(String output) {
