@@ -243,7 +243,9 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 int newValue = msg.arg1;
                 try {
                     switch (newValue){
-                        // TODO 不用arg1，改用有意义的变量名，你操作下，我不好debug
+                        // TODO 不用arg1，改用有意义的变量名
+                        // TODO 不用what，改用有意义的变量名
+                        // TODO 注释不同value的操作，便于后续开发维护
                         case 0: // 当 newValue 的值为 0 时，禁用指定的限制策略
                             switch (msg.what){
                                 case 2: // 使用 root 权限执行任务
@@ -372,5 +374,6 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
             throw new RuntimeException(e);
         }
     }
-
 }
+// TODO 继续加注释
+// TODO 优化对Main.java的调用
