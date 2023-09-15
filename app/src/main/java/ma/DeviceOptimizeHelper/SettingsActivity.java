@@ -59,30 +59,33 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.settings_activity);
 
-        if (savedInstanceState == null) {
+        if (savedInstanceState == null) { // 如果没有保存的实例状态
             getSupportFragmentManager()
                     .beginTransaction()
-                    .replace(R.id.settings, new HeaderFragment())
-                    .commit();
-        } else {
-            setTitle(savedInstanceState.getCharSequence(TITLE_TAG));
+                    .replace(R.id.settings, new HeaderFragment()) // 用HeaderFragment替换id为settings的视图
+                    .commit(); // 提交
+        } else { // 如果有保存的实例状态
+            setTitle(savedInstanceState.getCharSequence(TITLE_TAG)); // 恢复之前保存的标题
         }
+
         getSupportFragmentManager().addOnBackStackChangedListener(() -> {
             if (getSupportFragmentManager().getBackStackEntryCount() == 0) {
-                setTitle(R.string.title_activity_settings);
+                setTitle(R.string.title_activity_settings); // 当返回栈为空时，设置标题为R.string.title_activity_settings
             }
         });
 
-        ActionBar actionBar = getSupportActionBar();
+        ActionBar actionBar = getSupportActionBar(); // 获取ActionBar实例
+
         if (actionBar != null) {
-            actionBar.setDisplayHomeAsUpEnabled(false);
-            actionBar.setBackgroundDrawable(null);
+            actionBar.setDisplayHomeAsUpEnabled(false); // 禁用ActionBar的返回按钮
+            actionBar.setBackgroundDrawable(null); // 移除ActionBar的背景图案
         }
 
-        command = "app_process -Djava.class.path="+getApkPath(this)+"  /system/bin   ma.DeviceOptimizeHelper.Main  ";
-
+// 设置command字符串，用于后续执行特定命令
+        command = "app_process -Djava.class.path=" + getApkPath(this) + "  /system/bin   ma.DeviceOptimizeHelper.Main  ";
         // 开发者是个小黑子
         serviceThread2.start();
 
@@ -151,7 +154,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
     }
 
     private static void oneKeyChange(boolean z) throws RemoteException {
-
+    // 目前仅用于一键操作所有策略
         try {
             String value  = z ? "true" : "false";
             CommandExecutor.executeCommand(command + " " + value, true, new CommandExecutor.CommandCallback() {
@@ -165,14 +168,10 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 compat.setChecked(z);
             }
         }catch (Exception e){
-
             Toast.makeText(context, "尝试使用 root 权限执行失败", Toast.LENGTH_SHORT).show();
-
             if (userService != null){
-
                 StringBuilder setErrorList = new StringBuilder();
                 int i = 0;
-
                 for (SwitchPreferenceCompat compat: switchPreferenceCompatArraySet){
                     try {
                         if (z){
