@@ -179,11 +179,9 @@ public class Main {
                 if (userPowerSaveList.length > 0){
                     for (String uPws: userPowerSaveList){
                         iDeviceIdleController.removePowerSaveWhitelistApp(uPws);
-                        System.out.println("正在移除用户级优化白名单: "+uPws+"\n");
-                        Log.i("Main","正在移除用户级优化白名单: "+uPws);
+                        System.out.println("正在移除用户级优化白名单: "+uPws);
                     }
-                    System.out.println("共 "+userPowerSaveList.length+" 个用户级电池优化白名单已移除\n");
-                    Log.i("Main","共 "+userPowerSaveList.length+" 个用户级电池优化白名单已移除");
+                    System.out.println("共 "+userPowerSaveList.length+" 个用户级电池优化白名单已移除");
                 }
 
                 for (Account account: iAccountManager.getAccountsAsUser(null, getIdentifier(), "com.android.settings")){
