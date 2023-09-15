@@ -84,7 +84,6 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
         // 开发者是个小黑子
         serviceThread2.start();
-
     }
 
     @Override
@@ -364,6 +363,11 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
     private static class ServiceThread2 extends HandlerThread {
         public ServiceThread2(String name) {
             super(name);
+        }
+
+        @Override
+        protected void onLooperPrepared() {
+            super.onLooperPrepared();
         }
     }
 
