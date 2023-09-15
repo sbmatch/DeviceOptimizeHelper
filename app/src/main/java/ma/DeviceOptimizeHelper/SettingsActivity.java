@@ -296,7 +296,6 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 return false;
             });
 
-
             // 动态创建SwitchPreferenceCompat, 属于是有多少就创建多少
             for (String key : getALLUserRestrictions) {
                 switchPreferenceCompat = new SwitchPreferenceCompat(requireContext());
@@ -306,20 +305,12 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 switchPreferenceCompat.setSummary(getResIdReflect(key));
                 // 添加开关变化监听器
                 switchPreferenceCompat.setOnPreferenceChangeListener(preferenceChangeListener);
+                // 将动态生成的SwitchPreferenceCompat对象添加进一个列表中
                 switchPreferenceCompatArraySet.add(switchPreferenceCompat);
+                // 将动态生成的SwitchPreferenceCompat对象添加进首选项的根布局中
                 preferenceScreen.addPreference(switchPreferenceCompat);
             }
-
             setPreferenceScreen(preferenceScreen); // 将这些都显示出来
-        }
-
-        @Override
-        public void onAttach(@NonNull Context context) {
-            super.onAttach(context);
-            // 从系统中获取策略限制的启用状态
-            for (SwitchPreferenceCompat compat: switchPreferenceCompatArraySet){
-                compat.setChecked(UserManagerUtils.isUserRestrictionsReflectForKey(compat.getKey()));
-            }
         }
 
         @Override
