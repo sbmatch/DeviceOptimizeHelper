@@ -91,9 +91,7 @@ public class CommandExecutor {
                 }
             }
         });
-
         h1.start();
-
         callback.onSuccess(output.toString());
     }
 
