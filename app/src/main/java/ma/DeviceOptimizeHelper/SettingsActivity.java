@@ -147,55 +147,52 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
     }
 
     private static void oneKeyChange(boolean z) throws RemoteException {
-
-        try {
-            String value  = z ? "true" : "false";
-            commandExecutor.executeCommand(command + " " + value, new CommandExecutor.CommandResultListener() {
-                @Override
-                public void onSuccess(String output) {
-
-                }
-
-                @Override
-                public void onError(String error, Exception e) {
-
-                }
-            }, true, true);
-
-            for (SwitchPreferenceCompat compat: switchPreferenceCompatArraySet){
-                compat.setChecked(z);
-            }
-        }catch (Exception e){
-
-            Toast.makeText(context, "尝试使用 root 权限执行失败", Toast.LENGTH_SHORT).show();
-
-            if (userService != null){
-
-                StringBuilder setErrorList = new StringBuilder();
-                int i = 0;
-
+        String value  = z ? "true" : "false";
+        commandExecutor.executeCommand(command + " " + value, new CommandExecutor.CommandResultListener() {
+            @Override
+            public void onSuccess(String output) {
+                Looper.prepare();
                 for (SwitchPreferenceCompat compat: switchPreferenceCompatArraySet){
-                    try {
-                        if (z){
-                            userService.addUserRestriction(DhizukuVariables.COMPONENT_NAME, compat.getKey());
-                            compat.setChecked(true);
-                        }else {
-                            userService.clearUserRestriction(DhizukuVariables.COMPONENT_NAME, compat.getKey());
-                            compat.setChecked(false);
+                    compat.setChecked(z);
+                }
+                Toast.makeText(context, "任务执行完毕", Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onError(String error, Exception e) {
+                Looper.prepare();
+                if (error.contains("Permission denied")){
+                    Toast.makeText(context, "尝试使用 root 权限执行失败", Toast.LENGTH_SHORT).show();
+
+                    if (userService != null){
+
+                        StringBuilder setErrorList = new StringBuilder();
+                        int i = 0;
+
+                        for (SwitchPreferenceCompat compat: switchPreferenceCompatArraySet){
+                            try {
+                                if (z){
+                                    userService.addUserRestriction(DhizukuVariables.COMPONENT_NAME, compat.getKey());
+                                    compat.setChecked(true);
+                                }else {
+                                    userService.clearUserRestriction(DhizukuVariables.COMPONENT_NAME, compat.getKey());
+                                    compat.setChecked(false);
+                                }
+                            }catch (SecurityException | RemoteException e1){
+                                i++;
+                                setErrorList.append(e1.getMessage()).append("\n\n");
+                            }
                         }
-                    }catch (SecurityException e1){
-                        i++;
-                        setErrorList.append(e1.getMessage()).append("\n\n");
+
+                        String title = context.getString(getResIdReflect("set_error_count_title"));
+                        new MaterialAlertDialogBuilder(context).setMessage(setErrorList).setTitle(String.format(title,i)).setPositiveButton("Ok",null).create().show();
+                    }else {
+                        Toast.makeText(context, "尝试使用 Dhizuku 执行任务失败", Toast.LENGTH_SHORT).show();
                     }
                 }
-
-                String title = context.getString(getResIdReflect("set_error_count_title"));
-
-                new MaterialAlertDialogBuilder(context).setMessage(setErrorList).setTitle(String.format(title,i)).setPositiveButton("Ok",null).create().show();
-            }else {
-                Toast.makeText(context, "尝试使用 Dhizuku 执行任务失败", Toast.LENGTH_SHORT).show();
             }
-        }
+        }, true, true);
+
     }
 
     /**
@@ -299,24 +296,30 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 return false;
             });
 
-
             // 动态创建SwitchPreferenceCompat, 属于是有多少就创建多少
             for (String key : getALLUserRestrictions) {
-
                 switchPreferenceCompat = new SwitchPreferenceCompat(requireContext());
                 switchPreferenceCompat.setKey(key);
                 switchPreferenceCompat.setTitle(key);
-                // 从系统中获取策略限制的启用状态
-                switchPreferenceCompat.setChecked(UserManagerUtils.isUserRestrictionsReflectForKey(key));
                 // 添加限制策略的描述 目前支持中，英文
                 switchPreferenceCompat.setSummary(getResIdReflect(key));
                 // 添加开关变化监听器
                 switchPreferenceCompat.setOnPreferenceChangeListener(preferenceChangeListener);
+                // 将动态生成的SwitchPreferenceCompat对象添加进一个列表中
                 switchPreferenceCompatArraySet.add(switchPreferenceCompat);
+                // 将动态生成的SwitchPreferenceCompat对象添加进首选项的根布局中
                 preferenceScreen.addPreference(switchPreferenceCompat);
             }
-
             setPreferenceScreen(preferenceScreen); // 将这些都显示出来
+        }
+
+        @Override
+        public void onResume() {
+            super.onResume();
+            // 从系统中获取策略限制的启用状态
+            for (SwitchPreferenceCompat compat: switchPreferenceCompatArraySet){
+                compat.setChecked(UserManagerUtils.isUserRestrictionsReflectForKey(compat.getKey()));
+            }
         }
 
         public static Preference.OnPreferenceChangeListener preferenceChangeListener = new Preference.OnPreferenceChangeListener() {
@@ -328,7 +331,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 message.obj = preference.getKey(); // 获取限制策略的键
                 message.arg1 = (boolean) newValue ? 1 : 0;
 
-                commandExecutor.executeCommand("whoami",  new CommandExecutor.CommandResultListener() {
+                commandExecutor.executeCommand(command,  new CommandExecutor.CommandResultListener() {
                     @Override
                     public void onSuccess(String output) {
                         z = true;

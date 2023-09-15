@@ -115,32 +115,26 @@ public class Main {
 //
 //    }
 
-    static class accountManagerResponse extends IAccountManagerResponse.Stub{
+    public static class accountManagerResponse extends IAccountManagerResponse.Stub{
 
-        /**
-         * @param value
-         * @throws RemoteException
-         */
         @Override
         public void onResult(Bundle value) throws RemoteException {
             Set<String> keys = value.keySet();
-            Message msg = Message.obtain();
             for (String key: keys){
-                if (key.contains(AccountManager.KEY_ACCOUNT_TYPE)){
-                    msg.obj = value.get(key);
-                    handler.sendMessage(msg);
-                }
+                Message msg = Message.obtain();
+                msg.what = 1;
+                msg.obj = value.get(key);
+                handler.sendMessage(msg);
             }
         }
 
-        /**
-         * @param errorCode
-         * @param errorMessage
-         * @throws RemoteException
-         */
         @Override
         public void onError(int errorCode, String errorMessage) throws RemoteException {
-            System.err.print("errorMsg: "+errorMessage+"\n");
+            Message msg = Message.obtain();
+            msg.what = 2;
+            msg.arg1 = errorCode;
+            msg.obj = errorMessage;
+            handler.sendMessage(msg);
         }
 
     }
@@ -148,9 +142,14 @@ public class Main {
     static class ChildCallback implements Handler.Callback{
         @Override
         public boolean handleMessage(Message msg) {
-
-            System.out.println("removed the account type: "+msg.obj);
-
+            switch (msg.what){
+                case 1:
+                    System.out.println(msg.obj+"\n");
+                    break;
+                case 2:
+                    System.out.println("Can't remove errorMessage: "+msg.obj +", errorCode: "+msg.arg1);
+                    break;
+            }
             return false;
         }
     }
@@ -170,23 +169,21 @@ public class Main {
             handler = new Handler(serviceThread.getLooper(),new ChildCallback());
 
             try{
-
                 String[] sysPowerSaveList = iDeviceIdleController.getSystemPowerWhitelist();
-                if (sysPowerSaveList.length > 0){
-                    for (String sPwt : sysPowerSaveList){
-                        iDeviceIdleController.removeSystemPowerWhitelistApp(sPwt);
-                        Log.i("Main","正在移除系统级优化白名单: "+sPwt+"\n");
-                    }
-                    Log.i("Main","共 "+sysPowerSaveList.length+" 个系统级电池优化白名单已移除\n");
+                for (String sPwt : sysPowerSaveList) {
+                    iDeviceIdleController.removeSystemPowerWhitelistApp(sPwt);
+                    Log.i("Main", "正在移除系统级优化白名单: " + sPwt + "\n");
                 }
 
                 String[] userPowerSaveList = iDeviceIdleController.getUserPowerWhitelist();
                 if (userPowerSaveList.length > 0){
                     for (String uPws: userPowerSaveList){
                         iDeviceIdleController.removePowerSaveWhitelistApp(uPws);
-                        Log.i("Main","正在移除用户级优化白名单: "+uPws+"\n");
+                        System.out.println("正在移除用户级优化白名单: "+uPws+"\n");
+                        Log.i("Main","正在移除用户级优化白名单: "+uPws);
                     }
-                    Log.i("Main","共 "+userPowerSaveList.length+" 个用户级电池优化白名单已移除\n");
+                    System.out.println("共 "+userPowerSaveList.length+" 个用户级电池优化白名单已移除\n");
+                    Log.i("Main","共 "+userPowerSaveList.length+" 个用户级电池优化白名单已移除");
                 }
 
                 for (Account account: iAccountManager.getAccountsAsUser(null, getIdentifier(), "com.android.settings")){
@@ -195,7 +192,6 @@ public class Main {
 
             }catch (Exception e){
                 e.printStackTrace();
-                throw new SecurityException(e);
             }
             serviceThread.getLooper().quitSafely();
         }
