@@ -211,29 +211,40 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
         public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
             context = requireContext();
             try {
-                if (!Dhizuku.isPermissionGranted()){
-                    new MaterialAlertDialogBuilder(requireContext()).setTitle("权限检查")
+                // 检查是否已授予权限
+                if (!Dhizuku.isPermissionGranted()) {
+                    // 如果没有授权权限，则显示权限申请对话框
+                    new MaterialAlertDialogBuilder(requireContext())
+                            .setTitle("权限检查")
                             .setMessage("本应用支持 root 和 Dhizuku 两种模式, 让我们试试申请Dhizuku权限, 如果可以请在接下来的权限申请对话框中允许授权")
-                            .setPositiveButton("好的",  (dialog, which) -> Dhizuku.requestPermission(new DhizukuRequestPermissionListener() {
+                            .setPositiveButton("好的", (dialog, which) -> Dhizuku.requestPermission(new DhizukuRequestPermissionListener() {
                                 @Override
                                 public void onRequestPermission(int grantResult) {
+                                    // 处理权限请求结果
                                     if (grantResult == PackageManager.PERMISSION_GRANTED) {
+                                        // 如果权限被授予，则绑定 Dhizuku 服务
                                         bindDhizukuservice();
                                     }
                                 }
-                            })).setNegativeButton("取消",null).create().show();
-                }else {
+                            }))
+                            .setNegativeButton("取消", null)
+                            .create()
+                            .show();
+                } else {
+                    // 如果已经授权权限，则直接绑定 Dhizuku 服务
                     bindDhizukuservice();
                 }
-            }catch (IllegalStateException e){
+            } catch (IllegalStateException e) {
                 e.printStackTrace();
             }
 
+            // 创建一个 PreferenceScreen 对象
             preferenceScreen = getPreferenceManager().createPreferenceScreen(requireContext());
+            // 获取所有用户限制
             getALLUserRestrictions = UserManagerUtils.getALLUserRestrictionsReflectForUserManager();
 
-// 创建一个 Handler 对象，将它关联到指定线程的 Looper 上
-// 这里的 serviceThread2 是一个线程对象，通过 getLooper() 获取它的消息循环
+            // 创建一个 Handler 对象，将它关联到指定线程的 Looper 上
+            // 这里的 serviceThread2 是一个线程对象，通过 getLooper() 获取它的消息循环
             handler = new Handler(serviceThread2.getLooper(), msg -> {
                 String TAG = "Handler操作";
                 // 获取限制策略的键
