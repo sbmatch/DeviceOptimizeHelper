@@ -19,9 +19,11 @@ import android.util.ArraySet;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.preference.Preference;
@@ -101,7 +103,6 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
         super.onSaveInstanceState(outState);
         // Save current activity title so we can set it again after a configuration change
         outState.putCharSequence(TITLE_TAG, getTitle());
-        outState.putBoolean("isRoot", FilesUtils.isFileExists(isRootFilePath));
         outState.putBoolean("isDhizuku", FilesUtils.isFileExists(isDhizukuFilePath));
     }
 
@@ -273,6 +274,15 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
     public static class HeaderFragment extends PreferenceFragmentCompat {
         Handler handler;
+        @Override
+        public void onCreate(@Nullable Bundle savedInstanceState) {
+            if (FilesUtils.isFileExists(isRootFilePath)){
+                if (savedInstanceState == null) savedInstanceState = new Bundle();
+                savedInstanceState.putBoolean("isGrantRoot", isRooted());
+            }
+            super.onCreate(savedInstanceState);
+        }
+
         @SuppressLint("ResourceAsColor")
         @Override
         public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
@@ -281,7 +291,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
             getALLUserRestrictions = UserManagerUtils.getALLUserRestrictionsReflectForUserManager();
 
-            if (FilesUtils.isFileExists(isDhizukuFilePath) || FilesUtils.isFileExists(isRootFilePath)){
+            if (FilesUtils.isFileExists(isDhizukuFilePath) || savedInstanceState.getBoolean("isGrantRoot")){
                 Toast.makeText(context, "欢迎使用", Toast.LENGTH_SHORT).show();
             }else {
                 new MaterialAlertDialogBuilder(context).setTitle("应用说明").setMessage("本应用支持 Dhizuku 与 Root 两种使用方式，其中Root模式可设置所有系统支持的限制策略，Dhizuku模式下各家深度定制ROM对<设备所有者>权限的限制则各有不同，接下来我们会向您请求这两种权限, 优先级为: Root > Dhizuku ，请注意: 在我们获取到Dhizuku权限后会继续尝试申请Root权限, 现在，我们将尝试申请您设备上的Dhizuku权限, 成功后会继续尝试申请Root权限 \n如果您了解自己在干什么，请点击继续按钮")
@@ -396,7 +406,16 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
             setPreferenceScreen(preferenceScreen); // 将这些都显示出来
         }
 
-        public  Preference.OnPreferenceChangeListener preferenceChangeListener = new Preference.OnPreferenceChangeListener() {
+
+        @Override
+        public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+            super.onViewCreated(view, savedInstanceState);
+            if (savedInstanceState != null){
+                savedInstanceState.putBoolean("isGrantRoot",isRooted());
+            }
+        }
+
+        public Preference.OnPreferenceChangeListener preferenceChangeListener = new Preference.OnPreferenceChangeListener() {
             @Override
             public boolean onPreferenceChange(@NonNull Preference preference, Object newValue) {
 
@@ -405,9 +424,26 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 message.arg1 = (boolean)newValue ? 1 : 0;
                 handler.sendMessage(message); // 发送消息
 
-                return (FilesUtils.isFileExists(isRootFilePath) ||  bindDhizukuservice());
+                return (getArguments().getBoolean("isGrantRoot") ||  bindDhizukuservice());
             }
         };
+
+        public static boolean isRooted() {
+            try {
+                // 尝试执行一个需要root权限的命令，例如 "su"
+                Process process = Runtime.getRuntime().exec("su");
+                process.getOutputStream().close();
+                process.getInputStream().close();
+                process.getErrorStream().close();
+                process.waitFor();
+                // 如果上述命令执行成功，说明应用具有root权限
+                return true;
+            } catch (Exception e) {
+                // 如果出现异常，说明应用没有root权限
+                return false;
+            }
+        }
+
 
     }
 
