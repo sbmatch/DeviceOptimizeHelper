@@ -4,7 +4,7 @@ plugins {
 
 android {
     namespace 'ma.DeviceOptimizeHelper'
-    compileSdk 33
+    compileSdk 34
 
     defaultConfig {
         applicationId "ma.DeviceOptimizeHelper"
@@ -49,5 +49,6 @@ dependencies {
     implementation 'androidx.preference:preference:1.2.0'
     implementation 'com.google.android.material:material:1.8.0'
     implementation 'org.lsposed.hiddenapibypass:hiddenapibypass:4.3'
-    implementation "io.github.iamr0s:Dhizuku-API:2.4"
+    def dhizuku_version = "2.4"
+    implementation "io.github.iamr0s:Dhizuku-API:$dhizuku_version"
 }
