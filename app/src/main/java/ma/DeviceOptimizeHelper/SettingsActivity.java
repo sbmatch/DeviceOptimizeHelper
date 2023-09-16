@@ -114,23 +114,21 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        switch (item.getItemId()){
-            case 10000:
-                // 启用全部
-                try {
+
+        try{
+            switch (item.getItemId()){
+                case 10000:
+                    // 启用全部
                     oneKeyChange(true);
-                } catch (RemoteException e) {
-                    e.printStackTrace();
-                 }
-                break;
-            case 10001:
-                try {
+                    break;
+                case 10001:
                     oneKeyChange(false);
-                } catch (RemoteException e) {
-                    e.printStackTrace();
-                }
-                break;
+                    break;
+            }
+        }catch (Exception e){
+            throw new RuntimeException(e);
         }
+
         return super.onOptionsItemSelected(item);
     }
 
@@ -187,8 +185,6 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 Looper.prepare();
                 if (error.contains("Permission denied")){
 
-                    Toast.makeText(context, "尝试使用root执行失败", Toast.LENGTH_SHORT).show();
-
                     if (userService != null){
                         StringBuilder setErrorList = new StringBuilder();
                         runOnUiThread(() -> {
@@ -211,8 +207,6 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                             new MaterialAlertDialogBuilder(context).setMessage(setErrorList).setTitle(String.format(title,i)).setPositiveButton("Ok",null).create().show();
 
                         });
-                    }else {
-                        Toast.makeText(context, "尝试使用Dhizuku执行任务失败", Toast.LENGTH_SHORT).show();
                     }
                 }
             }
@@ -324,8 +318,8 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                                         // 使用 dhizuku 提供的权限执行任务
                                         userService.clearUserRestriction(DhizukuVariables.COMPONENT_NAME, key);
                                         Toast.makeText(context, "已禁用此限制策略", Toast.LENGTH_SHORT).show();
-                                    } catch (Exception e1) {
-                                        Toast.makeText(context, "操作失败", Toast.LENGTH_SHORT).show();
+                                    } catch (android.os.RemoteException e1) {
+                                        throw  new RuntimeException(e1);
                                     }
 
                             }
@@ -349,7 +343,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                                     userService.addUserRestriction(DhizukuVariables.COMPONENT_NAME, key);
                                     Toast.makeText(context, "已启用此限制策略", Toast.LENGTH_SHORT).show();
                                 } catch (Exception e2) {
-                                    Toast.makeText(context, "操作失败", Toast.LENGTH_SHORT).show();
+                                    throw new RuntimeException(e2);
                                 }
                             }
                         }, true, true);
