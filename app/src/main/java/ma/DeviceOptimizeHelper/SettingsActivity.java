@@ -54,8 +54,6 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
     public static PreferenceScreen preferenceScreen;
     public static ArraySet<SwitchPreferenceCompat> switchPreferenceCompatArraySet = new ArraySet<>();
     private static ArraySet<String> getALLUserRestrictions;
-
-    private static String isRootFilePath ;
     private static String isDhizukuFilePath ;
     public static CommandExecutor commandExecutor = CommandExecutor.getInstance();
     public static IUserService userService;
@@ -91,7 +89,6 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
         command = "app_process -Djava.class.path="+getApkPath(this)+"  /system/bin   ma.DeviceOptimizeHelper.Main  ";
 
-        isRootFilePath = new File(getFilesDir(),"isRoot").getAbsolutePath();
         isDhizukuFilePath = new File(getFilesDir(),"isDhizuku").getAbsolutePath();
 
         // 开发者是个小黑子
@@ -188,9 +185,8 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
             @Override
             public void onError(String error, Exception e) {
-                Looper.prepare();
-                if (error.contains("Permission denied")){
 
+                if (error.contains("Permission denied")){
                     if (userService != null){
                         StringBuilder setErrorList = new StringBuilder();
                         runOnUiThread(() -> {
@@ -214,6 +210,8 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
                         });
                     }
+                    Looper.prepare();
+                    Toast.makeText(context, "任务执行失败", Toast.LENGTH_SHORT).show();
                 }
             }
         }, true, true);
@@ -235,7 +233,6 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
         commandExecutor.executeCommand(command,  new CommandExecutor.CommandResultListener() {
             @Override
             public void onSuccess(String output) {
-                FilesUtils.createFile(isRootFilePath);
                 Looper.prepare();
                 Toast.makeText(context, "已授权Root", Toast.LENGTH_SHORT).show();
             }
@@ -287,7 +284,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 savedInstanceState = new Bundle();
             }
 
-            savedInstanceState.putBoolean("isGrantRoot", FilesUtils.isFileExists(isRootFilePath));
+            savedInstanceState.putBoolean("isGrantRoot", isRooted());
 
             if (FilesUtils.isFileExists(isDhizukuFilePath) || savedInstanceState.getBoolean("isGrantRoot")){
                 Toast.makeText(context, "欢迎使用", Toast.LENGTH_SHORT).show();
