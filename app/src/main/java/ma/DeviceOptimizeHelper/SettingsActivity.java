@@ -126,6 +126,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                     break;
             }
         }catch (Exception e){
+            e.printStackTrace();
             throw new RuntimeException(e);
         }
 
@@ -150,9 +151,9 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 public void onServiceConnected(ComponentName name, IBinder service) {
                     if (userService == null){
                         userService = IUserService.Stub.asInterface(service);
+                    }else {
+                        FilesUtils.createFile(isDhizukuFilePath);
                     }
-                    FilesUtils.createFile(isDhizukuFilePath);
-
                 }
 
                 @Override
@@ -162,11 +163,13 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
             });
         }catch (IllegalStateException e){
             FilesUtils.delete(isDhizukuFilePath);
+            e.printStackTrace();
+
         }
         return FilesUtils.isFileExists(isDhizukuFilePath);
     }
 
-    private  void oneKeyChange(boolean z) throws RemoteException {
+    private  void oneKeyChange(boolean z) {
         String value  = z ? "true" : "false";
         commandExecutor.executeCommand(command + " " + value, new CommandExecutor.CommandResultListener() {
             @Override
@@ -315,11 +318,14 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                                     Looper.prepare();
                                     Toast.makeText(context, "Root方式执行失败，尝试使用Dhizuku执行...", Toast.LENGTH_SHORT).show();
                                     try {
-                                        // 使用 dhizuku 提供的权限执行任务
-                                        userService.clearUserRestriction(DhizukuVariables.COMPONENT_NAME, key);
-                                        Toast.makeText(context, "已禁用此限制策略", Toast.LENGTH_SHORT).show();
-                                    } catch (android.os.RemoteException e1) {
-                                        throw  new RuntimeException(e1);
+                                        if (userService != null){
+                                            // 使用 dhizuku 提供的权限执行任务
+                                            userService.clearUserRestriction(DhizukuVariables.COMPONENT_NAME, key);
+                                            Toast.makeText(context, "已禁用此限制策略", Toast.LENGTH_SHORT).show();
+                                        }
+                                        Toast.makeText(context, "任务执行失败", Toast.LENGTH_SHORT).show();
+                                    } catch (RemoteException e1) {
+                                        e1.printStackTrace();
                                     }
 
                             }
@@ -337,13 +343,16 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                             @Override
                             public void onError(String error, Exception e) {
                                 Looper.prepare();
-                                Toast.makeText(context, "Root方式执行失败，尝试使用Dhizuku执行...", Toast.LENGTH_SHORT).show();
+                                Toast.makeText(context, "尝试使用Dhizuku执行...", Toast.LENGTH_SHORT).show();
                                 try {
-                                    // 使用 dhizuku 提供的权限执行任务
-                                    userService.addUserRestriction(DhizukuVariables.COMPONENT_NAME, key);
-                                    Toast.makeText(context, "已启用此限制策略", Toast.LENGTH_SHORT).show();
+                                    if (userService != null){
+                                        // 使用 dhizuku 提供的权限执行任务
+                                        userService.addUserRestriction(DhizukuVariables.COMPONENT_NAME, key);
+                                        Toast.makeText(context, "已启用此限制策略", Toast.LENGTH_SHORT).show();
+                                    }
+                                    Toast.makeText(context, "任务执行失败", Toast.LENGTH_SHORT).show();
                                 } catch (Exception e2) {
-                                    throw new RuntimeException(e2);
+                                    e2.printStackTrace();
                                 }
                             }
                         }, true, true);
