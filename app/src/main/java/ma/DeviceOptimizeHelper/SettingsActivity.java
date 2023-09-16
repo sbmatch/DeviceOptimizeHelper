@@ -38,7 +38,9 @@ import com.rosan.dhizuku.api.DhizukuRequestPermissionListener;
 import com.rosan.dhizuku.api.DhizukuUserServiceArgs;
 import com.rosan.dhizuku.shared.DhizukuVariables;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 
 import ma.DeviceOptimizeHelper.Utils.CommandExecutor;
@@ -274,33 +276,26 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
     public static class HeaderFragment extends PreferenceFragmentCompat {
         Handler handler;
-        @Override
-        public void onCreate(@Nullable Bundle savedInstanceState) {
-            if (FilesUtils.isFileExists(isRootFilePath)){
-                if (savedInstanceState == null) savedInstanceState = new Bundle();
-                savedInstanceState.putBoolean("isGrantRoot", isRooted());
-            }
-            super.onCreate(savedInstanceState);
-        }
-
         @SuppressLint("ResourceAsColor")
         @Override
         public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
 
             context = requireContext();
-
             getALLUserRestrictions = UserManagerUtils.getALLUserRestrictionsReflectForUserManager();
+
+            if (savedInstanceState == null) {
+                savedInstanceState = new Bundle();
+            }
+
+            savedInstanceState.putBoolean("isGrantRoot", FilesUtils.isFileExists(isRootFilePath));
 
             if (FilesUtils.isFileExists(isDhizukuFilePath) || savedInstanceState.getBoolean("isGrantRoot")){
                 Toast.makeText(context, "欢迎使用", Toast.LENGTH_SHORT).show();
             }else {
                 new MaterialAlertDialogBuilder(context).setTitle("应用说明").setMessage("本应用支持 Dhizuku 与 Root 两种使用方式，其中Root模式可设置所有系统支持的限制策略，Dhizuku模式下各家深度定制ROM对<设备所有者>权限的限制则各有不同，接下来我们会向您请求这两种权限, 优先级为: Root > Dhizuku ，请注意: 在我们获取到Dhizuku权限后会继续尝试申请Root权限, 现在，我们将尝试申请您设备上的Dhizuku权限, 成功后会继续尝试申请Root权限 \n如果您了解自己在干什么，请点击继续按钮")
-                        .setPositiveButton("继续", new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                tryRequestsDhizukuPermission(context);
-                                dialog.cancel();
-                            }
+                        .setPositiveButton("继续", (dialog, which) -> {
+                            tryRequestsDhizukuPermission(context);
+                            dialog.cancel();
                         }).setNegativeButton("取消",null).create().show();
             }
 
@@ -381,7 +376,6 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
             // 创建首选项分类
             PreferenceCategory preferenceCategory = new PreferenceCategory(requireContext());
-            preferenceCategory.setTitle("哈哈哈");
             preferenceCategory.setIconSpaceReserved(false);
 
             // 将动态生成的分类添加进首选项的根布局中
@@ -393,19 +387,29 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 switchPreferenceCompat.setKey(key);
                 switchPreferenceCompat.setTitle(key);
                 switchPreferenceCompat.setIconSpaceReserved(false);
-                switchPreferenceCompat.setOnPreferenceChangeListener(preferenceChangeListener);
                 // 添加限制策略的描述 目前支持中，英文
                 switchPreferenceCompat.setSummary(getResIdReflect(key));
                 // 添加开关变化监听器
-                switchPreferenceCompat.setOnPreferenceChangeListener(preferenceChangeListener);
+                switchPreferenceCompat.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
+                    @Override
+                    public boolean onPreferenceChange(@NonNull Preference preference, Object newValue) {
+                        Message message = Message.obtain();
+                        message.obj =  preference.getKey();
+                        message.arg1 = (boolean)newValue ? 1 : 0;
+                        handler.sendMessage(message); // 发送消息
+
+                        return isRooted() || bindDhizukuservice();
+                    }
+                });
                 // 将动态生成的SwitchPreferenceCompat对象添加进一个列表中
                 switchPreferenceCompatArraySet.add(switchPreferenceCompat);
                 // 将动态生成的SwitchPreferenceCompat对象添加进首选项的分类布局中
                 preferenceCategory.addPreference(switchPreferenceCompat);
             }
+            preferenceCategory.setTitle("* 注: 限制策略的数量受Android版本的影响");
             setPreferenceScreen(preferenceScreen); // 将这些都显示出来
-        }
 
+        }
 
         @Override
         public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
@@ -415,35 +419,25 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
             }
         }
 
-        public Preference.OnPreferenceChangeListener preferenceChangeListener = new Preference.OnPreferenceChangeListener() {
-            @Override
-            public boolean onPreferenceChange(@NonNull Preference preference, Object newValue) {
-
-                Message message = Message.obtain();
-                message.obj =  preference.getKey();
-                message.arg1 = (boolean)newValue ? 1 : 0;
-                handler.sendMessage(message); // 发送消息
-
-                return (getArguments().getBoolean("isGrantRoot") ||  bindDhizukuservice());
-            }
-        };
 
         public static boolean isRooted() {
+
+            Process process = null;
             try {
                 // 尝试执行一个需要root权限的命令，例如 "su"
-                Process process = Runtime.getRuntime().exec("su");
-                process.getOutputStream().close();
-                process.getInputStream().close();
-                process.getErrorStream().close();
-                process.waitFor();
+                process = Runtime.getRuntime().exec("su"+"\n");
+                int exitCode = process.exitValue();
                 // 如果上述命令执行成功，说明应用具有root权限
-                return true;
+                return exitCode == 0;
             } catch (Exception e) {
                 // 如果出现异常，说明应用没有root权限
                 return false;
+            }finally {
+                if (process != null){
+                    process.destroy();
+                }
             }
         }
-
 
     }
 
