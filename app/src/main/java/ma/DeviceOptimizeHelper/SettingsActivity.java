@@ -277,7 +277,8 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
         @Override
         public void onCreate(@Nullable Bundle savedInstanceState) {
             if (FilesUtils.isFileExists(isRootFilePath)){
-                savedInstanceState.putBoolean("isGrantRoot",isRooted());
+                if (savedInstanceState == null) savedInstanceState = new Bundle();
+                savedInstanceState.putBoolean("isGrantRoot", isRooted());
             }
             super.onCreate(savedInstanceState);
         }
