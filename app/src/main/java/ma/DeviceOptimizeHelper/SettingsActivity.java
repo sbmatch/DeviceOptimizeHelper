@@ -7,10 +7,8 @@ import android.content.DialogInterface;
 import android.content.ServiceConnection;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
-import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.os.Bundle;
-import android.os.FileUtils;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
@@ -27,7 +25,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.preference.Preference;
-import androidx.preference.PreferenceDialogFragmentCompat;
+import androidx.preference.PreferenceCategory;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceScreen;
 import androidx.preference.SwitchPreferenceCompat;
@@ -42,7 +40,6 @@ import java.io.File;
 import java.lang.reflect.Field;
 
 import ma.DeviceOptimizeHelper.Utils.CommandExecutor;
-import ma.DeviceOptimizeHelper.Utils.FileObserverUtils;
 import ma.DeviceOptimizeHelper.Utils.FilesUtils;
 import ma.DeviceOptimizeHelper.Utils.UserManagerUtils;
 import ma.DeviceOptimizeHelper.Utils.UserService;
@@ -56,7 +53,6 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
     private static String isRootFilePath ;
     private static String isDhizukuFilePath ;
-    public static SwitchPreferenceCompat switchPreferenceCompat;
     public static CommandExecutor commandExecutor = CommandExecutor.getInstance();
     public static IUserService userService;
     private static String command;
@@ -146,19 +142,30 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
         return super.onSupportNavigateUp();
     }
 
-    private static void bindDhizukuservice(){
-        DhizukuUserServiceArgs args = new DhizukuUserServiceArgs(new ComponentName(context, UserService.class));
-        Dhizuku.bindUserService(args, new ServiceConnection() {
-            @Override
-            public void onServiceConnected(ComponentName name, IBinder service) {
-                userService = IUserService.Stub.asInterface(service);
-            }
+    private static boolean bindDhizukuservice(){
 
-            @Override
-            public void onServiceDisconnected(ComponentName name) {
-                Log.e("Dhizuku",name+" service is Disconnected");
-            }
-        });
+        DhizukuUserServiceArgs args = new DhizukuUserServiceArgs(new ComponentName(context, UserService.class));
+
+        try{
+            Dhizuku.bindUserService(args, new ServiceConnection() {
+                @Override
+                public void onServiceConnected(ComponentName name, IBinder service) {
+                    if (userService == null){
+                        userService = IUserService.Stub.asInterface(service);
+                    }
+                    FilesUtils.createFile(isDhizukuFilePath);
+
+                }
+
+                @Override
+                public void onServiceDisconnected(ComponentName name) {
+                    Log.e("Dhizuku",name+"  is Disconnected");
+                }
+            });
+        }catch (IllegalStateException e){
+            FilesUtils.delete(isDhizukuFilePath);
+        }
+        return FilesUtils.isFileExists(isDhizukuFilePath);
     }
 
     private  void oneKeyChange(boolean z) throws RemoteException {
@@ -177,13 +184,13 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
             @Override
             public void onError(String error, Exception e) {
+                Looper.prepare();
                 if (error.contains("Permission denied")){
-                    Toast.makeText(context, "尝试使用 root 权限执行失败", Toast.LENGTH_SHORT).show();
+
+                    Toast.makeText(context, "尝试使用root执行失败", Toast.LENGTH_SHORT).show();
 
                     if (userService != null){
-
                         StringBuilder setErrorList = new StringBuilder();
-
                         runOnUiThread(() -> {
                             int i = 0;
                             for (SwitchPreferenceCompat compat: switchPreferenceCompatArraySet){
@@ -205,7 +212,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
                         });
                     }else {
-                        Toast.makeText(context, "尝试使用 Dhizuku 执行任务失败", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(context, "尝试使用Dhizuku执行任务失败", Toast.LENGTH_SHORT).show();
                     }
                 }
             }
@@ -235,9 +242,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
             @Override
             public void onError(String error, Exception e) {
-                Log.e("CommandExecutor", error, e);
-                Looper.prepare();
-                Toast.makeText(context, "拒绝授权root权限", Toast.LENGTH_SHORT).show();
+               Log.e("CommandExecutor","root权限授权失败",e);
             }
 
         }, true, true);
@@ -252,9 +257,10 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                             @Override
                             public void onRequestPermission(int grantResult) {
                                 if (grantResult == PackageManager.PERMISSION_GRANTED) {
-                                    FilesUtils.createFile(isDhizukuFilePath);
                                     bindDhizukuservice();
                                     tryRequestRoot();
+                                    Looper.prepare();
+                                    Toast.makeText(context, "Dhizuku 已授权", Toast.LENGTH_SHORT).show();
                                 }
                             }
                         })).setNegativeButton("取消",null).create().show();
@@ -263,6 +269,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
             }
         }catch (IllegalStateException e){
             tryRequestRoot();
+            FilesUtils.delete(isDhizukuFilePath);
             Toast.makeText(context, "Dhizuku 未安装或未激活", Toast.LENGTH_SHORT).show();
         }
     }
@@ -275,7 +282,6 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
             context = requireContext();
 
-            preferenceScreen = getPreferenceManager().createPreferenceScreen(requireContext());
             getALLUserRestrictions = UserManagerUtils.getALLUserRestrictionsReflectForUserManager();
 
             if (FilesUtils.isFileExists(isDhizukuFilePath) || FilesUtils.isFileExists(isRootFilePath)){
@@ -311,16 +317,17 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
                             @Override
                             public void onError(String error, Exception e) {
-                                Log.e("CommandExecutor", error, e.fillInStackTrace());
-                                Looper.prepare();
-                                Toast.makeText(context, "使用Root执行失败， 尝试调用Dhizuku执行...", Toast.LENGTH_SHORT).show();
-                                try {
-                                    // 使用 dhizuku 提供的权限执行任务
-                                    userService.clearUserRestriction(DhizukuVariables.COMPONENT_NAME, key);
-                                } catch (Exception e2) {
-                                    e2.printStackTrace();
-                                    Toast.makeText(context, "尝试使用Dhizuku执行操作失败", Toast.LENGTH_SHORT).show();
-                                }
+
+                                    Looper.prepare();
+                                    Toast.makeText(context, "Root方式执行失败，尝试使用Dhizuku执行...", Toast.LENGTH_SHORT).show();
+                                    try {
+                                        // 使用 dhizuku 提供的权限执行任务
+                                        userService.clearUserRestriction(DhizukuVariables.COMPONENT_NAME, key);
+                                        Toast.makeText(context, "已禁用此限制策略", Toast.LENGTH_SHORT).show();
+                                    } catch (Exception e1) {
+                                        Toast.makeText(context, "操作失败", Toast.LENGTH_SHORT).show();
+                                    }
+
                             }
                         }, true, true);
                         break;
@@ -330,20 +337,19 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                             @Override
                             public void onSuccess(String output) {
                                 Looper.prepare();
-                                Toast.makeText(context, "已启用此限制策略", Toast.LENGTH_SHORT).show();
+                                Toast.makeText(context, "已启用此限制策略"+ output, Toast.LENGTH_SHORT).show();
                             }
 
                             @Override
                             public void onError(String error, Exception e) {
-                                Log.e("CommandExecutor", error, e.fillInStackTrace());
                                 Looper.prepare();
-                                Toast.makeText(context, "使用Root执行失败， 尝试调用Dhizuku执行...", Toast.LENGTH_SHORT).show();
+                                Toast.makeText(context, "Root方式执行失败，尝试使用Dhizuku执行...", Toast.LENGTH_SHORT).show();
                                 try {
                                     // 使用 dhizuku 提供的权限执行任务
                                     userService.addUserRestriction(DhizukuVariables.COMPONENT_NAME, key);
+                                    Toast.makeText(context, "已启用此限制策略", Toast.LENGTH_SHORT).show();
                                 } catch (Exception e2) {
-                                    e2.printStackTrace();
-                                    Toast.makeText(context, "尝试使用Dhizuku执行操作失败", Toast.LENGTH_SHORT).show();
+                                    Toast.makeText(context, "操作失败", Toast.LENGTH_SHORT).show();
                                 }
                             }
                         }, true, true);
@@ -355,11 +361,25 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 return true;
             });
 
+            // 获取根布局，如果不存在则创建一个
+            if (preferenceScreen == null){
+                preferenceScreen = getPreferenceManager().createPreferenceScreen(requireContext());
+            }
+
+            // 创建首选项分类
+            PreferenceCategory preferenceCategory = new PreferenceCategory(requireContext());
+            preferenceCategory.setTitle("哈哈哈");
+            preferenceCategory.setIconSpaceReserved(false);
+
+            // 将动态生成的分类添加进首选项的根布局中
+            preferenceScreen.addPreference(preferenceCategory);
+
             // 动态创建SwitchPreferenceCompat, 属于是有多少就创建多少
             for (String key : getALLUserRestrictions) {
-                switchPreferenceCompat = new SwitchPreferenceCompat(requireContext());
+                SwitchPreferenceCompat switchPreferenceCompat = new SwitchPreferenceCompat(requireContext());
                 switchPreferenceCompat.setKey(key);
                 switchPreferenceCompat.setTitle(key);
+                switchPreferenceCompat.setIconSpaceReserved(false);
                 switchPreferenceCompat.setOnPreferenceChangeListener(preferenceChangeListener);
                 // 添加限制策略的描述 目前支持中，英文
                 switchPreferenceCompat.setSummary(getResIdReflect(key));
@@ -367,8 +387,8 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 switchPreferenceCompat.setOnPreferenceChangeListener(preferenceChangeListener);
                 // 将动态生成的SwitchPreferenceCompat对象添加进一个列表中
                 switchPreferenceCompatArraySet.add(switchPreferenceCompat);
-                // 将动态生成的SwitchPreferenceCompat对象添加进首选项的根布局中
-                preferenceScreen.addPreference(switchPreferenceCompat);
+                // 将动态生成的SwitchPreferenceCompat对象添加进首选项的分类布局中
+                preferenceCategory.addPreference(switchPreferenceCompat);
             }
             setPreferenceScreen(preferenceScreen); // 将这些都显示出来
         }
@@ -382,18 +402,16 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 message.arg1 = (boolean)newValue ? 1 : 0;
                 handler.sendMessage(message); // 发送消息
 
-                return ((FilesUtils.isFileExists(isRootFilePath)) || (FilesUtils.isFileExists(isDhizukuFilePath)));
+                return (FilesUtils.isFileExists(isRootFilePath) ||  bindDhizukuservice());
             }
         };
 
     }
 
-
     private static class ServiceThread2 extends HandlerThread {
         public ServiceThread2(String name) {
             super(name);
         }
-
     }
 
     private static int getResIdReflect(String key){

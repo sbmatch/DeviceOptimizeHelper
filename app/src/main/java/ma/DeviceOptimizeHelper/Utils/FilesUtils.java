@@ -1,6 +1,10 @@
 package ma.DeviceOptimizeHelper.Utils;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 
 public class FilesUtils {
@@ -91,5 +95,65 @@ public class FilesUtils {
     public static boolean isDirExists(String dirPath) {
         File dir = new File(dirPath);
         return dir.exists() && dir.isDirectory();
+    }
+
+    /**
+     * 向文件写入内容
+     * @param filePath 文件路径
+     * @param content 写入的内容
+     * @return 写入成功返回true，否则返回false
+     */
+    public static boolean writeToFile(String filePath, String content) {
+        BufferedWriter writer = null;
+        try {
+            writer = new BufferedWriter(new FileWriter(filePath,false));
+            writer.write(content);
+            writer.flush();
+            return true;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        } finally {
+            if (writer != null) {
+                try {
+                    writer.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    /**
+     * 从文件中读取内容
+     * @param filePath 文件路径
+     * @return 读取到的内容，如果读取失败返回null
+     */
+    public static String readFromFile(String filePath) {
+        File file = new File(filePath);
+        if (!file.exists() || !file.isFile()) {
+            return null; // 文件不存在或不是文件，读取失败
+        }
+        BufferedReader reader = null;
+        try {
+            reader = new BufferedReader(new FileReader(file));
+            StringBuilder content = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                content.append(line).append("\n");
+            }
+            return content.toString();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        } finally {
+            if (reader != null) {
+                try {
+                    reader.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 }
