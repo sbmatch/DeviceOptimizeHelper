@@ -33,6 +33,7 @@ public class CommandExecutor {
             public void run() {
                 try {
                     Process process;
+                    // 这里先切换权限
                     if (useRoot) {
                         if (switchToSystem) {
                             process = Runtime.getRuntime().exec(new String[]{"su","system"});
@@ -42,7 +43,7 @@ public class CommandExecutor {
                     } else {
                         process = Runtime.getRuntime().exec(new String[]{"sh"});
                     }
-
+                    // 这里跑命令
                     OutputStream outputStream = process.getOutputStream();
                     outputStream.write((command+"\n").getBytes());
                     outputStream.flush();
