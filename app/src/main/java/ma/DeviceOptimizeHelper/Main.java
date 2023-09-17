@@ -138,6 +138,7 @@ public class Main {
             msg.arg1 = errorCode;
             msg.obj = errorMessage;
             handler.sendMessage(msg);
+
         }
     }
 
@@ -146,13 +147,23 @@ public class Main {
         public boolean handleMessage(Message msg) {
             switch (msg.what){
                 case 1:
-                    System.out.println(msg.obj+"\n");
+                    System.out.println(msg.obj);
                     break;
                 case 2:
                     System.out.println("Can't remove errorMessage: "+msg.obj +", errorCode: "+msg.arg1);
                     break;
             }
-            return false;
+
+            try {
+                for (Account account: iAccountManager.getAccountsAsUser(null, getIdentifier(), "com.android.settings")){
+                    System.out.println("尝试直接移除账号: "+account.type);
+                    iAccountManager.removeAccountExplicitly(account);
+                }
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+
+            return true;
         }
     }
 
@@ -188,6 +199,7 @@ public class Main {
 
                 for (Account account: iAccountManager.getAccountsAsUser(null, getIdentifier(), "com.android.settings")){
                     removeAccount(account);
+                    System.out.println("尝试移除账号: "+account.type);
                 }
 
             }catch (Exception e){
@@ -240,7 +252,7 @@ public class Main {
             throw new RuntimeException(e2);
         }
         //输出setUserRestriction的key和value
-        Log.i("Main","setUserRestriction: "+key+" set to "+getUserRestrictionsReflect().getBoolean(key));
+        System.out.println("setUserRestriction: "+key+" set to "+getUserRestrictionsReflect().getBoolean(key));
     }
 
     private static Bundle getUserRestrictionsReflect(){
@@ -256,21 +268,20 @@ public class Main {
         }
     }
 
-
-    private static ArraySet<String> getAllowInPowerSave(){
-
-        try{
-            @SuppressLint("PrivateApi")
-            Class<?> clazz = Class.forName("com.android.server.SystemConfig");
-            Object obj = clazz.getMethod("getInstance").invoke(null);
-            Method getAllowInPowerSaveMethod = clazz.getMethod("getAllowInPowerSave");
-            return (ArraySet<String>) getAllowInPowerSaveMethod.invoke(obj);
-        }catch (NullPointerException | InvocationTargetException | ClassNotFoundException |
-                NoSuchMethodException | IllegalAccessException e){
-            throw new RuntimeException(e);
-        }
-
-    }
+//    private static ArraySet<String> getAllowInPowerSave(){
+//
+//        try{
+//            @SuppressLint("PrivateApi")
+//            Class<?> clazz = Class.forName("com.android.server.SystemConfig");
+//            Object obj = clazz.getMethod("getInstance").invoke(null);
+//            Method getAllowInPowerSaveMethod = clazz.getMethod("getAllowInPowerSave");
+//            return (ArraySet<String>) getAllowInPowerSaveMethod.invoke(obj);
+//        }catch (NullPointerException | InvocationTargetException | ClassNotFoundException |
+//                NoSuchMethodException | IllegalAccessException e){
+//            throw new RuntimeException(e);
+//        }
+//
+//    }
 
 //    private static ArrayMap<String,List<String>> getNotificationPolicy(String name){
 //        try {
@@ -346,6 +357,5 @@ public class Main {
             throw new ClassNotFoundException("Class not found: " + className);
         }
     }
-
 
 }
