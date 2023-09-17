@@ -27,9 +27,9 @@ jobs:
         run: |
           chmod +x ./gradlew
           ./gradlew assembleRelease
-          releaseName =`ls app/build/outputs/apk/release/DeviceOptimizeHelper_v*_*.apk | awk -F '(/|.apk)' '{print $4}'` && echo "releaseName=$releaseName" >> $GITHUB_OUTPUT
-          jarsigner -keystore keystore.jks -storepass ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}  -keypass ${{ secrets.RELEASE_KEY_PASSWORD }} -sigalg SHA1withRSA -digestalg SHA1  -signedjar app/build/outputs/release/${{ steps.buildWithGradle.outputs.releaseName }}.apk app/build/outputs/release/${{ steps.buildWithGradle.outputs.releaseName }}_signed.apk   alias_name
-          zipalign -v 4 app/build/outputs/release/app-release.apk app/build/outputs/release/app-release-aligned.apk
+          releaseName =`ls app/build/outputs/apk/release/DeviceOptimizeHelper_v*_*.apk | awk -F '(/|.apk)' '{print $4}'` && echo "${releaseName}.apk"
+          jarsigner -keystore keystore.jks -storepass ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}  -keypass ${{ secrets.RELEASE_KEY_PASSWORD }}  -signedjar app/build/outputs/release/${releaseName}_signed.apk app/build/outputs/release/${releaseName}.apk  alias_name
+          zipalign -v 4 app/build/outputs/release/${releaseName}_signed.apk app/build/outputs/release/${releaseName}_aligned.apk
           working-directory: ./app
 
       - name: Upload APK Artifact
