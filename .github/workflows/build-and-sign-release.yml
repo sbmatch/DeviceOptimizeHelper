@@ -20,8 +20,11 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: Set up Keystore
-        run: echo "${{ secrets.RELEASE_KEYSTORE_FILE }}" > keystore.keystore
+      - name: Restore Keystore from Base64
+        run: |
+          echo ${{ secrets.RELEASE_KEYSTORE_FILE }} | base64 -d > keystore.keystore
+ 
+
 
       - name: Build and Sign APK
         run: |
