@@ -58,7 +58,7 @@ public class BaseApplication extends Application {
         @Override
         public void uncaughtException(@NonNull Thread thread, @NonNull Throwable throwable) {
 
-            File cacheDir = context.getCacheDir();
+            File cacheDir = context.getExternalCacheDir();
             if (cacheDir != null) {
                 // 创建一个名为"logs"的子目录
                 File logsDir = new File(cacheDir, "logs");
