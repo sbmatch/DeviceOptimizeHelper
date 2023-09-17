@@ -48,6 +48,11 @@ import ma.DeviceOptimizeHelper.Utils.FilesUtils;
 import ma.DeviceOptimizeHelper.Utils.UserManagerUtils;
 import ma.DeviceOptimizeHelper.Utils.UserService;
 
+
+// TODO 注释！！！可以用codegeex或者chatgpt一键生成即可（文心就是垃圾）
+// TODO 注释！！！可以用codegeex或者chatgpt一键生成即可（文心就是垃圾）
+// TODO 注释！！！可以用codegeex或者chatgpt一键生成即可（文心就是垃圾）
+
 public class SettingsActivity extends AppCompatActivity implements PreferenceFragmentCompat.OnPreferenceStartFragmentCallback {
 
     private static final String TITLE_TAG = "settingsActivityTitle";
