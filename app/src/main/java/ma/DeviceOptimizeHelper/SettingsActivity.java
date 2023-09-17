@@ -5,7 +5,6 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
@@ -20,11 +19,9 @@ import android.util.ArraySet;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.FileProvider;
@@ -63,6 +60,9 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
     private static SettingsActivity.ServiceThread2 serviceThread2 = new ServiceThread2("你干嘛哎呦");
 
     public static Context context;
+    // 声明SharedPreferences文件的名称和键
+    private static final String PREFS_NAME = "data";
+    private static final String FIRST_TIME_KEY = "firstTime";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -261,6 +261,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
     }
 
     public static class HeaderFragment extends PreferenceFragmentCompat {
+
         Handler handler;
         // 获取 SharedPreferences
         public android.content.SharedPreferences sharedPreferences;
@@ -274,6 +275,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
             if (sharedPreferences == null){
                 sharedPreferences = getPreferenceManager().getSharedPreferences();
             }
+
 
 // 创建一个 Handler 对象，将它关联到指定线程的 Looper 上
 // 这里的 serviceThread2 是一个线程对象，通过 getLooper() 获取它的消息循环
