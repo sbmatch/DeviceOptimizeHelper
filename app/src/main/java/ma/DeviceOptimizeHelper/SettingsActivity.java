@@ -174,6 +174,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
             @Override
             public void onError(String error, Exception e) {
+                e.printStackTrace();
 
             }
         }, false, false);
@@ -190,14 +191,16 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 public void onServiceConnected(ComponentName name, IBinder service) {
                     if (userService == null){
                         userService = IUserService.Stub.asInterface(service);
+                        FilesUtils.createFile(isDhizukuFilePath);
+                    }else {
+                        FilesUtils.createFile(isDhizukuFilePath);
                     }
-
-                    FilesUtils.createFile(isDhizukuFilePath);
                 }
 
                 @Override
                 public void onServiceDisconnected(ComponentName name) {
                     Log.e("Dhizuku",name+"  is Disconnected");
+                    FilesUtils.delete(isDhizukuFilePath);
                     bindDhizukuservice();
                 }
             });
@@ -225,37 +228,33 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
             public void onError(String error, Exception e) {
 
                 if (error.contains("Permission denied")){
-                    if (userService == null){
-                        bindDhizukuservice();
-                    }
-
-                    try {
-                        StringBuilder setErrorList = new StringBuilder();
-                        runOnUiThread(() -> {
-                            int i = 0;
-                            for (SwitchPreferenceCompat compat: switchPreferenceCompatArraySet){
-                                try {
-                                    if (z){
+                    StringBuilder setErrorList = new StringBuilder();
+                    runOnUiThread(() -> {
+                        int i = 0;
+                        for (SwitchPreferenceCompat compat: switchPreferenceCompatArraySet){
+                            try {
+                                if (FilesUtils.isFileExists(isDhizukuFilePath) && userService != null) {
+                                    if (z) {
                                         userService.addUserRestriction(DhizukuVariables.COMPONENT_NAME, compat.getKey());
                                         compat.setChecked(true);
-                                    }else {
+                                    } else {
                                         userService.clearUserRestriction(DhizukuVariables.COMPONENT_NAME, compat.getKey());
                                         compat.setChecked(false);
                                     }
-                                }catch (SecurityException | RemoteException | NullPointerException e1){
-                                    i++;
-                                    setErrorList.append(e1.getMessage()).append("\n\n");
-                                    e1.printStackTrace();
+                                }else {
+                                    setErrorList.append("没锅怎么炒菜啊, 大佬"+"\n");
                                 }
+                            }catch (Exception e1){
+                                e1.printStackTrace();
+                                i++;
+                                setErrorList.append(e1.getMessage()).append("\n\n");
                             }
-                            String title = context.getString(getResIdReflect("set_error_count_title"));
-                            new MaterialAlertDialogBuilder(context).setMessage(setErrorList).setTitle(String.format(title,i)).setPositiveButton("Ok",null).create().show();
+                        }
+                        String title = context.getString(getResIdReflect("set_error_count_title"));
+                        String t = (i >0) ? String.format(title,i) : "已完成! 全部失败 🤣👉🤡";
+                        new MaterialAlertDialogBuilder(context).setMessage(setErrorList).setTitle(t).setPositiveButton("Ok",null).create().show();
 
-                        });
-                    }catch (Exception  e2){
-                        e2.printStackTrace();
-                    }
-
+                    });
                 }
             }
         }, true, true);
@@ -308,17 +307,16 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
                             @Override
                             public void onError(String error, Exception e) {
-
-                                Looper.prepare();
                                 try {
                                     if (userService != null) {
                                         // 使用 dhizuku 提供的权限执行任务
                                         userService.clearUserRestriction(DhizukuVariables.COMPONENT_NAME, key);
-                                        Toast.makeText(context, "已禁用此限制策略", Toast.LENGTH_SHORT).show();
                                     }
                                 } catch (Exception e1) {
-                                    Toast.makeText(context, "任务执行失败", Toast.LENGTH_SHORT).show();
                                     e1.printStackTrace();
+                                    Looper.prepare();
+                                    Toast.makeText(getContext(), "任务执行失败", Toast.LENGTH_SHORT).show();
+
                                 }
 
                             }
@@ -335,16 +333,13 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
                             @Override
                             public void onError(String error, Exception e) {
-                                Looper.prepare();
                                 try {
                                     if (userService != null) {
                                         // 使用 dhizuku 提供的权限执行任务
                                         userService.addUserRestriction(DhizukuVariables.COMPONENT_NAME, key);
-                                        Toast.makeText(context, "已启用此限制策略", Toast.LENGTH_SHORT).show();
                                     }
                                 } catch (Exception e2) {
                                     e2.printStackTrace();
-                                    Toast.makeText(context, "任务执行失败", Toast.LENGTH_SHORT).show();
                                 }
                             }
                         }, true, true);
@@ -398,7 +393,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
                     Log.i("ssss","isDhizuku: "+FilesUtils.isFileExists(isDhizukuFilePath) +" , isGrantRoot: "+ sharedPreferences.getBoolean("isGrantRoot", false));
 
-                    return (FilesUtils.isFileExists(isDhizukuFilePath) || sharedPreferences.getBoolean("isGrantRoot", false));
+                    return ((Dhizuku.isPermissionGranted() && FilesUtils.isFileExists(isDhizukuFilePath))  || sharedPreferences.getBoolean("isGrantRoot", false));
                 });
                 // 将动态生成的SwitchPreferenceCompat对象添加进一个列表中
                 switchPreferenceCompatArraySet.add(switchPreferenceCompat);
@@ -434,31 +429,36 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 task.execute();
             }
 
+            bindDhizukuservice();
+
             super.onResume();
         }
 
+
         public void tryRequestRoot(){
-            commandExecutor.executeCommand(command,  new CommandExecutor.CommandResultListener() {
-                @Override
-                public void onSuccess(String output) {
+           if (!sharedPreferences.getBoolean("first_checkRoot",false)){
+               commandExecutor.executeCommand(command,  new CommandExecutor.CommandResultListener() {
+                   @Override
+                   public void onSuccess(String output) {
 
-                    sharedPreferences.edit().putBoolean("first_checkRoot",true).apply();
+                       sharedPreferences.edit().putBoolean("first_checkRoot",true).apply();
 
-                    CheckRootPermissionTask task = new CheckRootPermissionTask(hasRootPermission -> {
-                    sharedPreferences.edit().putBoolean("isGrantRoot", hasRootPermission).apply();
-                    });
-                    task.execute();
+                       CheckRootPermissionTask task = new CheckRootPermissionTask(hasRootPermission -> {
+                           sharedPreferences.edit().putBoolean("isGrantRoot", hasRootPermission).apply();
+                       });
+                       task.execute();
 
-                    Looper.prepare();
-                    Toast.makeText(context, "已授权Root", Toast.LENGTH_SHORT).show();
-                }
+                       Looper.prepare();
+                       Toast.makeText(context, "已授权Root", Toast.LENGTH_SHORT).show();
+                   }
 
-                @Override
-                public void onError(String error, Exception e) {
-                    Log.e("CommandExecutor","root权限授权失败",e);
-                }
+                   @Override
+                   public void onError(String error, Exception e) {
+                       Log.e("CommandExecutor","root权限授权失败",e);
+                   }
 
-            }, true, true);
+               }, true, true);
+           }
         }
 
         public  void tryRequestsDhizukuPermission(Context context){
@@ -470,7 +470,6 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                                 @Override
                                 public void onRequestPermission(int grantResult) {
                                     if (grantResult == PackageManager.PERMISSION_GRANTED) {
-                                        bindDhizukuservice();
                                         tryRequestRoot();
                                         Looper.prepare();
                                         Toast.makeText(context, "Dhizuku 已授权", Toast.LENGTH_SHORT).show();
@@ -491,6 +490,10 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
     }
 
+
+    public void showSwitchDone(String title, String msg){
+        new MaterialAlertDialogBuilder(context).setTitle(title).setMessage(msg).setNegativeButton("OK",null).create().show();
+    }
 
     private static class ServiceThread2 extends HandlerThread {
         public ServiceThread2(String name) {

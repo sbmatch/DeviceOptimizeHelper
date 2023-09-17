@@ -109,7 +109,7 @@ public class BaseApplication extends Application {
 
             context.startActivity(intent);
 
-            mHandler.postDelayed(() -> defaultHandler.uncaughtException(thread,throwable),5000);
+            mHandler.postDelayed(() -> defaultHandler.uncaughtException(thread,throwable),10000);
         }
 
         public static String getStackTrace(Throwable throwable) {
