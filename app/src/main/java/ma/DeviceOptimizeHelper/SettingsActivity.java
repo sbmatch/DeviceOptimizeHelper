@@ -3,7 +3,6 @@ package ma.DeviceOptimizeHelper;
 import android.annotation.SuppressLint;
 import android.content.ComponentName;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.ServiceConnection;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
@@ -38,9 +37,7 @@ import com.rosan.dhizuku.api.DhizukuRequestPermissionListener;
 import com.rosan.dhizuku.api.DhizukuUserServiceArgs;
 import com.rosan.dhizuku.shared.DhizukuVariables;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 
 import ma.DeviceOptimizeHelper.Utils.CommandExecutor;
@@ -387,16 +384,13 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 // 添加限制策略的描述 目前支持中，英文
                 switchPreferenceCompat.setSummary(getResIdReflect(key));
                 // 添加开关变化监听器
-                switchPreferenceCompat.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
-                    @Override
-                    public boolean onPreferenceChange(@NonNull Preference preference, Object newValue) {
-                        Message message = Message.obtain();
-                        message.obj =  preference.getKey();
-                        message.arg1 = (boolean)newValue ? 1 : 0;
-                        handler.sendMessage(message); // 发送消息
+                switchPreferenceCompat.setOnPreferenceChangeListener((preference, newValue) -> {
+                    Message message = Message.obtain();
+                    message.obj =  preference.getKey();
+                    message.arg1 = (boolean)newValue ? 1 : 0;
+                    handler.sendMessage(message); // 发送消息
 
-                        return isRooted() || bindDhizukuservice();
-                    }
+                    return isRooted() || bindDhizukuservice();
                 });
                 // 将动态生成的SwitchPreferenceCompat对象添加进一个列表中
                 switchPreferenceCompatArraySet.add(switchPreferenceCompat);
@@ -446,12 +440,13 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
     private static int getResIdReflect(String key){
         try{
-
             Class<?> clazz = R.string.class;
             Field field = clazz.getField(key);
             return field.getInt(null);
         }catch (Resources.NotFoundException | NoSuchFieldException | IllegalAccessException e){
             e.printStackTrace();
+            Looper.prepare();
+            Toast.makeText(context, "出现问题，即将退出...", Toast.LENGTH_SHORT).show();
             throw new RuntimeException(e);
         }
     }

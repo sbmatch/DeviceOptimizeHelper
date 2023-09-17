@@ -4,14 +4,12 @@ import android.annotation.SuppressLint;
 import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
-import android.net.Uri;
 import android.os.Build;
+import android.os.Handler;
 import android.os.Looper;
-import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.core.content.FileProvider;
 
 import com.rosan.dhizuku.api.Dhizuku;
 
@@ -27,6 +25,7 @@ import ma.DeviceOptimizeHelper.Utils.FilesUtils;
 
 public class BaseApplication extends Application {
     public Context context;
+    private static Handler mHandler;
     @Override
     protected void attachBaseContext(Context base) {
         super.attachBaseContext(base);
@@ -40,6 +39,7 @@ public class BaseApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+        mHandler = new Handler(Looper.getMainLooper());
         Thread.setDefaultUncaughtExceptionHandler(new GlobalExceptionHandler(context));
     }
 
@@ -84,6 +84,7 @@ public class BaseApplication extends Application {
                 intent.setType("text/plain");
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 intent.putExtra(Intent.EXTRA_SUBJECT, "崩溃日志已记录");
+
                 SettingsActivity.commandExecutor.executeCommand("logcat -v threadtime -b crash -d *:v ", new CommandExecutor.CommandResultListener() {
                     @Override
                     public void onSuccess(String output) {
@@ -94,12 +95,9 @@ public class BaseApplication extends Application {
 
                         FilesUtils.writeToFile(logFile.getAbsolutePath(),systemInfo+"\n\n"+stackTraceContext);
 
-                        Looper.prepare();
                         // 启动系统分享
                         context.startActivity(intent);
-                        Toast.makeText(context, "请将崩溃日志提交给开发者用于修复bug", Toast.LENGTH_SHORT).show();
-                        Looper.loop();
-                        defaultHandler.uncaughtException(thread,throwable);
+
                     }
 
                     @Override
@@ -107,8 +105,9 @@ public class BaseApplication extends Application {
 
                     }
                 }, false, false);
-
             }
+
+            mHandler.postDelayed(() -> defaultHandler.uncaughtException(thread,throwable),5000);
         }
 
         private static String getStackTrace(Throwable throwable) {
