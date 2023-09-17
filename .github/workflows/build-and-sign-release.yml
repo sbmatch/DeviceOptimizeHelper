@@ -26,7 +26,6 @@ jobs:
         run: |
           chmod +x ./gradlew
           ./gradlew assembleRelease
-          working-directory: ./app
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v2
