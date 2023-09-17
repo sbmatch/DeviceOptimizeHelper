@@ -157,7 +157,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
             public void onSuccess(String output) {
                 // 使用系统分享发送文件
                 Looper.prepare();
-                File shareFile = FilesUtils.getLatestFileInDirectory(BaseApplication.logsDir.getAbsolutePath());
+                File shareFile = FilesUtils.getLatestFileInDirectory(BaseApplication.getLogsDir(context).getAbsolutePath());
                 intent.putExtra(Intent.EXTRA_STREAM,  FileProvider.getUriForFile(context, "ma.DeviceOptimizeHelper.provider", shareFile));
                 intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 FilesUtils.writeToFile(BaseApplication.logFile.getAbsolutePath(),BaseApplication.systemInfo+"\n\n"+output, true);

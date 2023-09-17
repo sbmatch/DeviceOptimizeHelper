@@ -29,7 +29,7 @@ public class BaseApplication extends Application {
     public Context context;
     private static Handler mHandler;
     public static String systemInfo;
-    public static File logFile, logsDir;
+    public static File logFile;
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -61,16 +61,18 @@ public class BaseApplication extends Application {
         // 创建包含系统信息的日志字符串
         systemInfo = "Manufacturer: " + manufacturer + ", Model: " + model + ", Android Version: " + version + ", SDK Version: " + sdkVersion;
 
-        File cacheDir = context.getExternalCacheDir();
-        // 创建一个名为"logs"的子目录
-        logsDir = new File(cacheDir, "logs");
-        FilesUtils.createDir(logsDir.getAbsolutePath());
-        logFile = new File(logsDir, fileName);
+        logFile = new File(getLogsDir(context), fileName);
 
         Thread.setDefaultUncaughtExceptionHandler(new GlobalExceptionHandler(context));
     }
 
-
+    public static File getLogsDir(Context context) {
+        File cacheDir = context.getExternalCacheDir();
+        // 创建一个名为"logs"的子目录
+        File logsDir = new File(cacheDir, "logs");
+        FilesUtils.createDir(logsDir.getAbsolutePath());
+        return logsDir;
+    }
 
     public static class GlobalExceptionHandler implements Thread.UncaughtExceptionHandler {
 
