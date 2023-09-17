@@ -40,10 +40,10 @@ jobs:
       - name: Zipalign APK
         run: |
           # 使用 zipalign 优化 APK，生成最终的签名 APK
-          zipalign -v 4 app/build/outputs/apk/release/*.apk app/build/outputs/apk/release/app-release-aligned.apk
+          #zipalign -v 4 app/build/outputs/apk/release/*.apk app/build/outputs/apk/release/app-release-aligned.apk
 
       - name: Upload Signed APK
         uses: actions/upload-artifact@v2
         with:
           name: releaseApk
-          path: app/build/outputs/apk/release/app-release-aligned.apk
+          path: app/build/outputs/apk/release/*.apk
