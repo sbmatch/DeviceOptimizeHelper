@@ -23,7 +23,7 @@ jobs:
       - name: Restore Keystore from Base64
         run: |
           echo "Value of RELEASE_KEYSTORE_FILE: ${{ secrets.RELEASE_KEYSTORE_FILE }}"
-          echo ${{ secrets.RELEASE_KEYSTORE_FILE }} | base64 -d > keystore.keystore
+          echo "${{ secrets.RELEASE_KEYSTORE_FILE }}" | base64 -d > keystore.keystore
 
       - name: Build and Sign APK
         run: |
