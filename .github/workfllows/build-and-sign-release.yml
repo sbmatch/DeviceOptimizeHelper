@@ -3,7 +3,7 @@ name: Build and Sign Release APK
 on:
   push:
     branches:
-      - main # 替换为你的主分支名称
+      - main
 
 jobs:
   build:
