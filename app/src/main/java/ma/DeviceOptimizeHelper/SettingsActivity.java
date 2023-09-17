@@ -446,9 +446,9 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
         }catch (Resources.NotFoundException | NoSuchFieldException | IllegalAccessException e){
             e.printStackTrace();
             Looper.prepare();
-            Toast.makeText(context, "出现问题，即将退出...", Toast.LENGTH_SHORT).show();
-            throw new RuntimeException(e);
+            Toast.makeText(context, "捕获到崩溃，已写入日志文件", Toast.LENGTH_SHORT).show();
         }
+        return 0;
     }
 
     public static String getApkPath(Context context){
