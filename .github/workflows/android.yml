@@ -1,0 +1,37 @@
+name: Android CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: set up JDK 11
+      uses: actions/setup-java@v3
+      with:
+        java-version: '11'
+        distribution: 'temurin'
+        cache: gradle
+        
+    - name: Set up Keystore
+      run: echo "${{ secrets.RELEASE_KEYSTORE_FILE }}" > keystore.keystore
+
+    - name: Build and Sign APK
+      run: |
+          ./gradlew bundleRelease
+          jarsigner -keystore keystore.keystore -storepass:file keystore-password.txt -keypass:file key-password.txt -sigalg SHA1withRSA -digestalg SHA1 -storetype pkcs12 -signedjar app/build/outputs/bundle/release/app-release.aab app/build/outputs/bundle/release/app-release.aab key-alias -tsa http://timestamp.digicert.com
+          zipalign -v 4 app/build/outputs/bundle/release/app-release.apk app/build/outputs/bundle/release/app-release-aligned.apk
+          working-directory: ./app
+
+    - name: Upload APK Artifact
+      uses: actions/upload-artifact@v2
+      with:
+          name: release-apk
+          path: app/build/outputs/bundle/release/app-release-aligned.apk
