@@ -9,7 +9,7 @@
     <string name="no_outgoing_calls">禁止拨打电话(紧急电话除外)</string>
     <string name="no_wallpaper">禁止使用墙纸</string>
     <string name="no_outgoing_beam">禁止使用Beam</string>
-    <string name="no_debugging_features">禁止USB调试</string>
+    <string name="no_debugging_features">禁止开发者选项</string>
     <string name="no_airplane_mode">禁止飞行模式</string>
     <string name="no_network_reset">禁止重置网络</string>
     <string name="no_share_location">禁止位置共享</string>
@@ -74,6 +74,7 @@
     <string name="no_grant_admin">禁止管理员向其他用户授予admin权限</string>
     <string name="no_cellular_2g">禁止2G网络(防伪基站)</string>
     <string name="no_connect_data_network">禁止蜂窝网络</string>
+    <string name="no_usb_debugger">禁止Usb调试</string>
     <string name="disallow_all_policy">禁用所有限制</string>
     <string name="enable_all_policy">启用所有限制</string>
     <string name="set_error_count_title">完成! 共 %1$1d 个无法设置</string>

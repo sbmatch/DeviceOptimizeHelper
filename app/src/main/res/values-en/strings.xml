@@ -10,7 +10,7 @@
     <string name="no_outgoing_calls">Disallow outgoing calls (except emergency calls)</string>
     <string name="no_wallpaper">Disallow using wallpaper</string>
     <string name="no_outgoing_beam">Disallow using Beam</string>
-    <string name="no_debugging_features">Disallow USB debugging</string>
+    <string name="no_debugging_features">Disallow developer options</string>
     <string name="no_airplane_mode">Disallow Airplane mode</string>
     <string name="no_network_reset">Disallow resetting network</string>
     <string name="no_share_location">Disallow location sharing</string>
@@ -75,6 +75,7 @@
     <string name="no_grant_admin">Disable granting admin permission to other users by the administrator</string>
     <string name="no_cellular_2g">Disable 2G cellular network(Anti-counterfeit base station)</string>
     <string name="no_connect_data_network">Disable cellular network</string>
+    <string name="no_usb_debugger">Disable Usb debugger</string>
     <string name="disallow_all_policy">Disable all policy</string>
     <string name="enable_all_policy">Enable all policy</string>
     <string name="set_error_count_title">Complete! total %1$1d cannot be set</string>

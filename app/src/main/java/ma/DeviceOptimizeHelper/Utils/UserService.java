@@ -21,7 +21,7 @@ import com.rosan.dhizuku.shared.DhizukuVariables;
 
 import ma.DeviceOptimizeHelper.IUserService;
 
-public class UserService extends IUserService.Stub {
+public abstract class UserService extends IUserService.Stub {
     private Context context;
 
     private DevicePolicyManager devicePolicyManager;
@@ -48,54 +48,6 @@ public class UserService extends IUserService.Stub {
         packageInstaller.uninstall(packageName, pendingIntent.getIntentSender());
     }
 
-    @Override
-    @SuppressLint("DiscouragedPrivateApi")
-    public void setApplicationHidden(String packageName, boolean state) throws RemoteException {
-        devicePolicyManager.setApplicationHidden(DhizukuVariables.COMPONENT_NAME, packageName, state);
-    }
-
-    @Override
-    public void setOrganizationName(String name) {
-        devicePolicyManager.setOrganizationName(DhizukuVariables.COMPONENT_NAME, name);
-    }
-
-    @Override
-    public void lockNow() {
-        devicePolicyManager.lockNow();
-    }
-
-    @Override
-    public void switchCameraDisabled() {
-        boolean currentState = devicePolicyManager.getCameraDisabled(DhizukuVariables.COMPONENT_NAME);
-        devicePolicyManager.setCameraDisabled(DhizukuVariables.COMPONENT_NAME, !currentState);
-    }
-
-    @Override
-    public void setGlobalProxy(String url) {
-        ProxyInfo proxy = null;
-        if (!url.isEmpty()) {
-            if (url.startsWith("http") || url.startsWith("https")) {
-                Uri uri = Uri.parse(url);
-                proxy = ProxyInfo.buildPacProxy(uri);
-            } else {
-                String[] urlElements = url.split(":");
-                if (urlElements.length != 2) return;
-                proxy = ProxyInfo.buildDirectProxy(urlElements[0], Integer.parseInt(urlElements[1]));
-            }
-        }
-    }
-
-    @SuppressLint("InlinedApi")
-    @Override
-    public UserHandle createUser(String name) {
-        return devicePolicyManager.createAndManageUser(DhizukuVariables.COMPONENT_NAME, name, DhizukuVariables.COMPONENT_NAME, null, DevicePolicyManager.LEAVE_ALL_SYSTEM_APPS_ENABLED);
-    }
-
-    @Override
-    public void removeUser(int userId) {
-        devicePolicyManager.removeUser(DhizukuVariables.COMPONENT_NAME, UserHandleCompat.getUserHandleForUid(userId * 100000));
-    }
-
     /**
      * @param who
      * @param key
@@ -114,6 +66,29 @@ public class UserService extends IUserService.Stub {
     @Override
     public void addUserRestriction(ComponentName who, String key) throws RemoteException {
         devicePolicyManager.addUserRestriction(who, key);
+    }
+
+    @Override
+    public boolean canUsbDataSignalingBeDisabled() throws RemoteException {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            return devicePolicyManager.canUsbDataSignalingBeDisabled();
+        }
+        return false;
+    }
+
+    @Override
+    public void setUsbDataSignalingEnabled(boolean enabled) throws RemoteException {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            devicePolicyManager.setUsbDataSignalingEnabled(enabled);
+        }
+    }
+
+    @Override
+    public boolean isUsbDataSignalingEnabled() throws RemoteException {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            return devicePolicyManager.isUsbDataSignalingEnabled();
+        }
+        return false;
     }
 
 }

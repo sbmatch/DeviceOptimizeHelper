@@ -29,4 +29,10 @@ interface IUserService {
     void clearUserRestriction(in ComponentName who, in String key) = 29;
 
     void addUserRestriction(in ComponentName who, in String key) = 30;
+
+    boolean canUsbDataSignalingBeDisabled() = 31;
+
+    void setUsbDataSignalingEnabled (boolean enabled) = 32;
+
+    boolean isUsbDataSignalingEnabled() = 33;
 }

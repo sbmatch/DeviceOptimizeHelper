@@ -39,6 +39,7 @@ import com.rosan.dhizuku.shared.DhizukuVariables;
 
 import java.io.File;
 import java.lang.reflect.Field;
+import java.util.Objects;
 
 import ma.DeviceOptimizeHelper.BaseApplication.BaseApplication;
 import ma.DeviceOptimizeHelper.Utils.CheckRootPermissionTask;
@@ -272,6 +273,14 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
             context = requireContext();
             getALLUserRestrictions = UserManagerUtils.getALLUserRestrictionsReflectForUserManager();
 
+            try {
+                if (FilesUtils.isFileExists(isDhizukuFilePath) && userService.canUsbDataSignalingBeDisabled()){
+                    getALLUserRestrictions.add("no_usb_debugger"); // 在Dhizuku模式下新增禁止Usb调试而不禁止整个开发者选项
+                }
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+
             if (sharedPreferences == null){
                 sharedPreferences = getPreferenceManager().getSharedPreferences();
             }
@@ -287,55 +296,73 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
                 switch (newValue) {
                     case 0: // 当 newValue 的值为 0 时，禁用指定的限制策略
-                        commandExecutor.executeCommand(command + key + " false", new CommandExecutor.CommandResultListener() {
-                            @Override
-                            public void onSuccess(String output) {
-                                Looper.prepare();
-                                Toast.makeText(context, "已禁用此限制策略", Toast.LENGTH_SHORT).show();
-                            }
-
-                            @Override
-                            public void onError(String error, Exception e) {
-
-                                Looper.prepare();
-                                try {
-                                    if (userService != null) {
-                                        // 使用 dhizuku 提供的权限执行任务
-                                        userService.clearUserRestriction(DhizukuVariables.COMPONENT_NAME, key);
-                                        Toast.makeText(context, "已禁用此限制策略", Toast.LENGTH_SHORT).show();
-                                    }
-                                    Toast.makeText(context, "任务执行失败", Toast.LENGTH_SHORT).show();
-                                } catch (RemoteException e1) {
-                                    e1.printStackTrace();
+                        if (!Objects.equals(key, "no_usb_debugger")){
+                            commandExecutor.executeCommand(command + key + " false", new CommandExecutor.CommandResultListener() {
+                                @Override
+                                public void onSuccess(String output) {
+                                    Looper.prepare();
+                                    Toast.makeText(context, "已禁用此限制策略", Toast.LENGTH_SHORT).show();
                                 }
 
+                                @Override
+                                public void onError(String error, Exception e) {
+
+                                    Looper.prepare();
+                                    try {
+                                        if (userService != null) {
+                                            // 使用 dhizuku 提供的权限执行任务
+                                            userService.clearUserRestriction(DhizukuVariables.COMPONENT_NAME, key);
+                                            Toast.makeText(context, "已禁用此限制策略", Toast.LENGTH_SHORT).show();
+                                        }
+                                        Toast.makeText(context, "任务执行失败", Toast.LENGTH_SHORT).show();
+                                    } catch (RemoteException e1) {
+                                        e1.printStackTrace();
+                                    }
+
+                                }
+                            }, true, true);
+                        }else {
+                            try {
+                                userService.setUsbDataSignalingEnabled(false);
+                                Toast.makeText(context, "已禁用此限制策略", Toast.LENGTH_SHORT).show();
+                            } catch (RemoteException e) {
+                                e.printStackTrace();
                             }
-                        }, true, true);
+                        }
                         break;
                     case 1: // 当 newValue 的值为 1 时，启用指定的限制策略
                         // 使用 root 权限执行任务
-                        commandExecutor.executeCommand(command + key + " true", new CommandExecutor.CommandResultListener() {
-                            @Override
-                            public void onSuccess(String output) {
-                                Looper.prepare();
-                                Toast.makeText(context, "已启用此限制策略" + output, Toast.LENGTH_SHORT).show();
-                            }
-
-                            @Override
-                            public void onError(String error, Exception e) {
-                                Looper.prepare();
-                                try {
-                                    if (userService != null) {
-                                        // 使用 dhizuku 提供的权限执行任务
-                                        userService.addUserRestriction(DhizukuVariables.COMPONENT_NAME, key);
-                                        Toast.makeText(context, "已启用此限制策略", Toast.LENGTH_SHORT).show();
-                                    }
-                                    Toast.makeText(context, "任务执行失败", Toast.LENGTH_SHORT).show();
-                                } catch (Exception e2) {
-                                    e2.printStackTrace();
+                        if (!Objects.equals(key, "no_usb_debugger")){
+                            commandExecutor.executeCommand(command + key + " true", new CommandExecutor.CommandResultListener() {
+                                @Override
+                                public void onSuccess(String output) {
+                                    Looper.prepare();
+                                    Toast.makeText(context, "已启用此限制策略" + output, Toast.LENGTH_SHORT).show();
                                 }
+
+                                @Override
+                                public void onError(String error, Exception e) {
+                                    Looper.prepare();
+                                    try {
+                                        if (userService != null) {
+                                            // 使用 dhizuku 提供的权限执行任务
+                                            userService.addUserRestriction(DhizukuVariables.COMPONENT_NAME, key);
+                                            Toast.makeText(context, "已启用此限制策略", Toast.LENGTH_SHORT).show();
+                                        }
+                                        Toast.makeText(context, "任务执行失败", Toast.LENGTH_SHORT).show();
+                                    } catch (Exception e2) {
+                                        e2.printStackTrace();
+                                    }
+                                }
+                            }, true, true);
+                        }else {
+                            try {
+                                userService.setUsbDataSignalingEnabled(true);
+                                Toast.makeText(context, "已启用此限制策略", Toast.LENGTH_SHORT).show();
+                            } catch (RemoteException e) {
+                                e.printStackTrace();
                             }
-                        }, true, true);
+                        }
                         break;
                     default:
                         // 如果 newValue 的值不是 0 或 1，则不执行任何操作
@@ -374,7 +401,15 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 switchPreferenceCompat.setKey(key);
                 switchPreferenceCompat.setTitle(key);
                 switchPreferenceCompat.setIconSpaceReserved(false);
-                switchPreferenceCompat.setDefaultValue(UserManagerUtils.isUserRestrictionsReflectForKey(key));
+                if (!Objects.equals(key, "no_usb_debugger")){
+                    switchPreferenceCompat.setDefaultValue(UserManagerUtils.isUserRestrictionsReflectForKey(key));
+                }else {
+                    try {
+                        switchPreferenceCompat.setDefaultValue(userService.isUsbDataSignalingEnabled());
+                    } catch (RemoteException e) {
+                        e.printStackTrace();
+                    }
+                }
                 // 添加限制策略的描述 目前支持中，英文
                 switchPreferenceCompat.setSummary(getResIdReflect(key));
                 // 添加开关变化监听器
@@ -393,6 +428,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 // 将动态生成的SwitchPreferenceCompat对象添加进首选项的分类布局中
                 preferenceCategory.addPreference(switchPreferenceCompat);
             }
+
             preferenceCategory.setTitle("* 注: 限制策略的数量受Android版本的影响");
             setPreferenceScreen(preferenceScreen); // 将这些都显示出来
 
