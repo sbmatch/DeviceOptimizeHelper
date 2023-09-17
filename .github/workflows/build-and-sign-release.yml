@@ -23,15 +23,17 @@ jobs:
           echo "${{ secrets.RELEASE_KEYSTORE_FILE }}" | base64 -d > keystore.jks
 
       - name: Build and Sign APK
+        id: buildWithGradle
         run: |
           chmod +x ./gradlew
           ./gradlew assembleRelease
-          jarsigner -keystore keystore.jks -storepass ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}  -keypass ${{ secrets.RELEASE_KEY_PASSWORD }} -sigalg SHA1withRSA -digestalg SHA1  -signedjar app/build/outputs/release/app-release.apk  ${{ secrets.RELEASE_KEY_ALIAS }}
+          releaseName =`ls app/build/outputs/apk/release/DeviceOptimizeHelper_v*_*.apk | awk -F '(/|.apk)' '{print $4}'` && echo "releaseName=$releaseName" >> $GITHUB_OUTPUT
+          jarsigner -keystore keystore.jks -storepass ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}  -keypass ${{ secrets.RELEASE_KEY_PASSWORD }} -sigalg SHA1withRSA -digestalg SHA1  -signedjar app/build/outputs/release/${{ steps.buildWithGradle.outputs.releaseName }}.apk app/build/outputs/release/${{ steps.buildWithGradle.outputs.releaseName }}_signed.apk   alias_name
           zipalign -v 4 app/build/outputs/release/app-release.apk app/build/outputs/release/app-release-aligned.apk
           working-directory: ./app
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v2
         with:
-          name: release-apk
-          path: app/build/outputs/bundle/release/app-release-aligned.apk
+          name: ${{ steps.buildWithGradle.outputs.releaseName }}
+          path: app/build/outputs/apk/release/*.apk

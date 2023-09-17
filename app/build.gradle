@@ -37,7 +37,7 @@ android {
         variant.outputs.all {
             // 获取应用的版本名
             def versionName = variant.versionName
-            outputFileName = "DeviceOptimizeHelper_v${versionName}.apk"
+            outputFileName = "DeviceOptimizeHelper_v${versionName}_.apk"
         }
     }
 
