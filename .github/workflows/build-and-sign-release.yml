@@ -27,12 +27,11 @@ jobs:
         run: |
           chmod +x ./gradlew
           ./gradlew assembleRelease
-          jarsigner -keystore keystore.jks -storepass ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}  -keypass ${{ secrets.RELEASE_KEY_PASSWORD }}  -signedjar app/build/outputs/release/"`ls app/build/outputs/apk/release/DeviceOptimizeHelper_v*_*.apk | awk -F '(/|.apk)' '{print $4}'`"_signed.apk  app/build/outputs/release/"`ls app/build/outputs/apk/release/DeviceOptimizeHelper_v*_*.apk | awk -F '(/|.apk)' '{print $4}'`".apk  alias_name ${{ secrets.RELEASE_KEY_ALIAS }}
-          zipalign -v 4 app/build/outputs/release/${releaseName}_signed.apk app/build/outputs/release/${releaseName}_aligned.apk
+          jarsigner -keystore keystore.jks -storepass ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}  -keypass ${{ secrets.RELEASE_KEY_PASSWORD }} 
           working-directory: ./app
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v2
         with:
-          name: `ls app/build/outputs/apk/release/DeviceOptimizeHelper_v*_*.apk | awk -F '(/|.apk)' '{print $4}'`
+          name: releaseApk
           path: app/build/outputs/apk/release/*.apk
