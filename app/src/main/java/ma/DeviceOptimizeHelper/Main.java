@@ -119,7 +119,9 @@ public class Main {
 
         @Override
         public void onResult(Bundle value) throws RemoteException {
+            // 获取value中的key
             Set<String> keys = value.keySet();
+            // 遍历key，发送消息
             for (String key: keys){
                 Message msg = Message.obtain();
                 msg.what = 1;
@@ -130,13 +132,13 @@ public class Main {
 
         @Override
         public void onError(int errorCode, String errorMessage) throws RemoteException {
+            // 发送消息
             Message msg = Message.obtain();
             msg.what = 2;
             msg.arg1 = errorCode;
             msg.obj = errorMessage;
             handler.sendMessage(msg);
         }
-
     }
 
     static class ChildCallback implements Handler.Callback{
@@ -216,20 +218,28 @@ public class Main {
         }
     }
 
+    //设置用户禁止
     private static void setUserRestrictionReflect(String key, boolean value){
         try {
+            //获取IUserManager的Stub类
             @SuppressLint("PrivateApi")
             Class<?> cStub =  Class.forName("android.os.IUserManager$Stub");
+            //获取IUserManager的asInterface方法
             Method asInterface = cStub.getMethod("asInterface", IBinder.class);
+            //获取IUserManager的getSystemService方法
             Object obj = asInterface.invoke(null, getSystemService("user"));
 
+            //获取IUserManager的setUserRestriction方法
             Method setUserRestrictionMethod =  obj.getClass().getMethod("setUserRestriction",String.class, boolean.class, int.class);
 
+            //调用setUserRestriction方法
             setUserRestrictionMethod.invoke(obj,key,value,getIdentifier());
 
         } catch (Exception e2) {
+            //抛出异常
             throw new RuntimeException(e2);
         }
+        //输出setUserRestriction的key和value
         Log.i("Main","setUserRestriction: "+key+" set to "+getUserRestrictionsReflect().getBoolean(key));
     }
 
