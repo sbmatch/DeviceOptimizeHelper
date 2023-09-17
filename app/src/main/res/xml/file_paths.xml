@@ -3,7 +3,5 @@
     <!--为了适配所有路径可以设置 path = "." -->
     <external-path name="external_root" path="." />
     <files-path name="files" path="." />
-    <cache-path
-        name="logs"
-        path="logs/" />
+    <cache-path name="logs" path="." />
 </paths>
