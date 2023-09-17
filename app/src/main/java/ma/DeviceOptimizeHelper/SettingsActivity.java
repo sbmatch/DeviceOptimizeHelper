@@ -5,6 +5,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
@@ -62,6 +63,9 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
     private static SettingsActivity.ServiceThread2 serviceThread2 = new ServiceThread2("你干嘛哎呦");
 
     public static Context context;
+    // 声明SharedPreferences文件的名称和键
+    private static final String PREFS_NAME = "data";
+    private static final String FIRST_TIME_KEY = "firstTime";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -303,8 +307,19 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
             Toast.makeText(context, "Dhizuku 未安装或未激活", Toast.LENGTH_SHORT).show();
         }
     }
+    private boolean isFirstTime() {
+        SharedPreferences sharedPreferences = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        return sharedPreferences.getBoolean(FIRST_TIME_KEY, true);
+    }
 
-    public static class HeaderFragment extends PreferenceFragmentCompat {
+    private void markFirstTime() {
+        SharedPreferences sharedPreferences = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putBoolean(FIRST_TIME_KEY, false);
+        editor.apply();
+    }
+
+    public class HeaderFragment extends PreferenceFragmentCompat {
         Handler handler;
         @SuppressLint("ResourceAsColor")
         @Override
@@ -319,14 +334,24 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
             savedInstanceState.putBoolean("isGrantRoot", isRooted());
 
+            // TODO 你这里判断貌似有点问题,看看
             if (FilesUtils.isFileExists(isDhizukuFilePath) || savedInstanceState.getBoolean("isGrantRoot")){
                 Toast.makeText(context, "欢迎使用", Toast.LENGTH_SHORT).show();
             }else {
-                new MaterialAlertDialogBuilder(context).setTitle("应用说明").setMessage("本应用支持 Dhizuku 与 Root 两种使用方式，其中Root模式可设置所有系统支持的限制策略，Dhizuku模式下各家深度定制ROM对<设备所有者>权限的限制则各有不同，接下来我们会向您请求这两种权限, 优先级为: Root > Dhizuku ，请注意: 在我们获取到Dhizuku权限后会继续尝试申请Root权限, 现在，我们将尝试申请您设备上的Dhizuku权限, 成功后会继续尝试申请Root权限 \n如果您了解自己在干什么，请点击继续按钮")
+                new MaterialAlertDialogBuilder(context)
+                        .setTitle("应用说明")
+                        .setMessage("本应用支持 Dhizuku 与 Root 两种使用方式，其中Root模式可设置所有系统支持的限制策略，Dhizuku模式下各家深度定制ROM对<设备所有者>权限的限制则各有不同，接下来我们会向您请求这两种权限, 优先级为: Root > Dhizuku ，请注意: 在我们获取到Dhizuku权限后会继续尝试申请Root权限, 现在，我们将尝试申请您设备上的Dhizuku权限, 成功后会继续尝试申请Root权限 \n如果您了解自己在干什么，请点击继续按钮")
                         .setPositiveButton("继续", (dialog, which) -> {
                             tryRequestsDhizukuPermission(context);
                             dialog.cancel();
-                        }).setNegativeButton("取消",null).create().show();
+                        })
+                        .setNegativeButton("取消", (dialog, which) -> {
+                            // 在取消按钮点击时退出应用
+                            finish();
+                        })
+                        .create()
+                        .show();
+
             }
 
 
@@ -447,7 +472,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
         }
 
 
-        public static boolean isRooted() {
+        public boolean isRooted() {
 
             Process process = null;
             try {
