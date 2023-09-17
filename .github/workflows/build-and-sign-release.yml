@@ -27,8 +27,8 @@ jobs:
         run: |
           chmod +x ./gradlew
           ./gradlew assembleRelease
-          releaseName =`ls app/build/outputs/apk/release/DeviceOptimizeHelper_v*_*.apk | awk -F '(/|.apk)' '{print $4}'` && echo "${releaseName}.apk"
-          jarsigner -keystore keystore.jks -storepass ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}  -keypass ${{ secrets.RELEASE_KEY_PASSWORD }}  -signedjar app/build/outputs/release/${releaseName}_signed.apk app/build/outputs/release/${releaseName}.apk  alias_name ${{ secrets.RELEASE_KEY_ALIAS }}
+          releaseName ="`ls app/build/outputs/apk/release/DeviceOptimizeHelper_v*_*.apk | awk -F '(/|.apk)' '{print $4}'`"
+          jarsigner -keystore keystore.jks -storepass ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}  -keypass ${{ secrets.RELEASE_KEY_PASSWORD }}  -signedjar app/build/outputs/release/"$releaseName"_signed.apk app/build/outputs/release/"$releaseName".apk  alias_name ${{ secrets.RELEASE_KEY_ALIAS }}
           zipalign -v 4 app/build/outputs/release/${releaseName}_signed.apk app/build/outputs/release/${releaseName}_aligned.apk
           working-directory: ./app
 
