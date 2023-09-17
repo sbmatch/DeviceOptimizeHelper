@@ -22,15 +22,14 @@ jobs:
 
       - name: Restore Keystore from Base64
         run: |
-          echo "Value of RELEASE_KEYSTORE_FILE: ${{ secrets.RELEASE_KEYSTORE_FILE }}"
-          echo "${{ secrets.RELEASE_KEYSTORE_FILE }}" | base64 -d > keystore.keystore
+          echo "${{ secrets.RELEASE_KEYSTORE_FILE }}" | base64 -d > keystore.jks
 
       - name: Build and Sign APK
         run: |
           chmod +x ./gradlew
-          ./gradlew bundleRelease
-          jarsigner -keystore keystore.keystore -storepass ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}  -key-alias ${{ secrets.RELEASE_KEY_ALIAS }}  -keypass ${{ secrets.RELEASE_KEY_PASSWORD }} -sigalg SHA1withRSA -digestalg SHA1 -storetype pkcs12 -signedjar app/build/outputs/bundle/release/app-release.aab app/build/outputs/bundle/release/app-release.aab key-alias -tsa http://timestamp.digicert.com
-          zipalign -v 4 app/build/outputs/bundle/release/app-release.apk app/build/outputs/bundle/release/app-release-aligned.apk
+          ./gradlew :assembleRelease
+          jarsigner -keystore keystore.jks -storepass ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}  -keypass ${{ secrets.RELEASE_KEY_PASSWORD }} -sigalg SHA1withRSA -digestalg SHA1  -signedjar app/build/outputs/release/app-release.apk  ${{ secrets.RELEASE_KEY_ALIAS }}
+          zipalign -v 4 app/build/outputs/release/app-release.apk app/build/outputs/release/app-release-aligned.apk
           working-directory: ./app
 
       - name: Upload APK Artifact
