@@ -26,6 +26,7 @@ public class UserManagerUtils {
             }
             return fields;
         } catch (Exception e2) {
+            e2.printStackTrace();
             throw new SecurityException(e2);
         }
     }
