@@ -2,8 +2,7 @@ name: Build and Sign Release APK
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
 
 jobs:
   build:
