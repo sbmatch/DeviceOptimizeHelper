@@ -25,7 +25,7 @@ jobs:
       - name: Build and Sign APK
         run: |
           chmod +x ./gradlew
-          ./gradlew :app :assembleRelease
+          ./gradlew assembleRelease
           jarsigner -keystore keystore.jks -storepass ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}  -keypass ${{ secrets.RELEASE_KEY_PASSWORD }} -sigalg SHA1withRSA -digestalg SHA1  -signedjar app/build/outputs/release/app-release.apk  ${{ secrets.RELEASE_KEY_ALIAS }}
           zipalign -v 4 app/build/outputs/release/app-release.apk app/build/outputs/release/app-release-aligned.apk
           working-directory: ./app
