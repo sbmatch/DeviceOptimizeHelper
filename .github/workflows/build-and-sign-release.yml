@@ -43,7 +43,7 @@ jobs:
           #zipalign -v 4 app/build/outputs/apk/release/*.apk app/build/outputs/apk/release/app-release-aligned.apk
 
       - name: Upload Signed APK
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: releaseApk
           path: app/build/outputs/apk/release/*.apk
