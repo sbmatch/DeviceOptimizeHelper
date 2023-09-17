@@ -85,6 +85,10 @@ public class BaseApplication extends Application {
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 intent.putExtra(Intent.EXTRA_SUBJECT, "崩溃日志已记录");
 
+                if (getStackTrace(throwable).startsWith("System.err")){
+                    FilesUtils.writeToFile(logFile.getAbsolutePath(), systemInfo+"\n\n"+getStackTrace(throwable));
+                }
+
                 SettingsActivity.commandExecutor.executeCommand("logcat -v threadtime -b crash -d *:v ", new CommandExecutor.CommandResultListener() {
                     @Override
                     public void onSuccess(String output) {
@@ -92,12 +96,7 @@ public class BaseApplication extends Application {
                         String stackTraceContext = !output.isEmpty() ? output : getStackTrace(throwable) ;
                         // 使用系统分享发送文件
                         intent.putExtra(Intent.EXTRA_TEXT, systemInfo+"\n\n"+stackTraceContext);
-
                         FilesUtils.writeToFile(logFile.getAbsolutePath(),systemInfo+"\n\n"+stackTraceContext);
-
-                        // 启动系统分享
-                        context.startActivity(intent);
-
                     }
 
                     @Override
@@ -105,6 +104,8 @@ public class BaseApplication extends Application {
 
                     }
                 }, false, false);
+
+                context.startActivity(intent);
             }
 
             mHandler.postDelayed(() -> defaultHandler.uncaughtException(thread,throwable),5000);
