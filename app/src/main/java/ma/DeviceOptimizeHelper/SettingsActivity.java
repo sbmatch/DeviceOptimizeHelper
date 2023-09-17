@@ -5,6 +5,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
@@ -41,9 +42,9 @@ import com.rosan.dhizuku.shared.DhizukuVariables;
 
 import java.io.File;
 import java.lang.reflect.Field;
-import java.util.Objects;
 
 import ma.DeviceOptimizeHelper.BaseApplication.BaseApplication;
+import ma.DeviceOptimizeHelper.Utils.CheckRootPermissionTask;
 import ma.DeviceOptimizeHelper.Utils.CommandExecutor;
 import ma.DeviceOptimizeHelper.Utils.FilesUtils;
 import ma.DeviceOptimizeHelper.Utils.UserManagerUtils;
@@ -103,7 +104,6 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
         super.onSaveInstanceState(outState);
         // Save current activity title so we can set it again after a configuration change
         outState.putCharSequence(TITLE_TAG, getTitle());
-        outState.putBoolean("isDhizuku", FilesUtils.isFileExists(isDhizukuFilePath));
     }
 
     @Override
@@ -174,7 +174,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
     }
 
-    private static boolean bindDhizukuservice(){
+    private static void bindDhizukuservice(){
 
         DhizukuUserServiceArgs args = new DhizukuUserServiceArgs(new ComponentName(context, UserService.class));
 
@@ -184,9 +184,8 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 public void onServiceConnected(ComponentName name, IBinder service) {
                     if (userService == null){
                         userService = IUserService.Stub.asInterface(service);
-                    }else {
-                        FilesUtils.createFile(isDhizukuFilePath);
                     }
+                    FilesUtils.createFile(isDhizukuFilePath);
                 }
 
                 @Override
@@ -198,7 +197,6 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
             e.printStackTrace();
             FilesUtils.delete(isDhizukuFilePath);
         }
-        return FilesUtils.isFileExists(isDhizukuFilePath);
     }
 
     private  void oneKeyChange(boolean z) {
@@ -262,51 +260,10 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
         return true;
     }
 
-
-    public static void tryRequestRoot(){
-        commandExecutor.executeCommand(command,  new CommandExecutor.CommandResultListener() {
-            @Override
-            public void onSuccess(String output) {
-                Looper.prepare();
-                Toast.makeText(context, "已授权Root", Toast.LENGTH_SHORT).show();
-            }
-
-            @Override
-            public void onError(String error, Exception e) {
-               Log.e("CommandExecutor","root权限授权失败",e);
-            }
-
-        }, true, true);
-    }
-
-    public static void tryRequestsDhizukuPermission(Context context){
-        try {
-            if (!Dhizuku.isPermissionGranted()){
-                new MaterialAlertDialogBuilder(context).setTitle("权限检查")
-                        .setMessage("好的! 让我们试试申请Dhizuku权限, 如果可以,请在接下来的权限申请对话框中允许授权")
-                        .setPositiveButton("好的",  (dialog, which) -> Dhizuku.requestPermission(new DhizukuRequestPermissionListener() {
-                            @Override
-                            public void onRequestPermission(int grantResult) {
-                                if (grantResult == PackageManager.PERMISSION_GRANTED) {
-                                    bindDhizukuservice();
-                                    tryRequestRoot();
-                                    Looper.prepare();
-                                    Toast.makeText(context, "Dhizuku 已授权", Toast.LENGTH_SHORT).show();
-                                }
-                            }
-                        })).setNegativeButton("取消",null).create().show();
-            }else {
-                bindDhizukuservice();
-            }
-        }catch (IllegalStateException e){
-            tryRequestRoot();
-            FilesUtils.delete(isDhizukuFilePath);
-            Toast.makeText(context, "Dhizuku 未安装或未激活", Toast.LENGTH_SHORT).show();
-        }
-    }
-
     public static class HeaderFragment extends PreferenceFragmentCompat {
         Handler handler;
+        // 获取 SharedPreferences
+        public android.content.SharedPreferences sharedPreferences;
         @SuppressLint("ResourceAsColor")
         @Override
         public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
@@ -314,22 +271,9 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
             context = requireContext();
             getALLUserRestrictions = UserManagerUtils.getALLUserRestrictionsReflectForUserManager();
 
-            if (savedInstanceState == null) {
-                savedInstanceState = new Bundle();
+            if (sharedPreferences == null){
+                sharedPreferences = getPreferenceManager().getSharedPreferences();
             }
-
-            savedInstanceState.putBoolean("isGrantRoot", isRooted());
-
-            if (FilesUtils.isFileExists(isDhizukuFilePath) || savedInstanceState.getBoolean("isGrantRoot")){
-                Toast.makeText(context, "欢迎使用", Toast.LENGTH_SHORT).show();
-            }else {
-                new MaterialAlertDialogBuilder(context).setTitle("应用说明").setMessage("本应用支持 Dhizuku 与 Root 两种使用方式，其中Root模式可设置所有系统支持的限制策略，Dhizuku模式下各家深度定制ROM对<设备所有者>权限的限制则各有不同，接下来我们会向您请求这两种权限, 优先级为: Root > Dhizuku ，请注意: 在我们获取到Dhizuku权限后会继续尝试申请Root权限, 现在，我们将尝试申请您设备上的Dhizuku权限, 成功后会继续尝试申请Root权限 \n如果您了解自己在干什么，请点击继续按钮")
-                        .setPositiveButton("继续", (dialog, which) -> {
-                            tryRequestsDhizukuPermission(context);
-                            dialog.cancel();
-                        }).setNegativeButton("取消",null).create().show();
-            }
-
 
 // 创建一个 Handler 对象，将它关联到指定线程的 Looper 上
 // 这里的 serviceThread2 是一个线程对象，通过 getLooper() 获取它的消息循环
@@ -351,18 +295,17 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                             @Override
                             public void onError(String error, Exception e) {
 
-                                    Looper.prepare();
-                                    Toast.makeText(context, "Root方式执行失败，尝试使用Dhizuku执行...", Toast.LENGTH_SHORT).show();
-                                    try {
-                                        if (userService != null){
-                                            // 使用 dhizuku 提供的权限执行任务
-                                            userService.clearUserRestriction(DhizukuVariables.COMPONENT_NAME, key);
-                                            Toast.makeText(context, "已禁用此限制策略", Toast.LENGTH_SHORT).show();
-                                        }
-                                        Toast.makeText(context, "任务执行失败", Toast.LENGTH_SHORT).show();
-                                    } catch (RemoteException e1) {
-                                        e1.printStackTrace();
+                                Looper.prepare();
+                                try {
+                                    if (userService != null) {
+                                        // 使用 dhizuku 提供的权限执行任务
+                                        userService.clearUserRestriction(DhizukuVariables.COMPONENT_NAME, key);
+                                        Toast.makeText(context, "已禁用此限制策略", Toast.LENGTH_SHORT).show();
                                     }
+                                    Toast.makeText(context, "任务执行失败", Toast.LENGTH_SHORT).show();
+                                } catch (RemoteException e1) {
+                                    e1.printStackTrace();
+                                }
 
                             }
                         }, true, true);
@@ -373,15 +316,14 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                             @Override
                             public void onSuccess(String output) {
                                 Looper.prepare();
-                                Toast.makeText(context, "已启用此限制策略"+ output, Toast.LENGTH_SHORT).show();
+                                Toast.makeText(context, "已启用此限制策略" + output, Toast.LENGTH_SHORT).show();
                             }
 
                             @Override
                             public void onError(String error, Exception e) {
                                 Looper.prepare();
-                                Toast.makeText(context, "尝试使用Dhizuku执行...", Toast.LENGTH_SHORT).show();
                                 try {
-                                    if (userService != null){
+                                    if (userService != null) {
                                         // 使用 dhizuku 提供的权限执行任务
                                         userService.addUserRestriction(DhizukuVariables.COMPONENT_NAME, key);
                                         Toast.makeText(context, "已启用此限制策略", Toast.LENGTH_SHORT).show();
@@ -400,8 +342,20 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 return true;
             });
 
+
+            if ((FilesUtils.isFileExists(isDhizukuFilePath) || sharedPreferences.getBoolean("isGrantRoot", false))){
+                Toast.makeText(context, "欢迎使用", Toast.LENGTH_SHORT).show();
+            } else {
+                new MaterialAlertDialogBuilder(context).setTitle("应用说明").setMessage("本应用支持 Dhizuku 与 Root 两种使用方式，其中Root模式可设置所有系统支持的限制策略，Dhizuku模式下各家深度定制ROM对<设备所有者>权限的限制则各有不同，接下来我们会向您请求这两种权限, 优先级为: Root > Dhizuku ，请注意: 在我们获取到Dhizuku权限后会继续尝试申请Root权限, 现在，我们将尝试申请您设备上的Dhizuku权限, 成功后会继续尝试申请Root权限 \n如果您了解自己在干什么，请点击继续按钮")
+                        .setPositiveButton("继续", (dialog, which) -> {
+                            tryRequestsDhizukuPermission(context);
+                            dialog.cancel();
+                        }).setNegativeButton("取消", null).create().show();
+
+            }
+
             // 获取根布局，如果不存在则创建一个
-            if (preferenceScreen == null){
+            if (preferenceScreen == null) {
                 preferenceScreen = getPreferenceManager().createPreferenceScreen(requireContext());
             }
 
@@ -418,16 +372,19 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 switchPreferenceCompat.setKey(key);
                 switchPreferenceCompat.setTitle(key);
                 switchPreferenceCompat.setIconSpaceReserved(false);
+                switchPreferenceCompat.setDefaultValue(UserManagerUtils.isUserRestrictionsReflectForKey(key));
                 // 添加限制策略的描述 目前支持中，英文
                 switchPreferenceCompat.setSummary(getResIdReflect(key));
                 // 添加开关变化监听器
                 switchPreferenceCompat.setOnPreferenceChangeListener((preference, newValue) -> {
                     Message message = Message.obtain();
-                    message.obj =  preference.getKey();
-                    message.arg1 = (boolean)newValue ? 1 : 0;
+                    message.obj = preference.getKey();
+                    message.arg1 = (boolean) newValue ? 1 : 0;
                     handler.sendMessage(message); // 发送消息
 
-                    return isRooted() || bindDhizukuservice();
+                    Log.i("ssss","isDhizuku: "+FilesUtils.isFileExists(isDhizukuFilePath) +" , isGrantRoot: "+ sharedPreferences.getBoolean("isGrantRoot", false));
+
+                    return (FilesUtils.isFileExists(isDhizukuFilePath) || sharedPreferences.getBoolean("isGrantRoot", false));
                 });
                 // 将动态生成的SwitchPreferenceCompat对象添加进一个列表中
                 switchPreferenceCompatArraySet.add(switchPreferenceCompat);
@@ -439,35 +396,86 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
         }
 
+
         @Override
-        public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-            super.onViewCreated(view, savedInstanceState);
-            if (savedInstanceState != null){
-                savedInstanceState.putBoolean("isGrantRoot",isRooted());
-            }
+        public boolean onPreferenceTreeClick(@NonNull Preference preference) {
+
+            CheckRootPermissionTask task = new CheckRootPermissionTask(hasRootPermission -> {
+                sharedPreferences.edit().putBoolean("isGrantRoot", hasRootPermission).apply();
+            });
+            task.execute();
+
+            return super.onPreferenceTreeClick(preference);
+
         }
 
+        @Override
+        public void onResume() {
 
-        public static boolean isRooted() {
+            if (sharedPreferences.getBoolean("first_checkRoot",false)){
+                CheckRootPermissionTask task = new CheckRootPermissionTask(hasRootPermission -> {
+                    sharedPreferences.edit().putBoolean("isGrantRoot", hasRootPermission).apply();
+                });
+                task.execute();
+            }
 
-            Process process = null;
-            try {
-                // 尝试执行一个需要root权限的命令，例如 "su"
-                process = Runtime.getRuntime().exec("su"+"\n");
-                int exitCode = process.exitValue();
-                // 如果上述命令执行成功，说明应用具有root权限
-                return exitCode == 0;
-            } catch (Exception e) {
-                // 如果出现异常，说明应用没有root权限
-                return false;
-            }finally {
-                if (process != null){
-                    process.destroy();
+            super.onResume();
+        }
+
+        public void tryRequestRoot(){
+            commandExecutor.executeCommand(command,  new CommandExecutor.CommandResultListener() {
+                @Override
+                public void onSuccess(String output) {
+
+                    sharedPreferences.edit().putBoolean("first_checkRoot",true).apply();
+
+                    CheckRootPermissionTask task = new CheckRootPermissionTask(hasRootPermission -> {
+                    sharedPreferences.edit().putBoolean("isGrantRoot", hasRootPermission).apply();
+                    });
+                    task.execute();
+
+                    Looper.prepare();
+                    Toast.makeText(context, "已授权Root", Toast.LENGTH_SHORT).show();
                 }
+
+                @Override
+                public void onError(String error, Exception e) {
+                    Log.e("CommandExecutor","root权限授权失败",e);
+                }
+
+            }, true, true);
+        }
+
+        public  void tryRequestsDhizukuPermission(Context context){
+            try {
+                if (!Dhizuku.isPermissionGranted()){
+                    new MaterialAlertDialogBuilder(context).setTitle("权限检查")
+                            .setMessage("好的! 让我们试试申请Dhizuku权限, 如果可以,请在接下来的权限申请对话框中允许授权")
+                            .setPositiveButton("好的",  (dialog, which) -> Dhizuku.requestPermission(new DhizukuRequestPermissionListener() {
+                                @Override
+                                public void onRequestPermission(int grantResult) {
+                                    if (grantResult == PackageManager.PERMISSION_GRANTED) {
+                                        bindDhizukuservice();
+                                        tryRequestRoot();
+                                        Looper.prepare();
+                                        Toast.makeText(context, "Dhizuku 已授权", Toast.LENGTH_SHORT).show();
+                                    }
+                                }
+                            })).setNegativeButton("取消",null).create().show();
+                }else {
+                    bindDhizukuservice();
+                }
+            }catch (IllegalStateException e){
+                e.printStackTrace();
+                FilesUtils.delete(isDhizukuFilePath);
+                Toast.makeText(context, "Dhizuku 未安装或未激活", Toast.LENGTH_SHORT).show();
+                tryRequestRoot();
             }
         }
+
 
     }
+
 
     private static class ServiceThread2 extends HandlerThread {
         public ServiceThread2(String name) {
