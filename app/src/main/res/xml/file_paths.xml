@@ -2,7 +2,8 @@
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
     <!--为了适配所有路径可以设置 path = "." -->
     <external-path name="external_root" path="." />
-    <external-path name="external_logs" path="logs/" />
     <files-path name="files" path="." />
-    <files-path name="log_files" path="logs/" />
+    <cache-path
+        name="logs"
+        path="logs/" />
 </paths>

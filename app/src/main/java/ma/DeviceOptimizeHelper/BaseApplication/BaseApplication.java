@@ -7,6 +7,8 @@ import android.content.Intent;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
+import android.util.LogPrinter;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -26,6 +28,9 @@ import ma.DeviceOptimizeHelper.Utils.FilesUtils;
 public class BaseApplication extends Application {
     public Context context;
     private static Handler mHandler;
+    public static String systemInfo;
+    public static File logFile, logsDir;
+
     @Override
     protected void attachBaseContext(Context base) {
         super.attachBaseContext(base);
@@ -40,6 +45,28 @@ public class BaseApplication extends Application {
     public void onCreate() {
         super.onCreate();
         mHandler = new Handler(Looper.getMainLooper());
+
+        // 创建异常信息文件
+        @SuppressLint("SimpleDateFormat")
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy_MM_dd_HH:mm:ss");
+        String timestamp = dateFormat.format(new Date());
+        String fileName = "crash_" + timestamp + ".log";
+
+        // 获取系统信息
+        String manufacturer = Build.MANUFACTURER;
+        String model = Build.MODEL;
+        String version = Build.VERSION.RELEASE;
+        int sdkVersion = Build.VERSION.SDK_INT;
+
+        // 创建包含系统信息的日志字符串
+        systemInfo = "Manufacturer: " + manufacturer + ", Model: " + model + ", Android Version: " + version + ", SDK Version: " + sdkVersion;
+
+        File cacheDir = context.getExternalCacheDir();
+        // 创建一个名为"logs"的子目录
+        logsDir = new File(cacheDir, "logs");
+        FilesUtils.createDir(logsDir.getAbsolutePath());
+        logFile = new File(logsDir, fileName);
+
         Thread.setDefaultUncaughtExceptionHandler(new GlobalExceptionHandler(context));
     }
 
@@ -58,66 +85,41 @@ public class BaseApplication extends Application {
         @Override
         public void uncaughtException(@NonNull Thread thread, @NonNull Throwable throwable) {
 
-            File cacheDir = context.getExternalCacheDir();
-            if (cacheDir != null) {
-                // 创建一个名为"logs"的子目录
-                File logsDir = new File(cacheDir, "logs");
-                FilesUtils.createDir(logsDir.getAbsolutePath());
 
-                // 创建异常信息文件
-                @SuppressLint("SimpleDateFormat")
-                SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy_MM_dd_HH:mm:ss");
-                String timestamp = dateFormat.format(new Date());
-                String fileName = "crash_" + timestamp + ".log";
-                File logFile = new File(logsDir, fileName);
+            Intent intent = new Intent(Intent.ACTION_SEND);
+            intent.setType("text/plain");
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            intent.putExtra(Intent.EXTRA_SUBJECT, "崩溃日志已记录");
 
-                // 获取系统信息
-                String manufacturer = Build.MANUFACTURER;
-                String model = Build.MODEL;
-                String version = Build.VERSION.RELEASE;
-                int sdkVersion = Build.VERSION.SDK_INT;
+            SettingsActivity.commandExecutor.executeCommand("logcat -v threadtime -b crash -d *:v ", new CommandExecutor.CommandResultListener() {
+                @Override
+                public void onSuccess(String output) {
 
-                // 创建包含系统信息的日志字符串
-                String systemInfo = "Manufacturer: " + manufacturer + ", Model: " + model + ", Android Version: " + version + ", SDK Version: " + sdkVersion;
-
-                Intent intent = new Intent(Intent.ACTION_SEND);
-                intent.setType("text/plain");
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                intent.putExtra(Intent.EXTRA_SUBJECT, "崩溃日志已记录");
-
-                if (getStackTrace(throwable).startsWith("System.err")){
-                    FilesUtils.writeToFile(logFile.getAbsolutePath(), systemInfo+"\n\n"+getStackTrace(throwable));
+                    String stackTraceContext = !output.isEmpty() ? output : getStackTrace(throwable) ;
+                    // 使用系统分享发送文件
+                    intent.putExtra(Intent.EXTRA_TEXT, systemInfo+"\n\n"+stackTraceContext);
+                    FilesUtils.writeToFile(logFile.getAbsolutePath(),systemInfo+"\n\n"+stackTraceContext, false);
                 }
 
-                SettingsActivity.commandExecutor.executeCommand("logcat -v threadtime -b crash -d *:v ", new CommandExecutor.CommandResultListener() {
-                    @Override
-                    public void onSuccess(String output) {
+                @Override
+                public void onError(String error, Exception e) {
 
-                        String stackTraceContext = !output.isEmpty() ? output : getStackTrace(throwable) ;
-                        // 使用系统分享发送文件
-                        intent.putExtra(Intent.EXTRA_TEXT, systemInfo+"\n\n"+stackTraceContext);
-                        FilesUtils.writeToFile(logFile.getAbsolutePath(),systemInfo+"\n\n"+stackTraceContext);
-                    }
+                }
+            }, false, false);
 
-                    @Override
-                    public void onError(String error, Exception e) {
-
-                    }
-                }, false, false);
-
-                context.startActivity(intent);
-            }
+            context.startActivity(intent);
 
             mHandler.postDelayed(() -> defaultHandler.uncaughtException(thread,throwable),5000);
         }
 
-        private static String getStackTrace(Throwable throwable) {
+        public static String getStackTrace(Throwable throwable) {
             // 将 Throwable 对象的堆栈信息转换为字符串形式
             java.io.StringWriter sw = new java.io.StringWriter();
             java.io.PrintWriter pw = new java.io.PrintWriter(sw);
             throwable.printStackTrace(pw);
             return sw.toString();
         }
+
 
         private static void restartActivity(Context context,Class<?> clazz){
             Intent i = new Intent(context, clazz);

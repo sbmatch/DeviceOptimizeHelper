@@ -6,6 +6,8 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Comparator;
 
 public class FilesUtils {
 
@@ -103,10 +105,10 @@ public class FilesUtils {
      * @param content 写入的内容
      * @return 写入成功返回true，否则返回false
      */
-    public static boolean writeToFile(String filePath, String content) {
+    public static boolean writeToFile(String filePath, String content, boolean isAppend) {
         BufferedWriter writer = null;
         try {
-            writer = new BufferedWriter(new FileWriter(filePath,false));
+            writer = new BufferedWriter(new FileWriter(filePath,isAppend));
             writer.write(content);
             writer.flush();
             return true;
@@ -156,4 +158,35 @@ public class FilesUtils {
             }
         }
     }
+
+    public static File getLatestFileInDirectory(String directoryPath) {
+        File directory = new File(directoryPath);
+
+        // 检查目录是否存在
+        if (!directory.exists() || !directory.isDirectory()) {
+            return null;
+        }
+
+        // 获取目录中的所有文件
+        File[] files = directory.listFiles();
+
+        // 如果目录为空，返回null
+        if (files == null || files.length == 0) {
+            return null;
+        }
+
+        // 使用文件的最后修改时间进行排序
+        Arrays.sort(files, new Comparator<File>() {
+            @Override
+            public int compare(File file1, File file2) {
+                long lastModified1 = file1.lastModified();
+                long lastModified2 = file2.lastModified();
+                return Long.compare(lastModified2, lastModified1); // 降序排列
+            }
+        });
+
+        // 返回最新的文件
+        return files[0];
+    }
+
 }

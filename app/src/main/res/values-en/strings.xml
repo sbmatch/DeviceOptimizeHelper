@@ -79,5 +79,5 @@
     <string name="enable_all_policy">Enable all policy</string>
     <string name="set_error_count_title">Complete! total %1$1d cannot be set</string>
     <string name="abouts">About</string>
-    <string name="share_log">Share runtime logs</string>
+    <string name="share_runtime_logs">Share runtime logs</string>
 </resources>

@@ -3,6 +3,7 @@ package ma.DeviceOptimizeHelper;
 import android.annotation.SuppressLint;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
@@ -25,6 +26,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.FileProvider;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceCategory;
 import androidx.preference.PreferenceFragmentCompat;
@@ -39,7 +41,9 @@ import com.rosan.dhizuku.shared.DhizukuVariables;
 
 import java.io.File;
 import java.lang.reflect.Field;
+import java.util.Objects;
 
+import ma.DeviceOptimizeHelper.BaseApplication.BaseApplication;
 import ma.DeviceOptimizeHelper.Utils.CommandExecutor;
 import ma.DeviceOptimizeHelper.Utils.FilesUtils;
 import ma.DeviceOptimizeHelper.Utils.UserManagerUtils;
@@ -106,6 +110,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
     public boolean onCreateOptionsMenu(Menu menu) {
         menu.add(Menu.NONE,10000,0,getResIdReflect("enable_all_policy"));
         menu.add(Menu.NONE,10001,1,getResIdReflect("disallow_all_policy"));
+        menu.add(Menu.NONE,10002,2,getResIdReflect("share_runtime_logs"));
         return super.onCreateOptionsMenu(menu);
     }
 
@@ -120,6 +125,9 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                     break;
                 case 10001:
                     oneKeyChange(false);
+                    break;
+                case 10002:
+                    share_runtime_logs();
                     break;
             }
         }catch (Exception e){
@@ -136,6 +144,33 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
             return true;
         }
         return super.onSupportNavigateUp();
+    }
+
+
+    private static void share_runtime_logs(){
+
+        Intent intent = new Intent(Intent.ACTION_SEND);
+        intent.setType("text/plain");
+
+        SettingsActivity.commandExecutor.executeCommand("logcat -v threadtime -d *:v ", new CommandExecutor.CommandResultListener() {
+            @Override
+            public void onSuccess(String output) {
+                // 使用系统分享发送文件
+                Looper.prepare();
+                File shareFile = FilesUtils.getLatestFileInDirectory(BaseApplication.logsDir.getAbsolutePath());
+                intent.putExtra(Intent.EXTRA_STREAM,  FileProvider.getUriForFile(context, "ma.DeviceOptimizeHelper.provider", shareFile));
+                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                FilesUtils.writeToFile(BaseApplication.logFile.getAbsolutePath(),BaseApplication.systemInfo+"\n\n"+output, true);
+                context.startActivity(intent);
+                Looper.loop();
+            }
+
+            @Override
+            public void onError(String error, Exception e) {
+
+            }
+        }, false, false);
+
     }
 
     private static boolean bindDhizukuservice(){
@@ -159,9 +194,8 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 }
             });
         }catch (IllegalStateException e){
-            FilesUtils.delete(isDhizukuFilePath);
             e.printStackTrace();
-
+            FilesUtils.delete(isDhizukuFilePath);
         }
         return FilesUtils.isFileExists(isDhizukuFilePath);
     }
@@ -200,15 +234,17 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                                 }catch (SecurityException | RemoteException e1){
                                     i++;
                                     setErrorList.append(e1.getMessage()).append("\n\n");
+                                    e1.printStackTrace();
                                 }
                             }
                             String title = context.getString(getResIdReflect("set_error_count_title"));
                             new MaterialAlertDialogBuilder(context).setMessage(setErrorList).setTitle(String.format(title,i)).setPositiveButton("Ok",null).create().show();
 
                         });
+                    }else {
+                        Looper.prepare();
+                        Toast.makeText(context, "任务执行失败", Toast.LENGTH_SHORT).show();
                     }
-                    Looper.prepare();
-                    Toast.makeText(context, "任务执行失败", Toast.LENGTH_SHORT).show();
                 }
             }
         }, true, true);
