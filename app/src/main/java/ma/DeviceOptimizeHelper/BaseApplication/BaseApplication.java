@@ -29,7 +29,6 @@ public class BaseApplication extends Application {
     public Context context;
     private static Handler mHandler;
     public static String systemInfo;
-    public static File logFile;
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -46,22 +45,13 @@ public class BaseApplication extends Application {
         super.onCreate();
         mHandler = new Handler(Looper.getMainLooper());
 
-        // 创建异常信息文件
-        @SuppressLint("SimpleDateFormat")
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy_MM_dd_HH:mm:ss");
-        String timestamp = dateFormat.format(new Date());
-        String fileName = "crash_" + timestamp + ".log";
-
         // 获取系统信息
         String manufacturer = Build.MANUFACTURER;
         String model = Build.MODEL;
         String version = Build.VERSION.RELEASE;
         int sdkVersion = Build.VERSION.SDK_INT;
-
         // 创建包含系统信息的日志字符串
         systemInfo = "Manufacturer: " + manufacturer + ", Model: " + model + ", Android Version: " + version + ", SDK Version: " + sdkVersion;
-
-        logFile = new File(getLogsDir(context), fileName);
 
         Thread.setDefaultUncaughtExceptionHandler(new GlobalExceptionHandler(context));
     }
@@ -72,6 +62,14 @@ public class BaseApplication extends Application {
         File logsDir = new File(cacheDir, "logs");
         FilesUtils.createDir(logsDir.getAbsolutePath());
         return logsDir;
+    }
+
+    public static File getLogFile(Context context,String name) {
+        // 创建异常信息文件
+        @SuppressLint("SimpleDateFormat")
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy_MM_dd_HH:mm:ss");
+        String timestamp = dateFormat.format(new Date());
+        return new File(getLogsDir(context),name+"_" + timestamp + ".log");
     }
 
     public static class GlobalExceptionHandler implements Thread.UncaughtExceptionHandler {
@@ -100,7 +98,7 @@ public class BaseApplication extends Application {
                     String stackTraceContext = !output.isEmpty() ? output : getStackTrace(throwable) ;
                     // 使用系统分享发送文件
                     intent.putExtra(Intent.EXTRA_TEXT, systemInfo+"\n\n"+stackTraceContext);
-                    FilesUtils.writeToFile(logFile.getAbsolutePath(),systemInfo+"\n\n"+stackTraceContext, false);
+                    FilesUtils.writeToFile(getLogFile(context,"crash").getAbsolutePath(),systemInfo+"\n\n"+stackTraceContext, false);
                 }
 
                 @Override

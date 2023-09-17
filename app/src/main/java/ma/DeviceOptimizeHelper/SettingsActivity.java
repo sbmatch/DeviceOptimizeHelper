@@ -155,12 +155,13 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
         SettingsActivity.commandExecutor.executeCommand("logcat -v threadtime -d *:v ", new CommandExecutor.CommandResultListener() {
             @Override
             public void onSuccess(String output) {
+
+                FilesUtils.writeToFile(BaseApplication.getLogFile(context,"runtime_logs_").getAbsolutePath(),BaseApplication.systemInfo+"\n\n"+output, false);
                 // 使用系统分享发送文件
                 Looper.prepare();
                 File shareFile = FilesUtils.getLatestFileInDirectory(BaseApplication.getLogsDir(context).getAbsolutePath());
                 intent.putExtra(Intent.EXTRA_STREAM,  FileProvider.getUriForFile(context, "ma.DeviceOptimizeHelper.provider", shareFile));
                 intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                FilesUtils.writeToFile(BaseApplication.logFile.getAbsolutePath(),BaseApplication.systemInfo+"\n\n"+output, true);
                 context.startActivity(intent);
                 Looper.loop();
             }
