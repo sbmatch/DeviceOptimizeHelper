@@ -27,7 +27,6 @@ jobs:
         run: |
           chmod +x ./gradlew
           ./gradlew assembleRelease
-          jarsigner -keystore keystore.jks -storepass ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}  -keypass ${{ secrets.RELEASE_KEY_PASSWORD }} 
           working-directory: ./app
 
       - name: Upload APK Artifact
