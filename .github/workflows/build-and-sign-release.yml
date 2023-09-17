@@ -23,7 +23,6 @@ jobs:
           echo "${{ secrets.RELEASE_KEYSTORE_FILE }}" | base64 -d > keystore.jks
 
       - name: Build and Sign APK
-        id: buildWithGradle
         run: |
           chmod +x ./gradlew
           ./gradlew assembleRelease
