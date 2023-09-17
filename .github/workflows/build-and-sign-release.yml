@@ -27,7 +27,7 @@ jobs:
         run: |
           chmod +x ./gradlew
           ./gradlew bundleRelease
-          jarsigner -keystore keystore.keystore -storepass:file keystore-password.txt -keypass:file key-password.txt -sigalg SHA1withRSA -digestalg SHA1 -storetype pkcs12 -signedjar app/build/outputs/bundle/release/app-release.aab app/build/outputs/bundle/release/app-release.aab key-alias -tsa http://timestamp.digicert.com
+          jarsigner -keystore keystore.keystore -storepass ${{ secrets.RELEASE_KEYSTORE_PASSWORD }} -keypass ${{ secrets.RELEASE_KEY_PASSWORD }} -sigalg SHA1withRSA -digestalg SHA1 -storetype pkcs12 -signedjar app/build/outputs/bundle/release/app-release.aab app/build/outputs/bundle/release/app-release.aab key-alias -tsa http://timestamp.digicert.com
           zipalign -v 4 app/build/outputs/bundle/release/app-release.apk app/build/outputs/bundle/release/app-release-aligned.apk
           working-directory: ./app
 
