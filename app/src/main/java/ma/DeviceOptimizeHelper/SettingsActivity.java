@@ -204,38 +204,48 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
         boolean isRoot = sharedPreferences.getBoolean("isGrantRoot",false);
 
         if (isDhizuku && isRoot) {
+            getmHandle().post(() -> {
+                for (SwitchPreferenceCompat compat : switchPreferenceCompatArraySet) {
 
-            for (SwitchPreferenceCompat compat : switchPreferenceCompatArraySet) {
-                runOnUiThread(()-> {
                     try {
                         if (z) {
                             userService.addUserRestriction(DhizukuVariables.COMPONENT_NAME, compat.getKey());
-                            compat.setChecked(true);
+                            runOnUiThread(()-> { compat.setChecked(true);});
                         } else {
                             userService.clearUserRestriction(DhizukuVariables.COMPONENT_NAME, compat.getKey());
-                            compat.setChecked(false);
+                            runOnUiThread(()-> { compat.setChecked(false);});
                         }
                     } catch (Exception e1) {
-                        stringBuffer.append(compat.getKey()).append("\n");
-                        String title = String.format(getString(getResIdReflect("set_error_count_title")),stringBuffer.length());
-                        String msg = stringBuffer.toString();
+
+                        if (e1.getMessage().contains(compat.getKey())){
+                            stringBuffer.append(compat.getKey()).append("\n");
+                        }
+
                         commandExecutor.executeCommand(command + compat.getKey() + z, new CommandExecutor.CommandResultListener() {
                             @Override
                             public void onSuccess(String output) {
-                                compat.setChecked(z);
-                                new MaterialAlertDialogBuilder(context).setTitle(title).setMessage(msg).setPositiveButton("Ok",null).create().show();
+                                runOnUiThread(()-> {
+                                    compat.setChecked(z);
+                                });
                             }
 
                             @Override
                             public void onError(String error, Exception e) {
-                                compat.setEnabled(false);
-                                new MaterialAlertDialogBuilder(context).setTitle("无法设置以下限制").setMessage(msg).setPositiveButton("Ok",null).create().show();
+                                runOnUiThread(()-> {
+                                    compat.setChecked(z);
+                                });
                             }
                         }, true, true);
                     }
-                });
-            }
-            Toast.makeText(context, "任务执行完毕", Toast.LENGTH_SHORT).show();
+                }
+
+                String title = String.format(getString(getResIdReflect("set_error_count_title")),stringBuffer.toString().split("\n").length);
+                String msg = stringBuffer.toString();
+
+                if (stringBuffer.toString().split("\n").length > 0){
+                    new MaterialAlertDialogBuilder(context).setTitle(title).setMessage(msg).setPositiveButton("Ok",null).create().show();
+                }
+            });
         }else {
             Toast.makeText(context, "🤣👉🤡", Toast.LENGTH_SHORT).show();
         }
