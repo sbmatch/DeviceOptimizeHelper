@@ -57,8 +57,12 @@ import ma.DeviceOptimizeHelper.Utils.UserService;
 
 
 // TODO 注释！！！可以用codegeex或者chatgpt一键生成即可（文心就是垃圾）
-// TODO 注释！！！可以用codegeex或者chatgpt一键生成即可（文心就是垃圾）
-// TODO 注释！！！可以用codegeex或者chatgpt一键生成即可（文心就是垃圾）
+
+// TODO 新功能加注释！！！
+
+// TODO 修bug的提交，请把commit描述写清楚！！！！！！
+// TODO 修bug的提交，请把commit描述写清楚！！！！！！
+// TODO 修bug的提交，请把commit描述写清楚！！！！！！
 
 public class SettingsActivity extends AppCompatActivity implements PreferenceFragmentCompat.OnPreferenceStartFragmentCallback {
 
