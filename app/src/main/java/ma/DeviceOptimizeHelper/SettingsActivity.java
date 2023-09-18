@@ -209,11 +209,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
             getmHandle().post(() -> {
                 // 在 catch 块之前添加一个标志
                 for (SwitchPreferenceCompat compat : switchPreferenceCompatArraySet) {
-
                     try {
-
-                        sharedPreferences.edit().putBoolean("isallowswitch", true).apply();
-
                         if (z) {
                             userService.addUserRestriction(DhizukuVariables.COMPONENT_NAME, compat.getKey());
                             runOnUiThread(()-> { compat.setChecked(true);});
@@ -221,6 +217,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                             userService.clearUserRestriction(DhizukuVariables.COMPONENT_NAME, compat.getKey());
                             runOnUiThread(()-> { compat.setChecked(false);});
                         }
+
                     } catch (Exception e1) {
 
                         if (e1.getMessage().contains(compat.getKey())){
@@ -250,7 +247,6 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                                         String title = String.format(getString(getResIdReflect("set_error_count_title")),count, "失败");
                                         new MaterialAlertDialogBuilder(context).setTitle(title).setMessage(stringBuffer.toString()).setPositiveButton("Ok",null).create().show();
                                     });
-                                    sharedPreferences.edit().putBoolean("isallowswitch", false).apply();
                                 }
                             }
                         }, true, true);
@@ -290,7 +286,6 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 sharedPreferences = getPreferenceManager().getSharedPreferences();
             }
 
-            sharedPreferences.edit().putBoolean("isallowswitch", true).apply();
 
 // 创建一个 Handler 对象，将它关联到指定线程的 Looper 上
 // 这里的 serviceThread2 是一个线程对象，通过 getLooper() 获取它的消息循环
@@ -305,7 +300,6 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                         commandExecutor.executeCommand(command + key + " false", new CommandExecutor.CommandResultListener() {
                             @Override
                             public void onSuccess(String output) {
-                                sharedPreferences.edit().putBoolean("isallowswitch", true).apply();
                                 Looper.prepare();
                                 Toast.makeText(context, "已禁用此限制策略", Toast.LENGTH_SHORT).show();
                             }
@@ -323,7 +317,6 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                                     e1.printStackTrace();
                                     Looper.prepare();
                                     Toast.makeText(context, "任务执行失败", Toast.LENGTH_SHORT).show();
-                                    sharedPreferences.edit().putBoolean("isallowswitch", false).apply();
                                 }
 
                             }
@@ -334,7 +327,6 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                         commandExecutor.executeCommand(command + key + " true", new CommandExecutor.CommandResultListener() {
                             @Override
                             public void onSuccess(String output) {
-                                sharedPreferences.edit().putBoolean("isallowswitch", true).apply();
                                 Looper.prepare();
                                 Toast.makeText(context, "已启用此限制策略", Toast.LENGTH_SHORT).show();
                             }
@@ -350,7 +342,6 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                                     }
                                 } catch (Exception e2) {
                                     e2.printStackTrace();
-                                    sharedPreferences.edit().putBoolean("isallowswitch", false).apply();
                                     Looper.prepare();
                                     Toast.makeText(getContext(), "任务执行失败", Toast.LENGTH_SHORT).show();
                                 }
