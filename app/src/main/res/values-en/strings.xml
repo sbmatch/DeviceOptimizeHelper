@@ -78,7 +78,7 @@
     <string name="no_usb_debugger">Disable Usb debugger</string>
     <string name="disallow_all_policy">Disable all policy</string>
     <string name="enable_all_policy">Enable all policy</string>
-    <string name="set_error_count_title">Due to permission issues, %1$1d attempts were made to set as root %2$s</string>
+    <string name="set_error_count_title">Due to permission issues, %1$1d  were made to set is %2$s</string>
     <string name="abouts">About</string>
     <string name="share_runtime_logs">Share runtime logs</string>
     <string name="request_sync_account_access">Request to remove synchronous account</string>

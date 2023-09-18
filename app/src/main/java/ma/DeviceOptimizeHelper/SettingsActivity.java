@@ -71,7 +71,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
     private static String command;
     private static final SettingsActivity.ServiceThread2 serviceThread2 = new ServiceThread2("你干嘛哎呦");
     public static Context context;
-
+    public int count;
     public boolean dialogShown = false;
     private static SharedPreferences sharedPreferences;
     public static Handler mHandle;
@@ -206,13 +206,14 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
         if (isDhizuku || isRoot) {
 
-            String msg = stringBuffer.toString();
-
             getmHandle().post(() -> {
                 // 在 catch 块之前添加一个标志
                 for (SwitchPreferenceCompat compat : switchPreferenceCompatArraySet) {
 
                     try {
+
+                        sharedPreferences.edit().putBoolean("isallowswitch", true).apply();
+
                         if (z) {
                             userService.addUserRestriction(DhizukuVariables.COMPONENT_NAME, compat.getKey());
                             runOnUiThread(()-> { compat.setChecked(true);});
@@ -221,21 +222,24 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                             runOnUiThread(()-> { compat.setChecked(false);});
                         }
                     } catch (Exception e1) {
+
                         if (e1.getMessage().contains(compat.getKey())){
                             stringBuffer.append(compat.getKey()).append("\n");
                         }
+                        count = stringBuffer.toString().split("\n").length;
 
                         commandExecutor.executeCommand(command + compat.getKey() + z, new CommandExecutor.CommandResultListener() {
                             @Override
                             public void onSuccess(String output) {
                                 if (!dialogShown) {
                                     dialogShown = true; // 设置标志，表示已经弹出了对话框
+
                                     runOnUiThread(()-> {
                                         compat.setChecked(z);
-                                        String title = String.format(getString(getResIdReflect("set_error_count_title")),stringBuffer.toString().split("\n").length, z ? "启用" : "禁用" );
-                                        new MaterialAlertDialogBuilder(context).setTitle(title).setMessage(msg).setPositiveButton("Ok",null).create().show();
+                                        String title = String.format(getString(getResIdReflect("set_error_count_title")),count, z ? "启用" : "禁用" );
+                                        new MaterialAlertDialogBuilder(context).setTitle(title).setMessage(stringBuffer.toString()).setPositiveButton("Ok",null).create().show();
                                     });
-                                }
+                                 }
                             }
 
                             @Override
@@ -243,16 +247,18 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                                 if (!dialogShown) {
                                     dialogShown = true; // 设置标志，表示已经弹出了对话框
                                     runOnUiThread(() ->{
-                                        String title = String.format(getString(getResIdReflect("set_error_count_title")),stringBuffer.toString().split("\n").length, "失败");
-                                        new MaterialAlertDialogBuilder(context).setTitle(title).setMessage(msg).setPositiveButton("Ok",null).create().show();
+                                        String title = String.format(getString(getResIdReflect("set_error_count_title")),count, "失败");
+                                        new MaterialAlertDialogBuilder(context).setTitle(title).setMessage(stringBuffer.toString()).setPositiveButton("Ok",null).create().show();
                                     });
+                                    sharedPreferences.edit().putBoolean("isallowswitch", false).apply();
                                 }
                             }
                         }, true, true);
                     }
                 }
-
+                dialogShown = false;
             });
+
         }else {
             Toast.makeText(context, "🤣👉🤡", Toast.LENGTH_SHORT).show();
         }
@@ -284,6 +290,8 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                 sharedPreferences = getPreferenceManager().getSharedPreferences();
             }
 
+            sharedPreferences.edit().putBoolean("isallowswitch", true).apply();
+
 // 创建一个 Handler 对象，将它关联到指定线程的 Looper 上
 // 这里的 serviceThread2 是一个线程对象，通过 getLooper() 获取它的消息循环
             handler = new Handler(serviceThread2.getLooper(), msg -> {
@@ -297,6 +305,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                         commandExecutor.executeCommand(command + key + " false", new CommandExecutor.CommandResultListener() {
                             @Override
                             public void onSuccess(String output) {
+                                sharedPreferences.edit().putBoolean("isallowswitch", true).apply();
                                 Looper.prepare();
                                 Toast.makeText(context, "已禁用此限制策略", Toast.LENGTH_SHORT).show();
                             }
@@ -307,12 +316,14 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                                     if (userService != null) {
                                         // 使用 dhizuku 提供的权限执行任务
                                         userService.clearUserRestriction(DhizukuVariables.COMPONENT_NAME, key);
+                                        Looper.prepare();
+                                        Toast.makeText(context, "已禁用此限制策略", Toast.LENGTH_SHORT).show();
                                     }
                                 } catch (Exception e1) {
                                     e1.printStackTrace();
                                     Looper.prepare();
-                                    Toast.makeText(getContext(), "任务执行失败", Toast.LENGTH_SHORT).show();
-
+                                    Toast.makeText(context, "任务执行失败", Toast.LENGTH_SHORT).show();
+                                    sharedPreferences.edit().putBoolean("isallowswitch", false).apply();
                                 }
 
                             }
@@ -323,6 +334,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                         commandExecutor.executeCommand(command + key + " true", new CommandExecutor.CommandResultListener() {
                             @Override
                             public void onSuccess(String output) {
+                                sharedPreferences.edit().putBoolean("isallowswitch", true).apply();
                                 Looper.prepare();
                                 Toast.makeText(context, "已启用此限制策略", Toast.LENGTH_SHORT).show();
                             }
@@ -333,9 +345,14 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                                     if (userService != null) {
                                         // 使用 dhizuku 提供的权限执行任务
                                         userService.addUserRestriction(DhizukuVariables.COMPONENT_NAME, key);
+                                        Looper.prepare();
+                                        Toast.makeText(context, "已启用此限制策略", Toast.LENGTH_SHORT).show();
                                     }
                                 } catch (Exception e2) {
                                     e2.printStackTrace();
+                                    sharedPreferences.edit().putBoolean("isallowswitch", false).apply();
+                                    Looper.prepare();
+                                    Toast.makeText(getContext(), "任务执行失败", Toast.LENGTH_SHORT).show();
                                 }
                             }
                         }, true, true);
@@ -387,9 +404,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                     message.arg1 = (boolean) newValue ? 1 : 0;
                     handler.sendMessage(message); // 发送消息
 
-                    Log.i("ssss","isDhizuku: "+sharedPreferences.getBoolean("isGrantDhizuku",false) +" , isGrantRoot: "+ sharedPreferences.getBoolean("isGrantRoot", false));
-
-                    return (sharedPreferences.getBoolean("isGrantDhizuku",false))  || sharedPreferences.getBoolean("isGrantRoot", false);
+                    return (sharedPreferences.getBoolean("isGrantDhizuku",false)  || sharedPreferences.getBoolean("isGrantRoot", false));
                 });
                 // 将动态生成的SwitchPreferenceCompat对象添加进一个列表中
                 switchPreferenceCompatArraySet.add(switchPreferenceCompat);
