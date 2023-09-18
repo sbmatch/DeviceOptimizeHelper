@@ -77,7 +77,8 @@
     <string name="no_usb_debugger">禁止Usb调试</string>
     <string name="disallow_all_policy">禁用所有限制</string>
     <string name="enable_all_policy">启用所有限制</string>
-    <string name="set_error_count_title">完成! 共 %1$1d 个无法设置</string>
+    <string name="set_error_count_title">完成! 共 %1$1d 个通过root设置</string>
     <string name="share_runtime_logs">抓取日志</string>
+    <string name="request_sync_account_access">请求移除同步账户</string>
     <string name="abouts">关于</string>
 </resources>

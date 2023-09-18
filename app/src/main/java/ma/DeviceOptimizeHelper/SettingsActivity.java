@@ -1,10 +1,16 @@
 package ma.DeviceOptimizeHelper;
 
+import android.accounts.Account;
+import android.accounts.AccountManager;
+import android.accounts.AuthenticatorException;
+import android.accounts.OperationCanceledException;
 import android.annotation.SuppressLint;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
@@ -14,13 +20,14 @@ import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
-import android.os.RemoteException;
 import android.util.ArraySet;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
@@ -38,8 +45,8 @@ import com.rosan.dhizuku.api.DhizukuUserServiceArgs;
 import com.rosan.dhizuku.shared.DhizukuVariables;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Field;
-import java.util.Objects;
 
 import ma.DeviceOptimizeHelper.BaseApplication.BaseApplication;
 import ma.DeviceOptimizeHelper.Utils.CheckRootPermissionTask;
@@ -56,19 +63,17 @@ import ma.DeviceOptimizeHelper.Utils.UserService;
 public class SettingsActivity extends AppCompatActivity implements PreferenceFragmentCompat.OnPreferenceStartFragmentCallback {
 
     private static final String TITLE_TAG = "settingsActivityTitle";
+    @SuppressLint("StaticFieldLeak")
     public static PreferenceScreen preferenceScreen;
     public static ArraySet<SwitchPreferenceCompat> switchPreferenceCompatArraySet = new ArraySet<>();
-    private static ArraySet<String> getALLUserRestrictions;
-    private static String isDhizukuFilePath ;
     public static CommandExecutor commandExecutor = CommandExecutor.getInstance();
     public static IUserService userService;
     private static String command;
-    private static SettingsActivity.ServiceThread2 serviceThread2 = new ServiceThread2("你干嘛哎呦");
-
+    private static final SettingsActivity.ServiceThread2 serviceThread2 = new ServiceThread2("你干嘛哎呦");
     public static Context context;
-    // 声明SharedPreferences文件的名称和键
-    private static final String PREFS_NAME = "data";
-    private static final String FIRST_TIME_KEY = "firstTime";
+
+    private static SharedPreferences sharedPreferences;
+    public static Handler mHandle;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -97,12 +102,11 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
         command = "app_process -Djava.class.path="+getApkPath(this)+"  /system/bin   ma.DeviceOptimizeHelper.Main  ";
 
-        isDhizukuFilePath = new File(getFilesDir(),"isDhizuku").getAbsolutePath();
-
         // 开发者是个小黑子
         if (!serviceThread2.isAlive()){
             serviceThread2.start();
         }
+
     }
 
     @Override
@@ -152,24 +156,31 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
         return super.onSupportNavigateUp();
     }
 
+    private final ActivityResultLauncher<Intent> getSyncAccounts = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(), result -> {
 
-    private static void share_runtime_logs(){
+            });
 
-        Intent intent = new Intent(Intent.ACTION_SEND);
-        intent.setType("text/plain");
 
-        SettingsActivity.commandExecutor.executeCommand("logcat -v threadtime -d *:v ", new CommandExecutor.CommandResultListener() {
+    public static Handler getmHandle() {
+        return (mHandle != null) ? mHandle : (new Handler(Looper.getMainLooper()));
+    }
+
+    private void share_runtime_logs(){
+
+        SettingsActivity.commandExecutor.executeCommand("logcat -b main -b crash -d ", new CommandExecutor.CommandResultListener() {
             @Override
             public void onSuccess(String output) {
-
-                FilesUtils.writeToFile(BaseApplication.getLogFile(context,"runtime_logs").getAbsolutePath(),BaseApplication.systemInfo+"\n\n"+output, false);
-                // 使用系统分享发送文件
-                Looper.prepare();
-                File shareFile = FilesUtils.getLatestFileInDirectory(BaseApplication.getLogsDir(context).getAbsolutePath());
-                intent.putExtra(Intent.EXTRA_STREAM,  FileProvider.getUriForFile(context, "ma.DeviceOptimizeHelper.provider", shareFile));
-                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                context.startActivity(intent);
-                Looper.loop();
+                new Thread(() -> {
+                    FilesUtils.writeToFile(BaseApplication.getLogFile(context,"runtime_logs").getAbsolutePath(),BaseApplication.systemInfo+"\n\n"+output, false);
+                    // 使用系统分享发送文件
+                    Intent intent = new Intent(Intent.ACTION_SEND);
+                    intent.setType("text/plain");
+                    File shareFile = FilesUtils.getLatestFileInDirectory(BaseApplication.getLogsDir(context).getAbsolutePath());
+                    intent.putExtra(Intent.EXTRA_STREAM, FileProvider.getUriForFile(context, "ma.DeviceOptimizeHelper.provider", shareFile));
+                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+                    getApplicationContext().startActivity(intent);
+                }).start();
             }
 
             @Override
@@ -181,84 +192,53 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
     }
 
-    private static void bindDhizukuservice(){
-
-        DhizukuUserServiceArgs args = new DhizukuUserServiceArgs(new ComponentName(context, UserService.class));
-
-        try{
-            Dhizuku.bindUserService(args, new ServiceConnection() {
-                @Override
-                public void onServiceConnected(ComponentName name, IBinder service) {
-                    if (userService == null){
-                        userService = IUserService.Stub.asInterface(service);
-                        FilesUtils.createFile(isDhizukuFilePath);
-                    }else {
-                        FilesUtils.createFile(isDhizukuFilePath);
-                    }
-                }
-
-                @Override
-                public void onServiceDisconnected(ComponentName name) {
-                    Log.e("Dhizuku",name+"  is Disconnected");
-                    FilesUtils.delete(isDhizukuFilePath);
-                    bindDhizukuservice();
-                }
-            });
-        }catch (IllegalStateException e){
-            e.printStackTrace();
-            FilesUtils.delete(isDhizukuFilePath);
-        }
-    }
 
     private  void oneKeyChange(boolean z) {
-        String value  = z ? "true" : "false";
-        commandExecutor.executeCommand(command + " " + value, new CommandExecutor.CommandResultListener() {
-            @Override
-            public void onSuccess(String output) {
-                runOnUiThread(() -> {
-                    for (SwitchPreferenceCompat compat: switchPreferenceCompatArraySet){
-                        compat.setChecked(z);
+
+        // 重写了一键切换限制策略的实现，现在会首先使用Dhizuku进行执行， 遇到无法设置的限制则尝试使用root进行设置
+
+        StringBuffer stringBuffer = new StringBuffer();
+
+        boolean isDhizuku = sharedPreferences.getBoolean("isGrantDhizuku",false);
+
+        boolean isRoot = sharedPreferences.getBoolean("isGrantRoot",false);
+
+        if (isDhizuku && isRoot) {
+
+            for (SwitchPreferenceCompat compat : switchPreferenceCompatArraySet) {
+                runOnUiThread(()-> {
+                    try {
+                        if (z) {
+                            userService.addUserRestriction(DhizukuVariables.COMPONENT_NAME, compat.getKey());
+                            compat.setChecked(true);
+                        } else {
+                            userService.clearUserRestriction(DhizukuVariables.COMPONENT_NAME, compat.getKey());
+                            compat.setChecked(false);
+                        }
+                    } catch (Exception e1) {
+                        stringBuffer.append(compat.getKey()).append("\n");
+                        String title = String.format(getString(getResIdReflect("set_error_count_title")),stringBuffer.length());
+                        String msg = stringBuffer.toString();
+                        commandExecutor.executeCommand(command + compat.getKey() + z, new CommandExecutor.CommandResultListener() {
+                            @Override
+                            public void onSuccess(String output) {
+                                compat.setChecked(z);
+                                new MaterialAlertDialogBuilder(context).setTitle(title).setMessage(msg).setPositiveButton("Ok",null).create().show();
+                            }
+
+                            @Override
+                            public void onError(String error, Exception e) {
+                                compat.setEnabled(false);
+                                new MaterialAlertDialogBuilder(context).setTitle("无法设置以下限制").setMessage(msg).setPositiveButton("Ok",null).create().show();
+                            }
+                        }, true, true);
                     }
                 });
-                Looper.prepare();
-                Toast.makeText(context, "任务执行完毕", Toast.LENGTH_SHORT).show();
             }
-
-            @Override
-            public void onError(String error, Exception e) {
-
-                if (error.contains("Permission denied")){
-                    StringBuilder setErrorList = new StringBuilder();
-                    runOnUiThread(() -> {
-                        int i = 0;
-                        for (SwitchPreferenceCompat compat: switchPreferenceCompatArraySet){
-                            try {
-                                if (FilesUtils.isFileExists(isDhizukuFilePath) && userService != null) {
-                                    if (z) {
-                                        userService.addUserRestriction(DhizukuVariables.COMPONENT_NAME, compat.getKey());
-                                        compat.setChecked(true);
-                                    } else {
-                                        userService.clearUserRestriction(DhizukuVariables.COMPONENT_NAME, compat.getKey());
-                                        compat.setChecked(false);
-                                    }
-                                }else {
-                                    setErrorList.append("没锅怎么炒菜啊, 大佬"+"\n");
-                                }
-                            }catch (Exception e1){
-                                e1.printStackTrace();
-                                i++;
-                                setErrorList.append(e1.getMessage()).append("\n\n");
-                            }
-                        }
-                        String title = context.getString(getResIdReflect("set_error_count_title"));
-                        String t = (i >0) ? String.format(title,i) : "已完成! 全部失败 🤣👉🤡";
-                        new MaterialAlertDialogBuilder(context).setMessage(setErrorList).setTitle(t).setPositiveButton("Ok",null).create().show();
-
-                    });
-                }
-            }
-        }, true, true);
-
+            Toast.makeText(context, "任务执行完毕", Toast.LENGTH_SHORT).show();
+        }else {
+            Toast.makeText(context, "🤣👉🤡", Toast.LENGTH_SHORT).show();
+        }
     }
 
     /**
@@ -275,18 +255,17 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
         Handler handler;
         // 获取 SharedPreferences
-        public android.content.SharedPreferences sharedPreferences;
         @SuppressLint("ResourceAsColor")
         @Override
         public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
 
             context = requireContext();
-            getALLUserRestrictions = UserManagerUtils.getALLUserRestrictionsReflectForUserManager();
+
+            ArraySet<String> getALLUserRestrictions = UserManagerUtils.getALLUserRestrictionsReflectForUserManager();
 
             if (sharedPreferences == null){
                 sharedPreferences = getPreferenceManager().getSharedPreferences();
             }
-
 
 // 创建一个 Handler 对象，将它关联到指定线程的 Looper 上
 // 这里的 serviceThread2 是一个线程对象，通过 getLooper() 获取它的消息循环
@@ -328,7 +307,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                             @Override
                             public void onSuccess(String output) {
                                 Looper.prepare();
-                                Toast.makeText(context, "已启用此限制策略" + output, Toast.LENGTH_SHORT).show();
+                                Toast.makeText(context, "已启用此限制策略", Toast.LENGTH_SHORT).show();
                             }
 
                             @Override
@@ -352,7 +331,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
             });
 
 
-            if ((FilesUtils.isFileExists(isDhizukuFilePath) || sharedPreferences.getBoolean("isGrantRoot", false))){
+            if ((sharedPreferences.getBoolean("isGrantDhizuku",false) || sharedPreferences.getBoolean("isGrantRoot", false))){
                 Toast.makeText(context, "欢迎使用", Toast.LENGTH_SHORT).show();
             } else {
                 new MaterialAlertDialogBuilder(context).setTitle("应用说明").setMessage("本应用支持 Dhizuku 与 Root 两种使用方式，其中Root模式可设置所有系统支持的限制策略，Dhizuku模式下各家深度定制ROM对<设备所有者>权限的限制则各有不同，接下来我们会向您请求这两种权限, 优先级为: Root > Dhizuku ，请注意: 在我们获取到Dhizuku权限后会继续尝试申请Root权限, 现在，我们将尝试申请您设备上的Dhizuku权限, 成功后会继续尝试申请Root权限 \n如果您了解自己在干什么，请点击继续按钮")
@@ -391,9 +370,9 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                     message.arg1 = (boolean) newValue ? 1 : 0;
                     handler.sendMessage(message); // 发送消息
 
-                    Log.i("ssss","isDhizuku: "+FilesUtils.isFileExists(isDhizukuFilePath) +" , isGrantRoot: "+ sharedPreferences.getBoolean("isGrantRoot", false));
+                    Log.i("ssss","isDhizuku: "+sharedPreferences.getBoolean("isGrantDhizuku",false) +" , isGrantRoot: "+ sharedPreferences.getBoolean("isGrantRoot", false));
 
-                    return ((Dhizuku.isPermissionGranted() && FilesUtils.isFileExists(isDhizukuFilePath))  || sharedPreferences.getBoolean("isGrantRoot", false));
+                    return (sharedPreferences.getBoolean("isGrantDhizuku",false))  || sharedPreferences.getBoolean("isGrantRoot", false);
                 });
                 // 将动态生成的SwitchPreferenceCompat对象添加进一个列表中
                 switchPreferenceCompatArraySet.add(switchPreferenceCompat);
@@ -435,6 +414,32 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
         }
 
 
+        private void bindDhizukuservice(){
+
+            DhizukuUserServiceArgs args = new DhizukuUserServiceArgs(new ComponentName(context, UserService.class));
+
+            try{
+                Dhizuku.bindUserService(args, new ServiceConnection() {
+                    @Override
+                    public void onServiceConnected(ComponentName name, IBinder service) {
+                        if (userService == null){
+                            userService = IUserService.Stub.asInterface(service);
+                        }
+                        sharedPreferences.edit().putBoolean("isGrantDhizuku",true).apply();
+                    }
+
+                    @Override
+                    public void onServiceDisconnected(ComponentName name) {
+                        Log.e("Dhizuku",name+"  is Disconnected");
+                        bindDhizukuservice();
+                    }
+                });
+            }catch (IllegalStateException e){
+                e.printStackTrace();
+                sharedPreferences.edit().putBoolean("isGrantDhizuku",false).apply();
+            }
+        }
+
         public void tryRequestRoot(){
            if (!sharedPreferences.getBoolean("first_checkRoot",false)){
                commandExecutor.executeCommand(command,  new CommandExecutor.CommandResultListener() {
@@ -470,18 +475,16 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                                 @Override
                                 public void onRequestPermission(int grantResult) {
                                     if (grantResult == PackageManager.PERMISSION_GRANTED) {
+                                        sharedPreferences.edit().putBoolean("isGrantDhizuku",true).apply();
                                         tryRequestRoot();
                                         Looper.prepare();
                                         Toast.makeText(context, "Dhizuku 已授权", Toast.LENGTH_SHORT).show();
                                     }
                                 }
                             })).setNegativeButton("取消",null).create().show();
-                }else {
-                    bindDhizukuservice();
                 }
             }catch (IllegalStateException e){
                 e.printStackTrace();
-                FilesUtils.delete(isDhizukuFilePath);
                 Toast.makeText(context, "Dhizuku 未安装或未激活", Toast.LENGTH_SHORT).show();
                 tryRequestRoot();
             }
@@ -490,10 +493,6 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
     }
 
-
-    public void showSwitchDone(String title, String msg){
-        new MaterialAlertDialogBuilder(context).setTitle(title).setMessage(msg).setNegativeButton("OK",null).create().show();
-    }
 
     private static class ServiceThread2 extends HandlerThread {
         public ServiceThread2(String name) {

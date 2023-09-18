@@ -7,6 +7,8 @@ import android.accounts.IAccountManagerResponse;
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
@@ -53,7 +55,7 @@ public class Main {
     private static Handler handler;
 
 
-    public static void main(String[] args) throws ClassCastException{
+    public static void main(String[] args){
 
         if (Binder.getCallingUid() == 0 || Binder.getCallingUid() == 1000){
             Looper.prepare();
@@ -86,10 +88,29 @@ public class Main {
                 default:
                     System.err.print("好小子， 总爱给我玩点新花样");
             }
-        }else {
+        } else {
             System.err.print("   You must execute with root privileges!   ");
         }
 
+    }
+
+
+    public static Context createPackageContext(String packageName) {
+        try {
+            // 获取Application类对象（这是一个Android系统类）
+            Class<?> applicationClass = Class.forName("android.app.Application");
+
+            // 获取createPackageContext方法
+            Method createPackageContextMethod = applicationClass.getDeclaredMethod(
+                    "createPackageContext", String.class, int.class);
+            // 调用createPackageContext方法
+            Context packageContext = (Context) createPackageContextMethod.invoke(
+                    null, packageName, Context.CONTEXT_INCLUDE_CODE | Context.CONTEXT_IGNORE_SECURITY);
+            return packageContext;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
 
@@ -125,7 +146,7 @@ public class Main {
             for (String key: keys){
                 Message msg = Message.obtain();
                 msg.what = 1;
-                msg.obj = value.get(key);
+                msg.obj = value.get(key+":"+value.get(key));
                 handler.sendMessage(msg);
             }
         }
@@ -138,7 +159,6 @@ public class Main {
             msg.arg1 = errorCode;
             msg.obj = errorMessage;
             handler.sendMessage(msg);
-
         }
     }
 
@@ -152,18 +172,10 @@ public class Main {
                 case 2:
                     System.out.println("Can't remove errorMessage: "+msg.obj +", errorCode: "+msg.arg1);
                     break;
-            }
+                default:
 
-            try {
-                for (Account account: iAccountManager.getAccountsAsUser(null, getIdentifier(), "com.android.settings")){
-                    System.out.println("尝试直接移除账号: "+account.type);
-                    iAccountManager.removeAccountExplicitly(account);
-                }
-            } catch (RemoteException e) {
-                e.printStackTrace();
             }
-
-            return true;
+            return false;
         }
     }
 
@@ -202,8 +214,8 @@ public class Main {
                     System.out.println("尝试移除账号: "+account.type);
                 }
 
-            }catch (Exception e){
-                e.printStackTrace();
+            }catch (Exception ignored){
+
             }
             serviceThread.getLooper().quitSafely();
         }
@@ -321,6 +333,7 @@ public class Main {
 
         } catch (ClassNotFoundException | InvocationTargetException | IllegalAccessException |
                  InstantiationException | NoSuchMethodException e) {
+            e.printStackTrace();
             throw new RuntimeException(e);
         }
     }

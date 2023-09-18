@@ -3,6 +3,7 @@ package ma.DeviceOptimizeHelper.BaseApplication;
 import android.annotation.SuppressLint;
 import android.app.Application;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Handler;
@@ -12,7 +13,9 @@ import android.util.LogPrinter;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.rosan.dhizuku.api.Dhizuku;
 
 import org.lsposed.hiddenapibypass.HiddenApiBypass;
@@ -27,7 +30,6 @@ import ma.DeviceOptimizeHelper.Utils.FilesUtils;
 
 public class BaseApplication extends Application {
     public Context context;
-    private static Handler mHandler;
     public static String systemInfo;
 
     @Override
@@ -43,7 +45,6 @@ public class BaseApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
-        mHandler = new Handler(Looper.getMainLooper());
 
         // 获取系统信息
         String manufacturer = Build.MANUFACTURER;
@@ -73,12 +74,10 @@ public class BaseApplication extends Application {
     }
 
     public static class GlobalExceptionHandler implements Thread.UncaughtExceptionHandler {
-
-        private Thread.UncaughtExceptionHandler defaultHandler;
-        private Context context;
-
+        private final Context context;
+        Thread.UncaughtExceptionHandler defaultHandler = Thread.getDefaultUncaughtExceptionHandler();
         public GlobalExceptionHandler(Context context) {
-            defaultHandler = Thread.getDefaultUncaughtExceptionHandler();
+
             this.context = context;
         }
 
@@ -86,30 +85,13 @@ public class BaseApplication extends Application {
         public void uncaughtException(@NonNull Thread thread, @NonNull Throwable throwable) {
 
 
-            Intent intent = new Intent(Intent.ACTION_SEND);
-            intent.setType("text/plain");
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            intent.putExtra(Intent.EXTRA_SUBJECT, "崩溃日志已记录");
+            String logPath = getLogFile(context,"crash").getAbsolutePath();
+            String stackTraceContext =  getStackTrace(throwable);
+            FilesUtils.writeToFile(logPath,systemInfo+"\n"+stackTraceContext, false);
 
-            SettingsActivity.commandExecutor.executeCommand("logcat -v threadtime -b crash -d *:v ", new CommandExecutor.CommandResultListener() {
-                @Override
-                public void onSuccess(String output) {
+            Toast.makeText(context, "崩溃已写入Android/data/../cache/logs", Toast.LENGTH_SHORT).show();
 
-                    String stackTraceContext = !output.isEmpty() ? output : getStackTrace(throwable) ;
-                    // 使用系统分享发送文件
-                    intent.putExtra(Intent.EXTRA_TEXT, systemInfo+"\n\n"+stackTraceContext);
-                    FilesUtils.writeToFile(getLogFile(context,"crash").getAbsolutePath(),systemInfo+"\n\n"+stackTraceContext, false);
-                }
-
-                @Override
-                public void onError(String error, Exception e) {
-
-                }
-            }, false, false);
-
-            context.startActivity(intent);
-
-            mHandler.postDelayed(() -> defaultHandler.uncaughtException(thread,throwable),10000);
+            defaultHandler.uncaughtException(thread,throwable);
         }
 
         public static String getStackTrace(Throwable throwable) {
@@ -120,24 +102,27 @@ public class BaseApplication extends Application {
             return sw.toString();
         }
 
-
-        private static void restartActivity(Context context,Class<?> clazz){
-            Intent i = new Intent(context, clazz);
-            i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            context.startActivity(i);
-        }
-
-        private static void restartApp(Context context) {
-            Intent intent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
-            if (intent != null) {
-                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
-                context.startActivity(intent);
-            }
-
-            // 结束当前进程
-            android.os.Process.killProcess(android.os.Process.myPid());
-            System.exit(0);
-        }
     }
 
+    public static void restartApp(Context context) {
+
+        Intent intent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
+        if (intent != null) {
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+            context.startActivity(intent);
+        }
+
+        // 结束当前进程
+        android.os.Process.killProcess(android.os.Process.myPid());
+        System.exit(0);
+    }
+
+    public static void showDialog(Context context , String msg){
+        SettingsActivity.getmHandle().post(() -> new MaterialAlertDialogBuilder(context).setTitle("好消息！ 特大的好消息! 崩溃啦!").setMessage(msg).setNegativeButton("OK", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                restartApp(context);
+            }
+        }).create().show());
+    }
 }

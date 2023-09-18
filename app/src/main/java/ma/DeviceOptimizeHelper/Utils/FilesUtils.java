@@ -6,8 +6,10 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.List;
 
 public class FilesUtils {
 
@@ -188,5 +190,49 @@ public class FilesUtils {
         // 返回最新的文件
         return files[0];
     }
+
+    public static File getLatestFileInDirectoryWithPrefix(String directoryPath, String prefix) {
+        File directory = new File(directoryPath);
+
+        // 检查目录是否存在
+        if (!directory.exists() || !directory.isDirectory()) {
+            return null;
+        }
+
+        // 获取目录中的所有文件
+        File[] files = directory.listFiles();
+
+        // 如果目录为空，返回null
+        if (files == null || files.length == 0) {
+            return null;
+        }
+
+        // 过滤出以指定前缀开头的文件
+        List<File> matchingFiles = new ArrayList<>();
+        for (File file : files) {
+            if (file.getName().startsWith(prefix)) {
+                matchingFiles.add(file);
+            }
+        }
+
+        // 如果没有匹配的文件，返回null
+        if (matchingFiles.isEmpty()) {
+            return null;
+        }
+
+        // 使用文件的最后修改时间进行排序
+        matchingFiles.sort(new Comparator<File>() {
+            @Override
+            public int compare(File file1, File file2) {
+                long lastModified1 = file1.lastModified();
+                long lastModified2 = file2.lastModified();
+                return Long.compare(lastModified2, lastModified1); // 降序排列
+            }
+        });
+
+        // 返回最新的匹配文件
+        return matchingFiles.get(0);
+    }
+
 
 }
