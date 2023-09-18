@@ -72,6 +72,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
     private static final SettingsActivity.ServiceThread2 serviceThread2 = new ServiceThread2("你干嘛哎呦");
     public static Context context;
 
+    public boolean dialogShown = false;
     private static SharedPreferences sharedPreferences;
     public static Handler mHandle;
 
@@ -204,7 +205,11 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
         boolean isRoot = sharedPreferences.getBoolean("isGrantRoot",false);
 
         if (isDhizuku || isRoot) {
+
+            String msg = stringBuffer.toString();
+
             getmHandle().post(() -> {
+                // 在 catch 块之前添加一个标志
                 for (SwitchPreferenceCompat compat : switchPreferenceCompatArraySet) {
 
                     try {
@@ -216,7 +221,6 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                             runOnUiThread(()-> { compat.setChecked(false);});
                         }
                     } catch (Exception e1) {
-
                         if (e1.getMessage().contains(compat.getKey())){
                             stringBuffer.append(compat.getKey()).append("\n");
                         }
@@ -224,27 +228,30 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                         commandExecutor.executeCommand(command + compat.getKey() + z, new CommandExecutor.CommandResultListener() {
                             @Override
                             public void onSuccess(String output) {
-                                runOnUiThread(()-> {
-                                    compat.setChecked(z);
-                                });
+                                if (!dialogShown) {
+                                    dialogShown = true; // 设置标志，表示已经弹出了对话框
+                                    runOnUiThread(()-> {
+                                        compat.setChecked(z);
+                                        String title = String.format(getString(getResIdReflect("set_error_count_title")),stringBuffer.toString().split("\n").length, z ? "启用" : "禁用" );
+                                        new MaterialAlertDialogBuilder(context).setTitle(title).setMessage(msg).setPositiveButton("Ok",null).create().show();
+                                    });
+                                }
                             }
 
                             @Override
                             public void onError(String error, Exception e) {
-                                runOnUiThread(()-> {
-                                    compat.setChecked(z);
-                                });
+                                if (!dialogShown) {
+                                    dialogShown = true; // 设置标志，表示已经弹出了对话框
+                                    runOnUiThread(() ->{
+                                        String title = String.format(getString(getResIdReflect("set_error_count_title")),stringBuffer.toString().split("\n").length, "失败");
+                                        new MaterialAlertDialogBuilder(context).setTitle(title).setMessage(msg).setPositiveButton("Ok",null).create().show();
+                                    });
+                                }
                             }
                         }, true, true);
                     }
                 }
 
-                String title = String.format(getString(getResIdReflect("set_error_count_title")),stringBuffer.toString().split("\n").length);
-                String msg = stringBuffer.toString();
-
-                if (stringBuffer.toString().split("\n").length > 0){
-                    new MaterialAlertDialogBuilder(context).setTitle(title).setMessage(msg).setPositiveButton("Ok",null).create().show();
-                }
             });
         }else {
             Toast.makeText(context, "🤣👉🤡", Toast.LENGTH_SHORT).show();
