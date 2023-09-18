@@ -203,7 +203,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
         boolean isRoot = sharedPreferences.getBoolean("isGrantRoot",false);
 
-        if (isDhizuku && isRoot) {
+        if (isDhizuku || isRoot) {
             getmHandle().post(() -> {
                 for (SwitchPreferenceCompat compat : switchPreferenceCompatArraySet) {
 
