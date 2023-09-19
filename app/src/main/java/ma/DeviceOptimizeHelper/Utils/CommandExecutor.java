@@ -32,6 +32,7 @@ public class CommandExecutor {
             @Override
             public void run() {
                 try {
+                    // 切换权限
                     Process process;
                     // 这里先切换权限
                     if (useRoot) {
@@ -55,19 +56,21 @@ public class CommandExecutor {
                     StringBuilder errorOutput = new StringBuilder();
                     String line;
 
-                    while ((line = reader.readLine()) != null) {
+                    while ((line = reader.readLine())!= null) {
                         output.append(line).append("\n");
                     }
 
-                    while ((line = errorReader.readLine()) != null) {
+                    while ((line = errorReader.readLine())!= null) {
                         errorOutput.append(line).append("\n");
                     }
 
                     int exitCode = process.waitFor();
 
+                    // 如果结果为0，则调用listener的onSuccess方法
                     if (exitCode == 0) {
                         listener.onSuccess(output.toString());
                     } else {
+                        // 如果结果不为0，则调用listener的onError方法
                         Exception exception = new Exception("Command execution error");
                         listener.onError(errorOutput.toString(), exception);
                     }
@@ -77,6 +80,4 @@ public class CommandExecutor {
                 }
             }
         }).start();
-    }
-
-}
+    }}
