@@ -86,22 +86,28 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
         setContentView(R.layout.settings_activity);
 
         if (savedInstanceState == null) {
+            // 如果savedInstanceState为空，则添加HeaderFragment
             getSupportFragmentManager()
                     .beginTransaction()
                     .replace(R.id.settings, new HeaderFragment())
                     .commit();
         } else {
+            // 如果savedInstanceState不为空，则设置标题
             setTitle(savedInstanceState.getCharSequence(TITLE_TAG));
         }
+        // 监听BackStackChanged事件，当BackStack的顺序发生变化时，且栈为0时，设置标题
         getSupportFragmentManager().addOnBackStackChangedListener(() -> {
             if (getSupportFragmentManager().getBackStackEntryCount() == 0) {
                 setTitle(R.string.title_activity_settings);
             }
         });
 
+        // 获取ActionBar
         ActionBar actionBar = getSupportActionBar();
-        if (actionBar != null) {
+        if (actionBar!= null) {
+            // 如果ActionBar不为空，则设置不显示HomeAsUp按钮
             actionBar.setDisplayHomeAsUpEnabled(false);
+            // 如果ActionBar为空，则设置ActionBar的背景图片为null
             actionBar.setBackgroundDrawable(null);
         }
 
