@@ -178,7 +178,9 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
     }
 
     private void share_runtime_logs(){
-
+        // -b main 是指只显示主日志缓冲区（main buffer）的日志。主日志缓冲区包含了系统启动以来的所有核心系统日志。
+        // -b crash 是指只显示崩溃日志缓冲区（crash buffer）的日志。这个缓冲区包含了系统崩溃或ANR（Application Not Responding）时的日志。
+        // -d 是指倒序输出（descending order）。这意味着新的日志条目将首先显示，旧的条目将后显示。
         SettingsActivity.commandExecutor.executeCommand("logcat -b main -b crash -d ", new CommandExecutor.CommandResultListener() {
             @Override
             public void onSuccess(String output) {

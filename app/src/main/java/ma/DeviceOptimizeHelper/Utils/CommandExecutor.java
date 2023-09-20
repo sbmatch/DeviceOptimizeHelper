@@ -74,9 +74,11 @@ public class CommandExecutor {
 
                     // 如果结果为0，则调用listener的onSuccess方法
                     if (exitCode == 0) {
+                        Log.d("执行指令成功（commandexecutor）", "结果：" + output.toString());
                         listener.onSuccess(output.toString());
                     } else {
                         // 如果结果不为0，则调用listener的onError方法
+                        Log.d("执行指令失败（commandexecutor）", "结果：" + errorOutput.toString());
                         Exception exception = new Exception("Command execution error");
                         listener.onError(errorOutput.toString(), exception);
                     }
