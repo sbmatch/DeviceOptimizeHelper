@@ -14,9 +14,11 @@ public class CommandExecutor {
     }
 
     public static CommandExecutor getInstance() {
+        // 如果instance为空，则创建一个新的CommandExecutor实例
         if (instance == null) {
             instance = new CommandExecutor();
         }
+        // 返回CommandExecutor实例
         return instance;
     }
 
