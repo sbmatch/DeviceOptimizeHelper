@@ -34,11 +34,16 @@ public class BaseApplication extends Application {
 
     @Override
     protected void attachBaseContext(Context base) {
+        //调用父类的attachBaseContext方法
         super.attachBaseContext(base);
+        //如果当前系统版本大于等于Android P
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            //添加隐藏API的排除
             HiddenApiBypass.addHiddenApiExemptions("");
         }
+        //初始化Dhizuku
         Dhizuku.init(base);
+        //将当前上下文设置为base
         this.context = base;
     }
 
@@ -69,7 +74,9 @@ public class BaseApplication extends Application {
         // 创建异常信息文件
         @SuppressLint("SimpleDateFormat")
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy_MM_dd_HH:mm:ss");
+        // 将时间戳转换为字符串
         String timestamp = dateFormat.format(new Date());
+        // 获取logs文件夹
         return new File(getLogsDir(context),name+"_" + timestamp + ".log");
     }
 
@@ -80,7 +87,6 @@ public class BaseApplication extends Application {
 
             this.context = context;
         }
-
         @Override
         public void uncaughtException(@NonNull Thread thread, @NonNull Throwable throwable) {
             String logPath = getLogFile(context,"crash").getAbsolutePath();
