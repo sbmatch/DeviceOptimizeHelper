@@ -68,12 +68,14 @@ public class Main {
 
             // 判断参数长度
             switch (args.length){
-                case 0:
-                    // 没有参数 启动一个进程移除设备上的电池优化白名单和同步账号
-                    serviceThread.start();
-                    break;
                 case 1:
-                    // 有一个参数 根据这个参数的值启用或禁用设备上所有可用的限制策略
+                    // 有一个参数
+                    //判断参数为remove 启动一个进程移除设备上的电池优化白名单和同步账号
+                    if (args[0].equals("remove")){
+                        serviceThread.start();
+                        break;
+                    }
+                    // 若不是 根据这个参数的值启用或禁用设备上所有可用的限制策略
                     boolean value = Boolean.parseBoolean(args[0]);
                     for (String key: UserManagerUtils.getALLUserRestrictionsReflectForUserManager()){
                         setUserRestrictionReflect(key, value);
