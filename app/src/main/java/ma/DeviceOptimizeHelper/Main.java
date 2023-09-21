@@ -199,7 +199,7 @@ public class Main {
                 String[] sysPowerSaveList = iDeviceIdleController.getSystemPowerWhitelist();
                 for (String sPwt : sysPowerSaveList) {
                     iDeviceIdleController.removeSystemPowerWhitelistApp(sPwt);
-                    Log.i("Main", "正在移除系统级优化白名单: " + sPwt + "\n");
+                    System.out.println("正在移除系统级优化白名单: " + sPwt + "\n");
                 }
 
                 String[] userPowerSaveList = iDeviceIdleController.getUserPowerWhitelist();
@@ -235,11 +235,15 @@ public class Main {
 
     private static IBinder getSystemService(String name){
         try {
+            //获取android.os.ServiceManager的getService方法
             @SuppressLint({"PrivateApi", "DiscouragedPrivateApi"})
             Method getServiceMethod = Class.forName("android.os.ServiceManager").getDeclaredMethod("getService", String.class);
+            //设置getService方法的可访问性
             getServiceMethod.setAccessible(true);
+            //调用getService方法，传入name参数，获取IBinder对象
             return (IBinder) getServiceMethod.invoke(null, name);
         } catch (NullPointerException | IllegalAccessException | InvocationTargetException | ClassNotFoundException | NoSuchMethodException e) {
+            //抛出运行时异常
             throw new RuntimeException(e);
         }
     }
@@ -266,7 +270,7 @@ public class Main {
             throw new RuntimeException(e2);
         }
         //输出setUserRestriction的key和value
-        System.out.println("setUserRestriction: "+key+" set to "+getUserRestrictionsReflect().getBoolean(key));
+        System.out.println("设置用户限制: "+key+"\n当前状态："+getUserRestrictionsReflect().getBoolean(key));
     }
 
     private static Bundle getUserRestrictionsReflect(){
