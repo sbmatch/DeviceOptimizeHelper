@@ -541,7 +541,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
         }
     }
 
-    private static int getResIdReflect(String key){
+    static int getResIdReflect(String key){
         //获取R.string.class对象
         try{
             Class<?> clazz = R.string.class;
