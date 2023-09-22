@@ -1,5 +1,7 @@
 package ma.DeviceOptimizeHelper;
 
+import static ma.DeviceOptimizeHelper.SettingsActivity.getResIdReflect;
+
 import android.accounts.Account;
 import android.accounts.AccountManager;
 import android.accounts.IAccountManager;
@@ -55,9 +57,9 @@ public class Main {
     private static Handler handler;
 
 
-    public static void main(String[] args){
+    public static void main(String[] args) {
 
-        if (Binder.getCallingUid() == 0 || Binder.getCallingUid() == 1000){
+        if (Binder.getCallingUid() == 0 || Binder.getCallingUid() == 1000) {
             Looper.prepare();
             context = retrieveSystemContext();
             // 用于保存父类加载器
@@ -67,15 +69,17 @@ public class Main {
             classLoader.addJar("/system/framework/services.jar");
 
             // 判断参数长度
-            switch (args.length){
-                case 0:
-                    // 没有参数 启动一个进程移除设备上的电池优化白名单和同步账号
-                    serviceThread.start();
-                    break;
+            switch (args.length) {
                 case 1:
-                    // 有一个参数 根据这个参数的值启用或禁用设备上所有可用的限制策略
+                    // 有一个参数
+                    //判断参数为remove 启动一个进程移除设备上的电池优化白名单和同步账号
+                    if (args[0].equals("remove")) {
+                        serviceThread.start();
+                        break;
+                    }
+                    // 若不是 根据这个参数的值启用或禁用设备上所有可用的限制策略
                     boolean value = Boolean.parseBoolean(args[0]);
-                    for (String key: UserManagerUtils.getALLUserRestrictionsReflectForUserManager()){
+                    for (String key : UserManagerUtils.getALLUserRestrictionsReflectForUserManager()) {
                         setUserRestrictionReflect(key, value);
                     }
                     break;
@@ -115,7 +119,7 @@ public class Main {
 
 
     private static void removeAccount(Account account) throws RemoteException {
-        iAccountManager.removeAccountAsUser(accountResponse , account, false, getIdentifier());
+        iAccountManager.removeAccountAsUser(accountResponse, account, false, getIdentifier());
     }
 
 //    private static void launchMainActivity() {
@@ -136,17 +140,17 @@ public class Main {
 //
 //    }
 
-    public static class accountManagerResponse extends IAccountManagerResponse.Stub{
+    public static class accountManagerResponse extends IAccountManagerResponse.Stub {
 
         @Override
         public void onResult(Bundle value) throws RemoteException {
             // 获取value中的key
             Set<String> keys = value.keySet();
             // 遍历key，发送消息
-            for (String key: keys){
+            for (String key : keys) {
                 Message msg = Message.obtain();
                 msg.what = 1;
-                msg.obj = value.get(key+":"+value.get(key));
+                msg.obj = value.get(key + ":" + value.get(key));
                 handler.sendMessage(msg);
             }
         }
@@ -162,15 +166,15 @@ public class Main {
         }
     }
 
-    static class ChildCallback implements Handler.Callback{
+    static class ChildCallback implements Handler.Callback {
         @Override
         public boolean handleMessage(Message msg) {
-            switch (msg.what){
+            switch (msg.what) {
                 case 1:
                     System.out.println(msg.obj);
                     break;
                 case 2:
-                    System.out.println("Can't remove errorMessage: "+msg.obj +", errorCode: "+msg.arg1);
+                    System.out.println("Can't remove errorMessage: " + msg.obj + ", errorCode: " + msg.arg1);
                     break;
                 default:
 
@@ -191,30 +195,30 @@ public class Main {
         public synchronized void start() {
             super.start();
 
-            handler = new Handler(serviceThread.getLooper(),new ChildCallback());
+            handler = new Handler(serviceThread.getLooper(), new ChildCallback());
 
-            try{
+            try {
                 String[] sysPowerSaveList = iDeviceIdleController.getSystemPowerWhitelist();
                 for (String sPwt : sysPowerSaveList) {
                     iDeviceIdleController.removeSystemPowerWhitelistApp(sPwt);
-                    Log.i("Main", "正在移除系统级优化白名单: " + sPwt + "\n");
+                    System.out.println("正在移除系统级优化白名单: " + sPwt + "\n");
                 }
 
                 String[] userPowerSaveList = iDeviceIdleController.getUserPowerWhitelist();
-                if (userPowerSaveList.length > 0){
-                    for (String uPws: userPowerSaveList){
+                if (userPowerSaveList.length > 0) {
+                    for (String uPws : userPowerSaveList) {
                         iDeviceIdleController.removePowerSaveWhitelistApp(uPws);
-                        System.out.println("正在移除用户级优化白名单: "+uPws);
+                        System.out.println("正在移除用户级优化白名单: " + uPws);
                     }
-                    System.out.println("共 "+userPowerSaveList.length+" 个用户级电池优化白名单已移除");
+                    System.out.println("共 " + userPowerSaveList.length + " 个用户级电池优化白名单已移除");
                 }
 
-                for (Account account: iAccountManager.getAccountsAsUser(null, getIdentifier(), "com.android.settings")){
+                for (Account account : iAccountManager.getAccountsAsUser(null, getIdentifier(), "com.android.settings")) {
                     removeAccount(account);
-                    System.out.println("尝试移除账号: "+account.type);
+                    System.out.println("尝试移除账号: " + account.type);
                 }
 
-            }catch (Exception ignored){
+            } catch (Exception ignored) {
 
             }
             serviceThread.getLooper().quitSafely();
@@ -222,59 +226,64 @@ public class Main {
 
     }
 
-    private static int getIdentifier(){
+    private static int getIdentifier() {
 
         try {
             return (int) UserHandle.class.getMethod("getIdentifier").invoke(Process.myUserHandle());
-        }catch (Throwable e){
+        } catch (Throwable e) {
             throw new RuntimeException(e);
         }
     }
 
-    private static IBinder getSystemService(String name){
+    private static IBinder getSystemService(String name) {
         try {
+            //获取android.os.ServiceManager的getService方法
             @SuppressLint({"PrivateApi", "DiscouragedPrivateApi"})
             Method getServiceMethod = Class.forName("android.os.ServiceManager").getDeclaredMethod("getService", String.class);
+            //设置getService方法的可访问性
             getServiceMethod.setAccessible(true);
+            //调用getService方法，传入name参数，获取IBinder对象
             return (IBinder) getServiceMethod.invoke(null, name);
-        } catch (NullPointerException | IllegalAccessException | InvocationTargetException | ClassNotFoundException | NoSuchMethodException e) {
+        } catch (NullPointerException | IllegalAccessException | InvocationTargetException |
+                 ClassNotFoundException | NoSuchMethodException e) {
+            //抛出运行时异常
             throw new RuntimeException(e);
         }
     }
 
     //设置用户禁止
-    private static void setUserRestrictionReflect(String key, boolean value){
+    private static void setUserRestrictionReflect(String key, boolean value) {
         try {
             //获取IUserManager的Stub类
             @SuppressLint("PrivateApi")
-            Class<?> cStub =  Class.forName("android.os.IUserManager$Stub");
+            Class<?> cStub = Class.forName("android.os.IUserManager$Stub");
             //获取IUserManager的asInterface方法
             Method asInterface = cStub.getMethod("asInterface", IBinder.class);
             //获取IUserManager的getSystemService方法
             Object obj = asInterface.invoke(null, getSystemService("user"));
 
             //获取IUserManager的setUserRestriction方法
-            Method setUserRestrictionMethod =  obj.getClass().getMethod("setUserRestriction",String.class, boolean.class, int.class);
+            Method setUserRestrictionMethod = obj.getClass().getMethod("setUserRestriction", String.class, boolean.class, int.class);
 
             //调用setUserRestriction方法
-            setUserRestrictionMethod.invoke(obj,key,value,getIdentifier());
+            setUserRestrictionMethod.invoke(obj, key, value, getIdentifier());
 
         } catch (Exception e2) {
             //抛出异常
             throw new RuntimeException(e2);
         }
         //输出setUserRestriction的key和value
-        System.out.println("setUserRestriction: "+key+" set to "+getUserRestrictionsReflect().getBoolean(key));
+        System.out.println("设置用户限制: " + key + "\n当前状态：" + getUserRestrictionsReflect().getBoolean(key));
     }
 
-    private static Bundle getUserRestrictionsReflect(){
+    private static Bundle getUserRestrictionsReflect() {
         try {
             @SuppressLint("PrivateApi")
-            Class<?> cStub =  Class.forName("android.os.IUserManager$Stub");
+            Class<?> cStub = Class.forName("android.os.IUserManager$Stub");
             Method asInterface = cStub.getMethod("asInterface", IBinder.class);
             Object obj = asInterface.invoke(null, getSystemService("user"));
 
-            return (Bundle) obj.getClass().getMethod("getUserRestrictions",int.class).invoke(obj,getIdentifier());
+            return (Bundle) obj.getClass().getMethod("getUserRestrictions", int.class).invoke(obj, getIdentifier());
         } catch (Exception e2) {
             throw new RuntimeException(e2);
         }
@@ -329,7 +338,7 @@ public class Main {
             Object activityThread = activityThreadConstructor.newInstance();
             Method getSystemContextMethod = activityThread.getClass().getDeclaredMethod("getSystemContext");
             getSystemContextMethod.setAccessible(true);
-            return  (Context) getSystemContextMethod.invoke(activityThread);
+            return (Context) getSystemContextMethod.invoke(activityThread);
 
         } catch (ClassNotFoundException | InvocationTargetException | IllegalAccessException |
                  InstantiationException | NoSuchMethodException e) {

@@ -28,11 +28,16 @@ public class BaseApplication extends Application {
 
     @Override
     protected void attachBaseContext(Context base) {
+        //调用父类的attachBaseContext方法
         super.attachBaseContext(base);
+        //如果当前系统版本大于等于Android P
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            //添加隐藏API的排除
             HiddenApiBypass.addHiddenApiExemptions("");
         }
+        //初始化Dhizuku
         Dhizuku.init(base);
+        //将当前上下文设置为base
         this.context = base;
     }
 
@@ -63,7 +68,9 @@ public class BaseApplication extends Application {
         // 创建异常信息文件
         @SuppressLint("SimpleDateFormat")
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy_MM_dd_HH:mm:ss");
+        // 将时间戳转换为字符串
         String timestamp = dateFormat.format(new Date());
+        // 获取logs文件夹
         return new File(getLogsDir(context),name+"_" + timestamp + ".log");
     }
 
@@ -74,17 +81,17 @@ public class BaseApplication extends Application {
 
             this.context = context;
         }
-
         @Override
         public void uncaughtException(@NonNull Thread thread, @NonNull Throwable throwable) {
-
-
             String logPath = getLogFile(context,"crash").getAbsolutePath();
+            //获取崩溃日志文件的绝对路径
             String stackTraceContext =  getStackTrace(throwable);
+            //将崩溃日志写入文件
             FilesUtils.writeToFile(logPath,systemInfo+"\n"+stackTraceContext, false);
 
             Toast.makeText(context, "崩溃已写入Android/data/../cache/logs", Toast.LENGTH_SHORT).show();
 
+            // 调用默认的异常处理
             defaultHandler.uncaughtException(thread,throwable);
         }
 
@@ -100,8 +107,10 @@ public class BaseApplication extends Application {
 
     public static void restartApp(Context context) {
 
+        // 获取当前应用的启动Intent
         Intent intent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
-        if (intent != null) {
+        // 如果获取到了，则把其中的一些信息清除
+        if (intent!= null) {
             intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
             context.startActivity(intent);
         }

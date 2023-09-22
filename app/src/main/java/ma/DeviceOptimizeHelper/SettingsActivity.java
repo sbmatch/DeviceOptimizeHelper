@@ -51,8 +51,12 @@ import ma.DeviceOptimizeHelper.Utils.UserService;
 
 
 // TODO 注释！！！可以用codegeex或者chatgpt一键生成即可（文心就是垃圾）
-// TODO 注释！！！可以用codegeex或者chatgpt一键生成即可（文心就是垃圾）
-// TODO 注释！！！可以用codegeex或者chatgpt一键生成即可（文心就是垃圾）
+
+// TODO 新功能加注释！！！
+
+// TODO 修bug的提交，请把commit描述写清楚！！！！！！
+// TODO 修bug的提交，请把commit描述写清楚！！！！！！
+// TODO 修bug的提交，请把commit描述写清楚！！！！！！
 
 public class SettingsActivity extends AppCompatActivity{
 
@@ -76,22 +80,28 @@ public class SettingsActivity extends AppCompatActivity{
         setContentView(R.layout.settings_activity);
 
         if (savedInstanceState == null) {
+            // 如果savedInstanceState为空，则添加HeaderFragment
             getSupportFragmentManager()
                     .beginTransaction()
                     .replace(R.id.settings, new HeaderFragment())
                     .commit();
         } else {
+            // 如果savedInstanceState不为空，则设置标题
             setTitle(savedInstanceState.getCharSequence(TITLE_TAG));
         }
+        // 监听BackStackChanged事件，当BackStack的顺序发生变化时，且栈为0时，设置标题
         getSupportFragmentManager().addOnBackStackChangedListener(() -> {
             if (getSupportFragmentManager().getBackStackEntryCount() == 0) {
                 setTitle(R.string.title_activity_settings);
             }
         });
 
+        // 获取ActionBar
         ActionBar actionBar = getSupportActionBar();
-        if (actionBar != null) {
+        if (actionBar!= null) {
+            // 如果ActionBar不为空，则设置不显示HomeAsUp按钮
             actionBar.setDisplayHomeAsUpEnabled(false);
+            // 如果ActionBar为空，则设置ActionBar的背景图片为null
             actionBar.setBackgroundDrawable(null);
         }
 
@@ -162,18 +172,26 @@ public class SettingsActivity extends AppCompatActivity{
     }
 
     private void share_runtime_logs(){
-
+        // -b main 是指只显示主日志缓冲区（main buffer）的日志。主日志缓冲区包含了系统启动以来的所有核心系统日志。
+        // -b crash 是指只显示崩溃日志缓冲区（crash buffer）的日志。这个缓冲区包含了系统崩溃或ANR（Application Not Responding）时的日志。
+        // -d 是指倒序输出（descending order）。这意味着新的日志条目将首先显示，旧的条目将后显示。
         SettingsActivity.commandExecutor.executeCommand("logcat -b main -b crash -d ", new CommandExecutor.CommandResultListener() {
             @Override
             public void onSuccess(String output) {
+                // 写入日志文件
                 new Thread(() -> {
                     FilesUtils.writeToFile(BaseApplication.getLogFile(context,"runtime_logs").getAbsolutePath(),BaseApplication.systemInfo+"\n\n"+output, false);
                     // 使用系统分享发送文件
                     Intent intent = new Intent(Intent.ACTION_SEND);
+                    // 设置分享文件的类型
                     intent.setType("text/plain");
+                    // 获取最新的文件
                     File shareFile = FilesUtils.getLatestFileInDirectory(BaseApplication.getLogsDir(context).getAbsolutePath());
+                    // 将文件转换为Uri
                     intent.putExtra(Intent.EXTRA_STREAM, FileProvider.getUriForFile(context, "ma.DeviceOptimizeHelper.provider", shareFile));
+                    // 添加权限
                     intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+                    // 启动分享
                     getApplicationContext().startActivity(intent);
                 }).start();
             }
@@ -184,7 +202,6 @@ public class SettingsActivity extends AppCompatActivity{
 
             }
         }, false, false);
-
     }
 
 
@@ -193,9 +210,7 @@ public class SettingsActivity extends AppCompatActivity{
         // 重写了一键切换限制策略的实现，现在会首先使用Dhizuku进行执行， 遇到无法设置的限制则尝试使用root进行设置
 
         StringBuffer stringBuffer = new StringBuffer();
-
         boolean isDhizuku = sharedPreferences.getBoolean("isGrantDhizuku",false);
-
         boolean isRoot = sharedPreferences.getBoolean("isGrantRoot",false);
 
         if (isDhizuku || isRoot) {
@@ -263,14 +278,16 @@ public class SettingsActivity extends AppCompatActivity{
         @Override
         public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
 
+ // 引入context
             context = requireContext();
 
+ // 获取所有用户的限制
             ArraySet<String> getALLUserRestrictions = UserManagerUtils.getALLUserRestrictionsReflectForUserManager();
 
+ // 如果sharedPreferences为空，则获取sharedPreferences
             if (sharedPreferences == null){
                 sharedPreferences = getPreferenceManager().getSharedPreferences();
             }
-
 
 // 创建一个 Handler 对象，将它关联到指定线程的 Looper 上
 // 这里的 serviceThread2 是一个线程对象，通过 getLooper() 获取它的消息循环
@@ -349,7 +366,6 @@ public class SettingsActivity extends AppCompatActivity{
                             tryRequestsDhizukuPermission(context);
                             dialog.cancel();
                         }).setNegativeButton("取消", null).create().show();
-
             }
 
             // 获取根布局，如果不存在则创建一个
@@ -413,12 +429,14 @@ public class SettingsActivity extends AppCompatActivity{
         public void onResume() {
 
             if (sharedPreferences.getBoolean("first_checkRoot",false)){
+                // 创建一个CheckRootPermissionTask实例
                 CheckRootPermissionTask task = new CheckRootPermissionTask(hasRootPermission -> {
+                    // 将hasRootPermission设置到sharedPreferences中
                     sharedPreferences.edit().putBoolean("isGrantRoot", hasRootPermission).apply();
                 });
+                // 执行task
                 task.execute();
             }
-
             bindDhizukuservice();
 
             super.onResume();
@@ -511,27 +529,38 @@ public class SettingsActivity extends AppCompatActivity{
         }
     }
 
-    private static int getResIdReflect(String key){
+    static int getResIdReflect(String key){
+        //获取R.string.class对象
         try{
             Class<?> clazz = R.string.class;
+            //获取key对应的字段
             Field field = clazz.getField(key);
+            //获取字段的值
             return field.getInt(null);
         }catch (Resources.NotFoundException | NoSuchFieldException | IllegalAccessException e){
             e.printStackTrace();
+            //抛出异常
             Looper.prepare();
+            //显示提示信息
             Toast.makeText(context, "捕获到崩溃，已写入日志文件", Toast.LENGTH_SHORT).show();
         }
+        //返回0
         return 0;
     }
 
     public static String getApkPath(Context context){
+        //获取apk路径
         String apkPath;
         try {
+            //获取packageManager
             PackageManager packageManager = context.getPackageManager();
+            //获取applicationInfo
             ApplicationInfo applicationInfo = packageManager.getApplicationInfo(context.getPackageName(), 0);
+            //获取apk路径
             apkPath = applicationInfo.sourceDir;
             return apkPath;
         } catch (PackageManager.NameNotFoundException e) {
+            //抛出异常
             throw new RuntimeException(e);
         }
     }
