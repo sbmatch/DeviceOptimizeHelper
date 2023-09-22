@@ -55,8 +55,6 @@ import ma.DeviceOptimizeHelper.Utils.UserService;
 // TODO 新功能加注释！！！
 
 // TODO 修bug的提交，请把commit描述写清楚！！！！！！
-// TODO 修bug的提交，请把commit描述写清楚！！！！！！
-// TODO 修bug的提交，请把commit描述写清楚！！！！！！
 
 public class SettingsActivity extends AppCompatActivity{
 
@@ -397,7 +395,7 @@ public class SettingsActivity extends AppCompatActivity{
                     message.arg1 = (boolean) newValue ? 1 : 0;
                     handler.sendMessage(message); // 发送消息
 
-                    Log.i("SwitchPreferenceChangeListener","newValue: "+newValue);
+                    Log.i("SwitchPreferenceChangeListener","newValue(创建新值): "+newValue);
 
                     return (sharedPreferences.getBoolean("isGrantDhizuku",false)  || sharedPreferences.getBoolean("isGrantRoot", false));
                 });

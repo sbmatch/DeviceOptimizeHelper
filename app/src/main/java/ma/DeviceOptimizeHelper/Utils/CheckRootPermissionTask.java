@@ -3,6 +3,8 @@ package ma.DeviceOptimizeHelper.Utils;
 import android.os.AsyncTask;
 import android.util.Log;
 
+// TODO 找个时间换个实现方法
+
 public class CheckRootPermissionTask extends AsyncTask<Void, Void, Boolean> {
 
     private OnRootPermissionCheckedListener listener;
