@@ -1,13 +1,8 @@
 package ma.DeviceOptimizeHelper;
 
-import android.accounts.Account;
-import android.accounts.AccountManager;
-import android.accounts.AuthenticatorException;
-import android.accounts.OperationCanceledException;
 import android.annotation.SuppressLint;
 import android.content.ComponentName;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
@@ -45,7 +40,6 @@ import com.rosan.dhizuku.api.DhizukuUserServiceArgs;
 import com.rosan.dhizuku.shared.DhizukuVariables;
 
 import java.io.File;
-import java.io.IOException;
 import java.lang.reflect.Field;
 
 import ma.DeviceOptimizeHelper.BaseApplication.BaseApplication;
@@ -60,7 +54,7 @@ import ma.DeviceOptimizeHelper.Utils.UserService;
 // TODO 注释！！！可以用codegeex或者chatgpt一键生成即可（文心就是垃圾）
 // TODO 注释！！！可以用codegeex或者chatgpt一键生成即可（文心就是垃圾）
 
-public class SettingsActivity extends AppCompatActivity implements PreferenceFragmentCompat.OnPreferenceStartFragmentCallback {
+public class SettingsActivity extends AppCompatActivity{
 
     private static final String TITLE_TAG = "settingsActivityTitle";
     @SuppressLint("StaticFieldLeak")
@@ -260,15 +254,6 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
         }
     }
 
-    /**
-     * @param caller The fragment requesting navigation
-     * @param pref   The preference requesting the fragment
-     * @return
-     */
-    @Override
-    public boolean onPreferenceStartFragment(@NonNull PreferenceFragmentCompat caller, @NonNull Preference pref) {
-        return true;
-    }
 
     public static class HeaderFragment extends PreferenceFragmentCompat {
 
@@ -381,6 +366,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 
             // 动态创建SwitchPreferenceCompat, 属于是有多少就创建多少
             for (String key : getALLUserRestrictions) {
+
                 SwitchPreferenceCompat switchPreferenceCompat = new SwitchPreferenceCompat(requireContext());
                 switchPreferenceCompat.setKey(key);
                 switchPreferenceCompat.setTitle(key);
@@ -394,6 +380,8 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
                     message.obj = preference.getKey();
                     message.arg1 = (boolean) newValue ? 1 : 0;
                     handler.sendMessage(message); // 发送消息
+
+                    Log.i("SwitchPreferenceChangeListener","newValue: "+newValue);
 
                     return (sharedPreferences.getBoolean("isGrantDhizuku",false)  || sharedPreferences.getBoolean("isGrantRoot", false));
                 });

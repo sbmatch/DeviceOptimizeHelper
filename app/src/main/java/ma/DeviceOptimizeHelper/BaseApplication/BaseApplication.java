@@ -6,14 +6,9 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Build;
-import android.os.Handler;
-import android.os.Looper;
-import android.util.Log;
-import android.util.LogPrinter;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.rosan.dhizuku.api.Dhizuku;
@@ -25,7 +20,6 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import ma.DeviceOptimizeHelper.SettingsActivity;
-import ma.DeviceOptimizeHelper.Utils.CommandExecutor;
 import ma.DeviceOptimizeHelper.Utils.FilesUtils;
 
 public class BaseApplication extends Application {
@@ -115,14 +109,5 @@ public class BaseApplication extends Application {
         // 结束当前进程
         android.os.Process.killProcess(android.os.Process.myPid());
         System.exit(0);
-    }
-
-    public static void showDialog(Context context , String msg){
-        SettingsActivity.getmHandle().post(() -> new MaterialAlertDialogBuilder(context).setTitle("好消息！ 特大的好消息! 崩溃啦!").setMessage(msg).setNegativeButton("OK", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                restartApp(context);
-            }
-        }).create().show());
     }
 }
