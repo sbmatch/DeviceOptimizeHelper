@@ -36,7 +36,7 @@ jobs:
           # 恢复密钥库
           echo "${{ secrets.RELEASE_KEYSTORE_FILE }}" | base64 -d > keystore.jks
           # 使用 apksigner 签名 APK 引用环境变量中的密码和别名密码
-          ./gradlew signingConfig
+          ./gradlew signingConfigWriterRelease
           apksigner sign --ks keystore.jks --ks-key-alias env:RELEASE_KEY_ALIAS --ks-pass env:RELEASE_KEYSTORE_PASSWORD --key-pass env:RELEASE_KEY_PASSWORD --in app/build/outputs/apk/release/app-release-unsigned.apk --out app/build/outputs/apk/release/app-release.apk
 
           # 使用 zipalign 优化 APK
