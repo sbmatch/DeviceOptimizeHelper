@@ -8,6 +8,7 @@ import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.os.Bundle;
 import android.os.Handler;
@@ -19,6 +20,7 @@ import android.util.ArraySet;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -93,6 +95,18 @@ public class SettingsActivity extends AppCompatActivity {
                 setTitle(R.string.title_activity_settings);
             }
         });
+
+        // 深色模式适配
+        View decorView = getWindow().getDecorView();
+        int flags = decorView.getSystemUiVisibility();
+        if ((getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES) {
+            // 如果是深色模式，则设置状态栏文字为白色
+            flags &= ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+        } else {
+            // 如果不是深色模式，则设置状态栏文字为黑色
+            flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+        }
+        decorView.setSystemUiVisibility(flags);
 
         // 获取ActionBar
         ActionBar actionBar = getSupportActionBar();
