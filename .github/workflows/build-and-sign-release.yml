@@ -57,5 +57,5 @@ jobs:
         with:
           files: |
             app/build/outputs/apk/release/DeviceOptimizeHelper_v*.apk
-          tag_name: ${{ steps.get_version.outputs.tag_name }}
+          tag_name: "v${{ steps.get_version.outputs.tag_name }}"
           token: ${{ secrets.RELEASE_GITHUB_TOKEN }}
