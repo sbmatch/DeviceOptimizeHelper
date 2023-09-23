@@ -46,7 +46,7 @@ jobs:
           $ANDROID_HOME/build-tools/31.0.0/apksigner sign --ks keystore.jks --ks-key-alias ${{ secrets.RELEASE_KEY_ALIAS }} --ks-pass env:RELEASE_KEYSTORE_PASSWORD --key-pass env:RELEASE_KEY_PASSWORD --in app/build/outputs/apk/release/DeviceOptimizeHelper_v*.apk --out app/build/outputs/apk/release/app-release.apk
 
           # 使用 zipalign 优化 APK
-          zipalign -v -p 4 app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/app-release-aligned.apk
+          $ANDROID_HOME/build-tools/31.0.0/zipalign -v -p 4 app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/app-release-aligned.apk
 
 
       - name: Upload Signed APK
