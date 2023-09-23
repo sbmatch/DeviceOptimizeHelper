@@ -45,8 +45,22 @@ jobs:
           ./gradlew signingConfigWriterRelease
           $ANDROID_HOME/build-tools/31.0.0/apksigner sign --ks keystore.jks --ks-key-alias ${{ secrets.RELEASE_KEY_ALIAS }} --ks-pass env:RELEASE_KEYSTORE_PASSWORD --key-pass env:RELEASE_KEY_PASSWORD --in app/build/outputs/apk/release/DeviceOptimizeHelper_v*.apk
 
-      - name: Upload Signed APK
-        uses: actions/upload-artifact@v3
+
+      - name: Get commit messages
+        id: commit_messages
+        run: |
+          TAG=$(git describe --tags --abbrev=0)
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 $TAG^)
+          git log --pretty=format:"- %s%n" $PREVIOUS_TAG..$TAG > commit_messages.txt
+          echo "::set-output name=messages::$(cat commit_messages.txt)"
+
+      - name: Create release
+        id: create_release
+        uses: softprops/action-gh-release@v1
         with:
-          name: releaseApk
-          path: app/build/outputs/apk/release/*.apk
+          files: |
+            app/build/outputs/apk/release/DeviceOptimizeHelper_v*.apk
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: ${{ steps.commit_messages.outputs.messages }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
