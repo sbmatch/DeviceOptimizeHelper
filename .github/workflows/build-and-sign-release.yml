@@ -31,6 +31,13 @@ jobs:
           chmod +x ./gradlew
           ./gradlew assembleRelease
 
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v2
+        with:
+          sdk-platform: '31'
+          ndk-version: '21.4.7075529'
+
+
       - name: Sign APK with Keystore
         run: |
           # 恢复密钥库
