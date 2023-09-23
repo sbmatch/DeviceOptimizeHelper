@@ -50,5 +50,5 @@ jobs:
         with:
           files: |
             app/build/outputs/apk/release/DeviceOptimizeHelper_v*.apk
-          tag_name: "CI Auto Build"
+          tag_name: "v1.0.5_ci"
           token: ${{ secrets.RELEASE_GITHUB_TOKEN }}
