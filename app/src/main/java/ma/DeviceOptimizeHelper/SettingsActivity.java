@@ -56,7 +56,7 @@ import ma.DeviceOptimizeHelper.Utils.UserService;
 
 // TODO 修bug的提交，请把commit描述写清楚！！！！！！
 
-public class SettingsActivity extends AppCompatActivity{
+public class SettingsActivity extends AppCompatActivity {
 
     private static final String TITLE_TAG = "settingsActivityTitle";
     @SuppressLint("StaticFieldLeak")
@@ -96,17 +96,17 @@ public class SettingsActivity extends AppCompatActivity{
 
         // 获取ActionBar
         ActionBar actionBar = getSupportActionBar();
-        if (actionBar!= null) {
+        if (actionBar != null) {
             // 如果ActionBar不为空，则设置不显示HomeAsUp按钮
             actionBar.setDisplayHomeAsUpEnabled(false);
             // 如果ActionBar为空，则设置ActionBar的背景图片为null
             actionBar.setBackgroundDrawable(null);
         }
 
-        command = "app_process -Djava.class.path="+getApkPath(this)+"  /system/bin   ma.DeviceOptimizeHelper.Main  ";
+        command = "app_process -Djava.class.path=" + getApkPath(this) + "  /system/bin   ma.DeviceOptimizeHelper.Main  ";
 
         // 开发者是个小黑子
-        if (!serviceThread2.isAlive()){
+        if (!serviceThread2.isAlive()) {
             serviceThread2.start();
         }
 
@@ -121,17 +121,17 @@ public class SettingsActivity extends AppCompatActivity{
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        menu.add(Menu.NONE,10000,0,getResIdReflect("enable_all_policy"));
-        menu.add(Menu.NONE,10001,1,getResIdReflect("disallow_all_policy"));
-        menu.add(Menu.NONE,10002,2,getResIdReflect("share_runtime_logs"));
+        menu.add(Menu.NONE, 10000, 0, getResIdReflect("enable_all_policy"));
+        menu.add(Menu.NONE, 10001, 1, getResIdReflect("disallow_all_policy"));
+        menu.add(Menu.NONE, 10002, 2, getResIdReflect("share_runtime_logs"));
         return super.onCreateOptionsMenu(menu);
     }
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
 
-        try{
-            switch (item.getItemId()){
+        try {
+            switch (item.getItemId()) {
                 case 10000:
                     // 启用全部
                     oneKeyChange(true);
@@ -143,7 +143,7 @@ public class SettingsActivity extends AppCompatActivity{
                     share_runtime_logs();
                     break;
             }
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
             throw new RuntimeException(e);
         }
@@ -169,7 +169,7 @@ public class SettingsActivity extends AppCompatActivity{
         return (mHandle != null) ? mHandle : (new Handler(Looper.getMainLooper()));
     }
 
-    private void share_runtime_logs(){
+    private void share_runtime_logs() {
         // -b main 是指只显示主日志缓冲区（main buffer）的日志。主日志缓冲区包含了系统启动以来的所有核心系统日志。
         // -b crash 是指只显示崩溃日志缓冲区（crash buffer）的日志。这个缓冲区包含了系统崩溃或ANR（Application Not Responding）时的日志。
         // -d 是指倒序输出（descending order）。这意味着新的日志条目将首先显示，旧的条目将后显示。
@@ -178,7 +178,7 @@ public class SettingsActivity extends AppCompatActivity{
             public void onSuccess(String output) {
                 // 写入日志文件
                 new Thread(() -> {
-                    FilesUtils.writeToFile(BaseApplication.getLogFile(context,"runtime_logs").getAbsolutePath(),BaseApplication.systemInfo+"\n\n"+output, false);
+                    FilesUtils.writeToFile(BaseApplication.getLogFile(context, "runtime_logs").getAbsolutePath(), BaseApplication.systemInfo + "\n\n" + output, false);
                     // 使用系统分享发送文件
                     Intent intent = new Intent(Intent.ACTION_SEND);
                     // 设置分享文件的类型
@@ -203,13 +203,13 @@ public class SettingsActivity extends AppCompatActivity{
     }
 
 
-    private  void oneKeyChange(boolean z) {
+    private void oneKeyChange(boolean z) {
 
         // 重写了一键切换限制策略的实现，现在会首先使用Dhizuku进行执行， 遇到无法设置的限制则尝试使用root进行设置
 
         StringBuffer stringBuffer = new StringBuffer();
-        boolean isDhizuku = sharedPreferences.getBoolean("isGrantDhizuku",false);
-        boolean isRoot = sharedPreferences.getBoolean("isGrantRoot",false);
+        boolean isDhizuku = sharedPreferences.getBoolean("isGrantDhizuku", false);
+        boolean isRoot = sharedPreferences.getBoolean("isGrantRoot", false);
 
         if (isDhizuku || isRoot) {
 
@@ -219,15 +219,19 @@ public class SettingsActivity extends AppCompatActivity{
                     try {
                         if (z) {
                             userService.addUserRestriction(DhizukuVariables.COMPONENT_NAME, compat.getKey());
-                            runOnUiThread(()-> { compat.setChecked(true);});
+                            runOnUiThread(() -> {
+                                compat.setChecked(true);
+                            });
                         } else {
                             userService.clearUserRestriction(DhizukuVariables.COMPONENT_NAME, compat.getKey());
-                            runOnUiThread(()-> { compat.setChecked(false);});
+                            runOnUiThread(() -> {
+                                compat.setChecked(false);
+                            });
                         }
 
                     } catch (Exception e1) {
 
-                        if (e1.getMessage().contains(compat.getKey())){
+                        if (e1.getMessage().contains(compat.getKey())) {
                             stringBuffer.append(compat.getKey()).append("\n");
                         }
                         count = stringBuffer.toString().split("\n").length;
@@ -238,21 +242,21 @@ public class SettingsActivity extends AppCompatActivity{
                                 if (!dialogShown) {
                                     dialogShown = true; // 设置标志，表示已经弹出了对话框
 
-                                    runOnUiThread(()-> {
+                                    runOnUiThread(() -> {
                                         compat.setChecked(z);
-                                        String title = String.format(getString(getResIdReflect("set_error_count_title")),count, z ? "启用" : "禁用" );
-                                        new MaterialAlertDialogBuilder(context).setTitle(title).setMessage(stringBuffer.toString()).setPositiveButton("Ok",null).create().show();
+                                        String title = String.format(getString(getResIdReflect("set_error_count_title")), count, z ? "启用" : "禁用");
+                                        new MaterialAlertDialogBuilder(context).setTitle(title).setMessage(stringBuffer.toString()).setPositiveButton("Ok", null).create().show();
                                     });
-                                 }
+                                }
                             }
 
                             @Override
                             public void onError(String error, Exception e) {
                                 if (!dialogShown) {
                                     dialogShown = true; // 设置标志，表示已经弹出了对话框
-                                    runOnUiThread(() ->{
-                                        String title = String.format(getString(getResIdReflect("set_error_count_title")),count, "失败");
-                                        new MaterialAlertDialogBuilder(context).setTitle(title).setMessage(stringBuffer.toString()).setPositiveButton("Ok",null).create().show();
+                                    runOnUiThread(() -> {
+                                        String title = String.format(getString(getResIdReflect("set_error_count_title")), count, "失败");
+                                        new MaterialAlertDialogBuilder(context).setTitle(title).setMessage(stringBuffer.toString()).setPositiveButton("Ok", null).create().show();
                                     });
                                 }
                             }
@@ -262,7 +266,7 @@ public class SettingsActivity extends AppCompatActivity{
                 dialogShown = false;
             });
 
-        }else {
+        } else {
             Toast.makeText(context, "🤣👉🤡", Toast.LENGTH_SHORT).show();
         }
     }
@@ -271,19 +275,20 @@ public class SettingsActivity extends AppCompatActivity{
     public static class HeaderFragment extends PreferenceFragmentCompat {
 
         Handler handler;
+
         // 获取 SharedPreferences
         @SuppressLint("ResourceAsColor")
         @Override
         public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
 
- // 引入context
+            // 引入context
             context = requireContext();
 
             // 获取所有用户的限制
             ArraySet<String> getALLUserRestrictions = UserManagerUtils.getALLUserRestrictionsReflectForUserManager();
 
- // 如果sharedPreferences为空，则获取sharedPreferences
-            if (sharedPreferences == null){
+            // 如果sharedPreferences为空，则获取sharedPreferences
+            if (sharedPreferences == null) {
                 sharedPreferences = getPreferenceManager().getSharedPreferences();
             }
 
@@ -356,7 +361,7 @@ public class SettingsActivity extends AppCompatActivity{
             });
 
 
-            if ((sharedPreferences.getBoolean("isGrantDhizuku",false) || sharedPreferences.getBoolean("isGrantRoot", false))){
+            if ((sharedPreferences.getBoolean("isGrantDhizuku", false) || sharedPreferences.getBoolean("isGrantRoot", false))) {
                 Toast.makeText(context, "欢迎使用", Toast.LENGTH_SHORT).show();
             } else {
                 new MaterialAlertDialogBuilder(context).setTitle("应用说明").setMessage("本应用支持 Dhizuku 与 Root 两种使用方式，其中Root模式可设置所有系统支持的限制策略，Dhizuku模式下各家深度定制ROM对<设备所有者>权限的限制则各有不同，接下来我们会向您请求这两种权限, 优先级为: Root > Dhizuku ，请注意: 在我们获取到Dhizuku权限后会继续尝试申请Root权限, 现在，我们将尝试申请您设备上的Dhizuku权限, 成功后会继续尝试申请Root权限 \n如果您了解自己在干什么，请点击继续按钮")
@@ -395,9 +400,9 @@ public class SettingsActivity extends AppCompatActivity{
                     message.arg1 = (boolean) newValue ? 1 : 0;
                     handler.sendMessage(message); // 发送消息
 
-                    Log.i("SwitchPreferenceChangeListener","newValue(创建新值): "+newValue);
+                    Log.i("SwitchPreferenceChangeListener", "newValue(创建新值): " + newValue);
 
-                    return (sharedPreferences.getBoolean("isGrantDhizuku",false)  || sharedPreferences.getBoolean("isGrantRoot", false));
+                    return (sharedPreferences.getBoolean("isGrantDhizuku", false) || sharedPreferences.getBoolean("isGrantRoot", false));
                 });
                 // 将动态生成的SwitchPreferenceCompat对象添加进一个列表中
                 switchPreferenceCompatArraySet.add(switchPreferenceCompat);
@@ -426,7 +431,7 @@ public class SettingsActivity extends AppCompatActivity{
         @Override
         public void onResume() {
 
-            if (sharedPreferences.getBoolean("first_checkRoot",false)){
+            if (sharedPreferences.getBoolean("first_checkRoot", false)) {
                 // 创建一个CheckRootPermissionTask实例
                 CheckRootPermissionTask task = new CheckRootPermissionTask(hasRootPermission -> {
                     // 将hasRootPermission设置到sharedPreferences中
@@ -441,76 +446,76 @@ public class SettingsActivity extends AppCompatActivity{
         }
 
 
-        private void bindDhizukuservice(){
+        private void bindDhizukuservice() {
 
             DhizukuUserServiceArgs args = new DhizukuUserServiceArgs(new ComponentName(context, UserService.class));
 
-            try{
+            try {
                 Dhizuku.bindUserService(args, new ServiceConnection() {
                     @Override
                     public void onServiceConnected(ComponentName name, IBinder service) {
-                        if (userService == null){
+                        if (userService == null) {
                             userService = IUserService.Stub.asInterface(service);
                         }
-                        sharedPreferences.edit().putBoolean("isGrantDhizuku",true).apply();
+                        sharedPreferences.edit().putBoolean("isGrantDhizuku", true).apply();
                     }
 
                     @Override
                     public void onServiceDisconnected(ComponentName name) {
-                        Log.e("Dhizuku",name+"  is Disconnected");
+                        Log.e("Dhizuku", name + "  is Disconnected");
                         bindDhizukuservice();
                     }
                 });
-            }catch (IllegalStateException e){
+            } catch (IllegalStateException e) {
                 e.printStackTrace();
-                sharedPreferences.edit().putBoolean("isGrantDhizuku",false).apply();
+                sharedPreferences.edit().putBoolean("isGrantDhizuku", false).apply();
             }
         }
 
-        public void tryRequestRoot(){
-           if (!sharedPreferences.getBoolean("first_checkRoot",false)){
-               commandExecutor.executeCommand(command,  new CommandExecutor.CommandResultListener() {
-                   @Override
-                   public void onSuccess(String output) {
+        public void tryRequestRoot() {
+            if (!sharedPreferences.getBoolean("first_checkRoot", false)) {
+                commandExecutor.executeCommand(command, new CommandExecutor.CommandResultListener() {
+                    @Override
+                    public void onSuccess(String output) {
 
-                       sharedPreferences.edit().putBoolean("first_checkRoot",true).apply();
+                        sharedPreferences.edit().putBoolean("first_checkRoot", true).apply();
 
-                       CheckRootPermissionTask task = new CheckRootPermissionTask(hasRootPermission -> {
-                           sharedPreferences.edit().putBoolean("isGrantRoot", hasRootPermission).apply();
-                       });
-                       task.execute();
+                        CheckRootPermissionTask task = new CheckRootPermissionTask(hasRootPermission -> {
+                            sharedPreferences.edit().putBoolean("isGrantRoot", hasRootPermission).apply();
+                        });
+                        task.execute();
 
-                       Looper.prepare();
-                       Toast.makeText(context, "已授权Root", Toast.LENGTH_SHORT).show();
-                   }
+                        Looper.prepare();
+                        Toast.makeText(context, "已授权Root", Toast.LENGTH_SHORT).show();
+                    }
 
-                   @Override
-                   public void onError(String error, Exception e) {
-                       Log.e("CommandExecutor","root权限授权失败",e);
-                   }
+                    @Override
+                    public void onError(String error, Exception e) {
+                        Log.e("CommandExecutor", "root权限授权失败", e);
+                    }
 
-               }, true, true);
-           }
+                }, true, true);
+            }
         }
 
-        public  void tryRequestsDhizukuPermission(Context context){
+        public void tryRequestsDhizukuPermission(Context context) {
             try {
-                if (!Dhizuku.isPermissionGranted()){
+                if (!Dhizuku.isPermissionGranted()) {
                     new MaterialAlertDialogBuilder(context).setTitle("权限检查")
                             .setMessage("好的! 让我们试试申请Dhizuku权限, 如果可以,请在接下来的权限申请对话框中允许授权")
-                            .setPositiveButton("好的",  (dialog, which) -> Dhizuku.requestPermission(new DhizukuRequestPermissionListener() {
+                            .setPositiveButton("好的", (dialog, which) -> Dhizuku.requestPermission(new DhizukuRequestPermissionListener() {
                                 @Override
                                 public void onRequestPermission(int grantResult) {
                                     if (grantResult == PackageManager.PERMISSION_GRANTED) {
-                                        sharedPreferences.edit().putBoolean("isGrantDhizuku",true).apply();
+                                        sharedPreferences.edit().putBoolean("isGrantDhizuku", true).apply();
                                         tryRequestRoot();
                                         Looper.prepare();
                                         Toast.makeText(context, "Dhizuku 已授权", Toast.LENGTH_SHORT).show();
                                     }
                                 }
-                            })).setNegativeButton("取消",null).create().show();
+                            })).setNegativeButton("取消", null).create().show();
                 }
-            }catch (IllegalStateException e){
+            } catch (IllegalStateException e) {
                 e.printStackTrace();
                 Toast.makeText(context, "Dhizuku 未安装或未激活", Toast.LENGTH_SHORT).show();
                 tryRequestRoot();
@@ -527,15 +532,15 @@ public class SettingsActivity extends AppCompatActivity{
         }
     }
 
-    static int getResIdReflect(String key){
+    static int getResIdReflect(String key) {
         //获取R.string.class对象
-        try{
+        try {
             Class<?> clazz = R.string.class;
             //获取key对应的字段
             Field field = clazz.getField(key);
             //获取字段的值
             return field.getInt(null);
-        }catch (Resources.NotFoundException | NoSuchFieldException | IllegalAccessException e){
+        } catch (Resources.NotFoundException | NoSuchFieldException | IllegalAccessException e) {
             e.printStackTrace();
             //抛出异常
             Looper.prepare();
@@ -546,7 +551,7 @@ public class SettingsActivity extends AppCompatActivity{
         return 0;
     }
 
-    public static String getApkPath(Context context){
+    public static String getApkPath(Context context) {
         //获取apk路径
         String apkPath;
         try {
