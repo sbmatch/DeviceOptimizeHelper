@@ -8,5 +8,11 @@
         <item name="android:windowTranslucentStatus">true</item>
         <item name="android:fitsSystemWindows">true</item>
         <item name="android:windowLightStatusBar">true</item>
+
+        <item name="switchPreferenceCompatStyle">@style/Preference.Rikka.MateriaSwitchPreference</item>
+        <item name="preferenceCategoryStyle">@style/Preference.Rikka.Category.Material3</item>
+
     </style>
+
+
 </resources>

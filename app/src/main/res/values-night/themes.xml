@@ -1,6 +1,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
-    <style name="Theme.MyApplication" parent="Theme.Material3.Dark">
+    <style name="Theme.MyApplication" parent="ThemeOverlay.Material3.Dark">
         <!-- Primary brand color. -->
 
         <!-- Customize your theme here. -->
@@ -8,5 +8,8 @@
         <item name="android:windowTranslucentStatus">true</item>
         <item name="android:fitsSystemWindows">true</item>
         <item name="android:windowLightStatusBar">true</item>
+
+        <item name="switchPreferenceCompatStyle">@style/Preference.Rikka.MateriaSwitchPreference</item>
+        <item name="preferenceCategoryStyle">@style/Preference.Rikka.Category.Material3</item>
     </style>
 </resources>

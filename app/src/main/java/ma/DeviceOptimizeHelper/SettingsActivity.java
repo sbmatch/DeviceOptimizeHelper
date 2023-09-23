@@ -279,7 +279,7 @@ public class SettingsActivity extends AppCompatActivity{
  // 引入context
             context = requireContext();
 
- // 获取所有用户的限制
+            // 获取所有用户的限制
             ArraySet<String> getALLUserRestrictions = UserManagerUtils.getALLUserRestrictionsReflectForUserManager();
 
  // 如果sharedPreferences为空，则获取sharedPreferences
