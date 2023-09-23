@@ -44,18 +44,11 @@ jobs:
           ./gradlew signingConfigWriterRelease
           $ANDROID_HOME/build-tools/31.0.0/apksigner sign --ks keystore.jks --ks-key-alias ${{ secrets.RELEASE_KEY_ALIAS }} --ks-pass env:RELEASE_KEYSTORE_PASSWORD --key-pass env:RELEASE_KEY_PASSWORD --in app/build/outputs/apk/release/DeviceOptimizeHelper_v*.apk
 
-      - name: Get version from tag
-        id: version_from_tag
-        run: |
-          TAG=$(echo "${GITHUB_REF#refs/tags/}")  # Extract the tag name
-          echo "::set-output name=tag_name::$TAG"  # Set the tag name as an output
-        shell: bash
-
       - name: Create release
         id: create_release
         uses: softprops/action-gh-release@v1
         with:
           files: |
             app/build/outputs/apk/release/DeviceOptimizeHelper_v*.apk
-          tag_name: ${{ steps.version_from_tag.outputs.tag_name }}
+          tag_name: "CI Auto Build"
           token: ${{ secrets.RELEASE_GITHUB_TOKEN }}
