@@ -29,6 +29,8 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.FileProvider;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceCategory;
 import androidx.preference.PreferenceFragmentCompat;
@@ -43,6 +45,7 @@ import com.rosan.dhizuku.shared.DhizukuVariables;
 
 import java.io.File;
 import java.lang.reflect.Field;
+import java.util.List;
 
 import ma.DeviceOptimizeHelper.BaseApplication.BaseApplication;
 import ma.DeviceOptimizeHelper.Utils.CheckRootPermissionTask;
@@ -74,15 +77,18 @@ public class SettingsActivity extends AppCompatActivity {
     private static SharedPreferences sharedPreferences;
     public static Handler mHandle;
 
+    private static FragmentManager fragmentManager;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.settings_activity);
 
+        fragmentManager = getSupportFragmentManager();
+
         if (savedInstanceState == null) {
             // 如果savedInstanceState为空，则添加HeaderFragment
-            getSupportFragmentManager()
-                    .beginTransaction()
+            fragmentManager.beginTransaction()
                     .replace(R.id.settings, new HeaderFragment())
                     .commit();
         } else {
@@ -90,7 +96,7 @@ public class SettingsActivity extends AppCompatActivity {
             setTitle(savedInstanceState.getCharSequence(TITLE_TAG));
         }
         // 监听BackStackChanged事件，当BackStack的顺序发生变化时，且栈为0时，设置标题
-        getSupportFragmentManager().addOnBackStackChangedListener(() -> {
+        fragmentManager.addOnBackStackChangedListener(() -> {
             if (getSupportFragmentManager().getBackStackEntryCount() == 0) {
                 setTitle(R.string.title_activity_settings);
             }
@@ -171,6 +177,19 @@ public class SettingsActivity extends AppCompatActivity {
             return true;
         }
         return super.onSupportNavigateUp();
+    }
+
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+
+        List<Fragment> fragments = fragmentManager.getFragments();
+        for (Fragment fragment : fragments) {
+            if (fragment instanceof HeaderFragment) {
+                fragmentManager.beginTransaction().remove(fragment).commit();
+            }
+        }
     }
 
     private final ActivityResultLauncher<Intent> getSyncAccounts = registerForActivityResult(
@@ -539,7 +558,6 @@ public class SettingsActivity extends AppCompatActivity {
                 tryRequestRoot();
             }
         }
-
 
     }
 
