@@ -1,6 +1,7 @@
 package ma.DeviceOptimizeHelper;
 
 import android.annotation.SuppressLint;
+import android.app.UiModeManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -10,6 +11,7 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.content.res.Resources;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -26,11 +28,13 @@ import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.FileProvider;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentOnAttachListener;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceCategory;
 import androidx.preference.PreferenceFragmentCompat;
@@ -45,6 +49,7 @@ import com.rosan.dhizuku.shared.DhizukuVariables;
 
 import java.io.File;
 import java.lang.reflect.Field;
+import java.util.HashSet;
 import java.util.List;
 
 import ma.DeviceOptimizeHelper.BaseApplication.BaseApplication;
@@ -76,8 +81,10 @@ public class SettingsActivity extends AppCompatActivity {
     public boolean dialogShown = false;
     private static SharedPreferences sharedPreferences;
     public static Handler mHandle;
-
     private static FragmentManager fragmentManager;
+    private static int hashcode = 0;
+
+    private static HeaderFragment headerFragment = new HeaderFragment();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -86,15 +93,13 @@ public class SettingsActivity extends AppCompatActivity {
 
         fragmentManager = getSupportFragmentManager();
 
-        if (savedInstanceState == null) {
-            // 如果savedInstanceState为空，则添加HeaderFragment
-            fragmentManager.beginTransaction()
-                    .replace(R.id.settings, new HeaderFragment())
-                    .commit();
-        } else {
+        if (savedInstanceState != null) {
             // 如果savedInstanceState不为空，则设置标题
             setTitle(savedInstanceState.getCharSequence(TITLE_TAG));
         }
+
+        fragmentManager.beginTransaction().replace(R.id.settings, headerFragment).commit();
+
         // 监听BackStackChanged事件，当BackStack的顺序发生变化时，且栈为0时，设置标题
         fragmentManager.addOnBackStackChangedListener(() -> {
             if (getSupportFragmentManager().getBackStackEntryCount() == 0) {
@@ -103,14 +108,18 @@ public class SettingsActivity extends AppCompatActivity {
         });
 
         // 深色模式适配
+        UiModeManager uiModeManager = getSystemService(UiModeManager.class);
         View decorView = getWindow().getDecorView();
         int flags = decorView.getSystemUiVisibility();
+
         if ((getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES) {
             // 如果是深色模式，则设置状态栏文字为白色
             flags &= ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+            uiModeManager.setNightMode(UiModeManager.MODE_NIGHT_YES);
         } else {
             // 如果不是深色模式，则设置状态栏文字为黑色
             flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+            uiModeManager.setNightMode(UiModeManager.MODE_NIGHT_NO);
         }
         decorView.setSystemUiVisibility(flags);
 
@@ -137,6 +146,16 @@ public class SettingsActivity extends AppCompatActivity {
         super.onSaveInstanceState(outState);
         // Save current activity title so we can set it again after a configuration change
         outState.putCharSequence(TITLE_TAG, getTitle());
+    }
+
+    @Override
+    public void onConfigurationChanged(@NonNull Configuration newConfig) {
+
+        fragmentManager.beginTransaction().replace(R.id.settings,headerFragment).commit();
+        BaseApplication.restartApp(getApplicationContext());
+
+        super.onConfigurationChanged(newConfig);
+
     }
 
     @Override
@@ -183,13 +202,6 @@ public class SettingsActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-
-        List<Fragment> fragments = fragmentManager.getFragments();
-        for (Fragment fragment : fragments) {
-            if (fragment instanceof HeaderFragment) {
-                fragmentManager.beginTransaction().remove(fragment).commit();
-            }
-        }
     }
 
     private final ActivityResultLauncher<Intent> getSyncAccounts = registerForActivityResult(
@@ -304,6 +316,14 @@ public class SettingsActivity extends AppCompatActivity {
         }
     }
 
+
+    public static int getHashcode() {
+        return hashcode;
+    }
+
+    public static void setHashcode(int hashcode) {
+        SettingsActivity.hashcode = hashcode;
+    }
 
     public static class HeaderFragment extends PreferenceFragmentCompat {
 
@@ -452,6 +472,16 @@ public class SettingsActivity extends AppCompatActivity {
 
         }
 
+
+        @Override
+        public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+
+            context.setTheme(R.style.Theme_MyApplication);
+
+            fragmentManager.beginTransaction().replace(R.id.settings,headerFragment).commit();
+
+            super.onViewCreated(view, savedInstanceState);
+        }
 
         @Override
         public boolean onPreferenceTreeClick(@NonNull Preference preference) {

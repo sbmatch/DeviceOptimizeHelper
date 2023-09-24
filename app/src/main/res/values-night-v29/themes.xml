@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.MyApplication" parent="Theme.Material3.DayNight">
+    <style name="Theme.MyApplication" parent="Theme.Material3.Dark">
         <!-- Primary brand color. -->
 
         <!-- Customize your theme here. -->
@@ -9,5 +9,7 @@
         <item name="android:windowTranslucentStatus">true</item>
         <item name="android:fitsSystemWindows">true</item>
         <item name="android:windowLightStatusBar">true</item>
+
+        <item name="switchPreferenceCompatStyle">@style/Preference.Rikka.MateriaSwitchPreference</item>
     </style>
 </resources>

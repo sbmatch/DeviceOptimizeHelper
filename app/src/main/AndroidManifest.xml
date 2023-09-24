@@ -15,6 +15,7 @@
         <activity
             android:name=".SettingsActivity"
             android:exported="true"
+            android:configChanges="uiMode"
             android:label="@string/title_activity_settings" >
 
             <intent-filter>
