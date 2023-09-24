@@ -396,7 +396,8 @@ public class SettingsActivity extends AppCompatActivity {
 
             // 将动态生成的分类添加进首选项的根布局中
             preferenceScreen.addPreference(preferenceCategory);
-
+            String TAG = "创建SwitchPreference";
+            int SwitchPreference_create_count = 0;
             // 动态创建SwitchPreferenceCompat, 属于是有多少就创建多少
             for (String key : getALLUserRestrictions) {
 
@@ -420,8 +421,11 @@ public class SettingsActivity extends AppCompatActivity {
                 });
                 // 将动态生成的SwitchPreferenceCompat对象添加进一个列表中
                 switchPreferenceCompatArraySet.add(switchPreferenceCompat);
-                // 将动态生成的SwitchPreferenceCompat对象添加进首选项的分类布局中
+                // 将动态生成的SwitchPreferenceCompat对象添加进首选项 的分类布局中
                 preferenceCategory.addPreference(switchPreferenceCompat);
+
+                //SwitchPreference_create_count++;
+                //Log.d(TAG, "创建SwitchPreference: " + key + "\n当前次数/总次数" + SwitchPreference_create_count + "/" + getALLUserRestrictions.size());
             }
 
             preferenceCategory.setTitle("* 注: 限制策略的数量受Android版本的影响");
