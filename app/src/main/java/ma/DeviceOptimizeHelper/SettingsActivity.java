@@ -180,13 +180,17 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
 
+    // 修复切换深色模式时会创建多个Fragment
     @Override
     protected void onDestroy() {
         super.onDestroy();
-
+        // 获取fragmentManager中的所有fragment
         List<Fragment> fragments = fragmentManager.getFragments();
+        // 遍历fragment
         for (Fragment fragment : fragments) {
+        // 如果fragment是HeaderFragment的实例
             if (fragment instanceof HeaderFragment) {
+        // 开始一个事务，移除fragment，并提交
                 fragmentManager.beginTransaction().remove(fragment).commit();
             }
         }
@@ -455,7 +459,6 @@ public class SettingsActivity extends AppCompatActivity {
 
         @Override
         public boolean onPreferenceTreeClick(@NonNull Preference preference) {
-
             CheckRootPermissionTask task = new CheckRootPermissionTask(hasRootPermission -> {
                 sharedPreferences.edit().putBoolean("isGrantRoot", hasRootPermission).apply();
             });
