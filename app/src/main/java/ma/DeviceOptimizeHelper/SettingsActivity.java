@@ -199,11 +199,6 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-    }
-
     private final ActivityResultLauncher<Intent> getSyncAccounts = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(), result -> {
 
@@ -485,7 +480,6 @@ public class SettingsActivity extends AppCompatActivity {
 
         @Override
         public boolean onPreferenceTreeClick(@NonNull Preference preference) {
-
             CheckRootPermissionTask task = new CheckRootPermissionTask(hasRootPermission -> {
                 sharedPreferences.edit().putBoolean("isGrantRoot", hasRootPermission).apply();
             });
