@@ -108,18 +108,16 @@ public class SettingsActivity extends AppCompatActivity {
         });
 
         // 深色模式适配
-        UiModeManager uiModeManager = getSystemService(UiModeManager.class);
         View decorView = getWindow().getDecorView();
         int flags = decorView.getSystemUiVisibility();
 
         if ((getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES) {
             // 如果是深色模式，则设置状态栏文字为白色
             flags &= ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
-            uiModeManager.setNightMode(UiModeManager.MODE_NIGHT_YES);
+
         } else {
             // 如果不是深色模式，则设置状态栏文字为黑色
             flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
-            uiModeManager.setNightMode(UiModeManager.MODE_NIGHT_NO);
         }
         decorView.setSystemUiVisibility(flags);
 
@@ -151,7 +149,13 @@ public class SettingsActivity extends AppCompatActivity {
     @Override
     public void onConfigurationChanged(@NonNull Configuration newConfig) {
 
-        fragmentManager.beginTransaction().replace(R.id.settings,headerFragment).commit();
+        UiModeManager uiModeManager = getSystemService(UiModeManager.class);
+        uiModeManager.setNightMode(UiModeManager.MODE_NIGHT_AUTO);
+
+        for (Fragment f : fragmentManager.getFragments()){
+            fragmentManager.beginTransaction().replace(R.id.settings,f).commit();
+        }
+
         BaseApplication.restartApp(getApplicationContext());
 
         super.onConfigurationChanged(newConfig);
