@@ -4,12 +4,14 @@ import static ma.DeviceOptimizeHelper.Utils.UserManagerUtils.getIdentifier;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.Drawable;
 import android.os.IBinder;
 import android.util.ArraySet;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
 
@@ -46,7 +48,7 @@ public class PackageManagerUtils {
     }
 
 
-    public ArraySet<String> getAllPackageName(Context context) {
+    public static ArraySet<String> getAllPackageName(Context context) {
 
         ArraySet<String> allpkgs = new ArraySet<>();
         @SuppressLint("QueryPermissionsNeeded")
@@ -57,17 +59,17 @@ public class PackageManagerUtils {
         return allpkgs;
     }
 
-    public  String getAppNameForPackageName(Context context, String packageName) {
+    public static String getAppNameForPackageName(Context context, String packageName, long flags, int userId) {
         try{
-            @SuppressLint("QueryPermissionsNeeded")
-            PackageInfo packageInfo = context.getPackageManager().getPackageInfo(packageName,0);
-            return  packageInfo.applicationInfo.loadLabel(BaseApplication.getContext().getPackageManager()).toString();
-        }catch (PackageManager.NameNotFoundException e){
+            ApplicationInfo appInfo = (ApplicationInfo) IPackageManager().getClass().getMethod("getApplicationInfo", String.class, long.class, int.class).invoke(IPackageManager(), packageName , flags, userId );
+            return (String) appInfo.loadLabel(context.getPackageManager());
+        } catch (InvocationTargetException | IllegalAccessException | NoSuchMethodException e) {
+            e.printStackTrace();
             throw new RuntimeException(e);
         }
     }
 
-    public Drawable getAppIconForPackageName(Context context, String packageName) {
+    public static Drawable getAppIconForPackageName(Context context, String packageName) {
         try{
             @SuppressLint("QueryPermissionsNeeded")
             PackageInfo packageInfo = context.getPackageManager().getPackageInfo(packageName,0);

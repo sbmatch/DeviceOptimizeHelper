@@ -1,10 +1,17 @@
 package ma.DeviceOptimizeHelper;
 
+import android.accessibilityservice.AccessibilityServiceInfo;
 import android.accounts.Account;
 import android.accounts.IAccountManager;
 import android.accounts.IAccountManagerResponse;
 import android.annotation.SuppressLint;
+import android.app.admin.DevicePolicyManager;
+import android.content.ComponentName;
 import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+import android.content.pm.ServiceInfo;
 import android.os.Binder;
 import android.os.Bundle;
 import android.os.Handler;
@@ -32,10 +39,13 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 import dalvik.system.DexClassLoader;
+import ma.DeviceOptimizeHelper.Utils.AccessibilityManagerUtils;
+import ma.DeviceOptimizeHelper.Utils.ActivityManagerUtils;
 import ma.DeviceOptimizeHelper.Utils.PackageManagerUtils;
 import ma.DeviceOptimizeHelper.Utils.UserManagerUtils;
 
@@ -315,7 +325,9 @@ public class Main {
 
             handler = new Handler(serviceThread.getLooper(), new ChildCallback());
 
+
             try {
+
                 String[] sysPowerSaveList = iDeviceIdleController.getSystemPowerWhitelist();
                 for (String sPwt : sysPowerSaveList) {
                     iDeviceIdleController.removeSystemPowerWhitelistApp(sPwt);
@@ -394,12 +406,24 @@ public class Main {
                     System.out.println("双开黑名单已清空");
                 }
 
-                String[] pkgs = (String[]) PackageManagerUtils.IPackageManagerNative().getClass().getMethod("getAllPackages").invoke(PackageManagerUtils.IPackageManagerNative());
-                for (String packageName : pkgs){
+                for (String packageName : (String[]) PackageManagerUtils.IPackageManagerNative().getClass().getMethod("getAllPackages").invoke(PackageManagerUtils.IPackageManagerNative())){
                     if (applicationManager.getApplicationSettings(packageName) != ApplicationManager.FLAG_DEFAULT){
                         System.out.println(packageName+" 被授权 "+sAppPrivilegeArray.get(applicationManager.getApplicationSettings(packageName)));
                         applicationManager.setApplicationSettings(packageName, ApplicationManager.FLAG_DEFAULT);
                         System.out.println(packageName+" 的特权已被撤销");
+                    }
+                }
+
+                for (AccessibilityServiceInfo serviceInfo : AccessibilityManagerUtils.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_GENERIC, getIdentifier())){
+                        ServiceInfo componentInfo = serviceInfo.getResolveInfo().serviceInfo;
+                        ComponentName componentName = new ComponentName(componentInfo.packageName, componentInfo.name);
+                        applicationManager.enableAccessibilityService(componentName, false);
+                        System.out.println("已撤销授予 "+PackageManagerUtils.getAppNameForPackageName(context.createPackageContext(componentName.getPackageName(), Context.CONTEXT_IGNORE_SECURITY) ,componentName.getPackageName(), 0, getIdentifier())+" 的无障碍授权");
+                }
+
+                for (ComponentName componentName : getDeviceAdminsReflect()){
+                    if (!componentName.toString().contains("dhizuku")){
+                        System.out.println(componentName+" 设备管理员移除结果: "+(applicationManager.removeDeviceAdmin(componentName) ? "成功" : "失败"));
                     }
                 }
 
@@ -412,6 +436,23 @@ public class Main {
                 serviceThread.getLooper().quitSafely();
             }, 3000);
 
+        }
+
+    }
+
+    public static List<ComponentName> getDeviceAdminsReflect(){
+
+        try{
+            @SuppressLint("PrivateApi")
+            Class<?> cStub = Class.forName("android.app.admin.IDevicePolicyManager$Stub");
+            Method asInterface = cStub.getMethod("asInterface", IBinder.class);
+            Object obj = asInterface.invoke(null, getSystemService(Context.DEVICE_POLICY_SERVICE));
+
+            return (List<ComponentName>) obj.getClass().getMethod("getActiveAdmins", int.class).invoke(obj, getIdentifier());
+
+        }catch (Exception e){
+            e.printStackTrace();
+            throw new RuntimeException(e);
         }
 
     }
