@@ -19,11 +19,10 @@ import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-import ma.DeviceOptimizeHelper.SettingsActivity;
 import ma.DeviceOptimizeHelper.Utils.FilesUtils;
 
 public class BaseApplication extends Application {
-    public Context context;
+    public static Context context;
     public static String systemInfo;
 
     @Override
@@ -103,6 +102,10 @@ public class BaseApplication extends Application {
             return sw.toString();
         }
 
+    }
+
+    public static Context getContext() {
+        return context;
     }
 
     public static void restartApp(Context context) {

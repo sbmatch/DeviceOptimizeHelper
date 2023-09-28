@@ -1,23 +1,24 @@
 package ma.DeviceOptimizeHelper;
 
 import android.annotation.SuppressLint;
-import android.app.UiModeManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.content.res.Resources;
-import android.os.Build;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
+import android.util.ArrayMap;
 import android.util.ArraySet;
 import android.util.Log;
 import android.view.Menu;
@@ -31,10 +32,9 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.content.FileProvider;
-import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
-import androidx.fragment.app.FragmentOnAttachListener;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceCategory;
 import androidx.preference.PreferenceFragmentCompat;
@@ -49,13 +49,16 @@ import com.rosan.dhizuku.shared.DhizukuVariables;
 
 import java.io.File;
 import java.lang.reflect.Field;
-import java.util.HashSet;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Map;
 
 import ma.DeviceOptimizeHelper.BaseApplication.BaseApplication;
 import ma.DeviceOptimizeHelper.Utils.CheckRootPermissionTask;
 import ma.DeviceOptimizeHelper.Utils.CommandExecutor;
 import ma.DeviceOptimizeHelper.Utils.FilesUtils;
+import ma.DeviceOptimizeHelper.Utils.PackageManagerUtils;
 import ma.DeviceOptimizeHelper.Utils.UserManagerUtils;
 import ma.DeviceOptimizeHelper.Utils.UserService;
 
@@ -66,30 +69,33 @@ import ma.DeviceOptimizeHelper.Utils.UserService;
 
 // TODO 修bug的提交，请把commit描述写清楚！！！！！！
 
-public class SettingsActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity{
 
-    private static final String TITLE_TAG = "settingsActivityTitle";
+    private static final String TITLE_TAG = "MainActivityTitle";
     @SuppressLint("StaticFieldLeak")
     public static PreferenceScreen preferenceScreen;
     public static ArraySet<SwitchPreferenceCompat> switchPreferenceCompatArraySet = new ArraySet<>();
     public static CommandExecutor commandExecutor = CommandExecutor.getInstance();
     public static IUserService userService;
     private static String command;
-    private static final SettingsActivity.ServiceThread2 serviceThread2 = new ServiceThread2("你干嘛哎呦");
-    public static Context context;
+    private static final MainActivity.ServiceThread2 serviceThread2 = new ServiceThread2("你干嘛哎呦");
     public int count;
     public boolean dialogShown = false;
     private static SharedPreferences sharedPreferences;
     public static Handler mHandle;
     private static FragmentManager fragmentManager;
-    private static int hashcode = 0;
+    @SuppressLint("StaticFieldLeak")
+    private static PreferenceCategory preferenceCategory;
+    private static Context mContext;
 
-    private static HeaderFragment headerFragment = new HeaderFragment();
+    private final HeaderFragment headerFragment = new HeaderFragment();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.settings_activity);
+
+        mContext = getApplicationContext();
 
         fragmentManager = getSupportFragmentManager();
 
@@ -97,6 +103,8 @@ public class SettingsActivity extends AppCompatActivity {
             // 如果savedInstanceState不为空，则设置标题
             setTitle(savedInstanceState.getCharSequence(TITLE_TAG));
         }
+
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
 
         fragmentManager.beginTransaction().replace(R.id.settings, headerFragment).commit();
 
@@ -148,16 +156,6 @@ public class SettingsActivity extends AppCompatActivity {
 
     @Override
     public void onConfigurationChanged(@NonNull Configuration newConfig) {
-
-        UiModeManager uiModeManager = getSystemService(UiModeManager.class);
-        uiModeManager.setNightMode(UiModeManager.MODE_NIGHT_AUTO);
-
-        for (Fragment f : fragmentManager.getFragments()){
-            fragmentManager.beginTransaction().replace(R.id.settings,f).commit();
-        }
-
-        BaseApplication.restartApp(getApplicationContext());
-
         super.onConfigurationChanged(newConfig);
 
     }
@@ -217,20 +215,20 @@ public class SettingsActivity extends AppCompatActivity {
         // -b main 是指只显示主日志缓冲区（main buffer）的日志。主日志缓冲区包含了系统启动以来的所有核心系统日志。
         // -b crash 是指只显示崩溃日志缓冲区（crash buffer）的日志。这个缓冲区包含了系统崩溃或ANR（Application Not Responding）时的日志。
         // -d 是指倒序输出（descending order）。这意味着新的日志条目将首先显示，旧的条目将后显示。
-        SettingsActivity.commandExecutor.executeCommand("logcat -b main -b crash -d ", new CommandExecutor.CommandResultListener() {
+        MainActivity.commandExecutor.executeCommand("logcat -b main -b crash -d ", new CommandExecutor.CommandResultListener() {
             @Override
             public void onSuccess(String output) {
                 // 写入日志文件
                 new Thread(() -> {
-                    FilesUtils.writeToFile(BaseApplication.getLogFile(context, "runtime_logs").getAbsolutePath(), BaseApplication.systemInfo + "\n\n" + output, false);
+                    FilesUtils.writeToFile(BaseApplication.getLogFile(getBaseContext(), "runtime_logs").getAbsolutePath(), BaseApplication.systemInfo + "\n\n" + output, false);
                     // 使用系统分享发送文件
                     Intent intent = new Intent(Intent.ACTION_SEND);
                     // 设置分享文件的类型
                     intent.setType("text/plain");
                     // 获取最新的文件
-                    File shareFile = FilesUtils.getLatestFileInDirectory(BaseApplication.getLogsDir(context).getAbsolutePath());
+                    File shareFile = FilesUtils.getLatestFileInDirectory(BaseApplication.getLogsDir(getBaseContext()).getAbsolutePath());
                     // 将文件转换为Uri
-                    intent.putExtra(Intent.EXTRA_STREAM, FileProvider.getUriForFile(context, "ma.DeviceOptimizeHelper.provider", shareFile));
+                    intent.putExtra(Intent.EXTRA_STREAM, FileProvider.getUriForFile(getBaseContext(), "ma.DeviceOptimizeHelper.provider", shareFile));
                     // 添加权限
                     intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
                     // 启动分享
@@ -289,7 +287,7 @@ public class SettingsActivity extends AppCompatActivity {
                                     runOnUiThread(() -> {
                                         compat.setChecked(z);
                                         String title = String.format(getString(getResIdReflect("set_error_count_title")), count, z ? "启用" : "禁用");
-                                        new MaterialAlertDialogBuilder(context).setTitle(title).setMessage(stringBuffer.toString()).setPositiveButton("Ok", null).create().show();
+                                        new MaterialAlertDialogBuilder(MainActivity.this).setTitle(title).setMessage(stringBuffer.toString()).setPositiveButton("Ok", null).create().show();
                                     });
                                 }
                             }
@@ -300,7 +298,7 @@ public class SettingsActivity extends AppCompatActivity {
                                     dialogShown = true; // 设置标志，表示已经弹出了对话框
                                     runOnUiThread(() -> {
                                         String title = String.format(getString(getResIdReflect("set_error_count_title")), count, "失败");
-                                        new MaterialAlertDialogBuilder(context).setTitle(title).setMessage(stringBuffer.toString()).setPositiveButton("Ok", null).create().show();
+                                        new MaterialAlertDialogBuilder(MainActivity.this).setTitle(title).setMessage(stringBuffer.toString()).setPositiveButton("Ok", null).create().show();
                                     });
                                 }
                             }
@@ -311,18 +309,10 @@ public class SettingsActivity extends AppCompatActivity {
             });
 
         } else {
-            Toast.makeText(context, "🤣👉🤡", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "🤣👉🤡", Toast.LENGTH_SHORT).show();
         }
     }
 
-
-    public static int getHashcode() {
-        return hashcode;
-    }
-
-    public static void setHashcode(int hashcode) {
-        SettingsActivity.hashcode = hashcode;
-    }
 
     public static class HeaderFragment extends PreferenceFragmentCompat {
 
@@ -334,7 +324,7 @@ public class SettingsActivity extends AppCompatActivity {
         public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
 
             // 引入context
-            context = requireContext();
+            Context context = requireContext();
 
             // 获取所有用户的限制
             ArraySet<String> getALLUserRestrictions = UserManagerUtils.getALLUserRestrictionsReflectForUserManager();
@@ -429,13 +419,12 @@ public class SettingsActivity extends AppCompatActivity {
             }
 
             // 创建首选项分类
-            PreferenceCategory preferenceCategory = new PreferenceCategory(requireContext());
+            preferenceCategory = new PreferenceCategory(requireContext());
             preferenceCategory.setIconSpaceReserved(false);
 
             // 将动态生成的分类添加进首选项的根布局中
             preferenceScreen.addPreference(preferenceCategory);
             String TAG = "创建SwitchPreference";
-            int SwitchPreference_create_count = 0;
             // 动态创建SwitchPreferenceCompat, 属于是有多少就创建多少
             for (String key : getALLUserRestrictions) {
 
@@ -471,17 +460,6 @@ public class SettingsActivity extends AppCompatActivity {
 
         }
 
-
-        @Override
-        public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-
-            context.setTheme(R.style.Theme_MyApplication);
-
-            fragmentManager.beginTransaction().replace(R.id.settings,headerFragment).commit();
-
-            super.onViewCreated(view, savedInstanceState);
-        }
-
         @Override
         public boolean onPreferenceTreeClick(@NonNull Preference preference) {
             CheckRootPermissionTask task = new CheckRootPermissionTask(hasRootPermission -> {
@@ -513,7 +491,7 @@ public class SettingsActivity extends AppCompatActivity {
 
         private void bindDhizukuservice() {
 
-            DhizukuUserServiceArgs args = new DhizukuUserServiceArgs(new ComponentName(context, UserService.class));
+            DhizukuUserServiceArgs args = new DhizukuUserServiceArgs(new ComponentName(requireContext(), UserService.class));
 
             try {
                 Dhizuku.bindUserService(args, new ServiceConnection() {
@@ -551,7 +529,7 @@ public class SettingsActivity extends AppCompatActivity {
                         task.execute();
 
                         Looper.prepare();
-                        Toast.makeText(context, "已授权Root", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(requireContext(), "已授权Root", Toast.LENGTH_SHORT).show();
                     }
 
                     @Override
@@ -596,7 +574,7 @@ public class SettingsActivity extends AppCompatActivity {
         }
     }
 
-    static int getResIdReflect(String key) {
+     public static int getResIdReflect(String key) {
         //获取R.string.class对象
         try {
             Class<?> clazz = R.string.class;
@@ -609,10 +587,23 @@ public class SettingsActivity extends AppCompatActivity {
             //抛出异常
             Looper.prepare();
             //显示提示信息
-            Toast.makeText(context, "捕获到崩溃，已写入日志文件", Toast.LENGTH_SHORT).show();
+            Toast.makeText(mContext, "捕获到崩溃，已写入日志文件", Toast.LENGTH_SHORT).show();
         }
         //返回0
         return 0;
+    }
+
+    public static int getIdentifierReflect(String name, String defType, String defPackage) {
+        //获取R.string.class对象
+        try {
+            Class<?> clazz = Resources.class;
+            //获取key对应的字段
+            Method m1 = clazz.getMethod("getIdentifier",String.class, String.class, String.class);
+
+            return (int)m1.invoke(null,name,defType,defPackage);
+        } catch (Resources.NotFoundException | IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public static String getApkPath(Context context) {

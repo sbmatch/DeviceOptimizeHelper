@@ -4,6 +4,7 @@ import android.accounts.Account;
 import android.accounts.IAccountManager;
 import android.accounts.IAccountManagerResponse;
 import android.annotation.SuppressLint;
+import android.appwidget.AppWidgetProvider;
 import android.content.Context;
 import android.os.Binder;
 import android.os.Bundle;
@@ -16,15 +17,28 @@ import android.os.Message;
 import android.os.Process;
 import android.os.RemoteException;
 import android.os.UserHandle;
+import android.util.ArraySet;
+import android.util.Log;
+import android.util.SparseArray;
 
+import com.miui.enterprise.sdk.ApplicationManager;
+import com.miui.enterprise.sdk.DeviceManager;
+import com.miui.enterprise.sdk.PhoneManager;
+import com.miui.enterprise.sdk.RestrictionsManager;
+
+import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
 import dalvik.system.DexClassLoader;
+import ma.DeviceOptimizeHelper.Utils.PackageManagerUtils;
 import ma.DeviceOptimizeHelper.Utils.UserManagerUtils;
 
 public class Main {
@@ -42,6 +56,11 @@ public class Main {
     // 用于处理消息的处理程序
     private static Handler handler;
 
+    private static RestrictionsManager restrictionsManager;
+    private static DeviceManager deviceManager;
+    private static ApplicationManager applicationManager;
+    private static PhoneManager phoneManager;
+
 
     public static void main(String[] args) {
 
@@ -53,20 +72,50 @@ public class Main {
             // 创建一个自定义的类加载器，用于加载外部 JAR 文件
             MultiJarClassLoader classLoader = new MultiJarClassLoader(parentClassloader);
             classLoader.addJar("/system/framework/services.jar");
+            classLoader.addJar("/system_ext/framework/miui-framework.jar");
+
+            restrictionsManager = RestrictionsManager.getInstance();
+            deviceManager = DeviceManager.getInstance();
+            applicationManager = ApplicationManager.getInstance();
+            phoneManager = PhoneManager.getInstance();
 
             // 判断参数长度
             switch (args.length) {
+
                 case 1:
                     // 有一个参数
+                    if (args[0].equals("disable")){
+                        for (String key : getDisallowsFieldReflect()){
+                            if (!restrictionsManager.hasRestriction(key)){
+                                restrictionsManager.setRestriction(key,true);
+                                System.out.println("已启用 "+key+" 限制");
+                            }
+                        }
+                        break;
+                    }
+
                     //判断参数为remove 启动一个进程移除设备上的电池优化白名单和同步账号
                     if (args[0].equals("remove")) {
                         serviceThread.start();
+                        if (Binder.getCallingUid() == 1000){
+                            try {
+                                for (Account account : iAccountManager.getAccountsAsUser(null, getIdentifier(), "com.android.settings")) {
+                                    removeAccount(account);
+                                }
+                            }catch (Exception e){
+                                e.printStackTrace();
+                            }
+                        }
                         break;
                     }
-                    // 若不是 根据这个参数的值启用或禁用设备上所有可用的限制策略
-                    boolean value = Boolean.parseBoolean(args[0]);
-                    for (String key : UserManagerUtils.getALLUserRestrictionsReflectForUserManager()) {
-                        setUserRestrictionReflect(key, value);
+
+                    if (args[0].equals("true") || args[0].equals("false")){
+                        // 若不是 根据这个参数的值启用或禁用设备上所有可用的限制策略
+                        boolean value = Boolean.parseBoolean(args[0]);
+                        for (String key : UserManagerUtils.getALLUserRestrictionsReflectForUserManager()) {
+                            setUserRestrictionReflect(key, value);
+                        }
+                        break;
                     }
                     break;
                 case 2:
@@ -84,22 +133,61 @@ public class Main {
 
     }
 
+    private static final SparseArray<String> sMsgArray = new SparseArray<String>() {{
+        put(RestrictionsManager.DISABLE, "禁用");
+        put(RestrictionsManager.ENABLE, "启用");
+        put(RestrictionsManager.OPEN, "开启");
+        put(RestrictionsManager.CLOSE, "关闭");
+        put(RestrictionsManager.FORCE_OPEN, "强制开启且无法关闭");
+    }};
 
-    public static Context createPackageContext(String packageName) {
+    private static final SparseArray<String> sAppPrivilegeArray = new SparseArray<String>() {{
+        put(ApplicationManager.FLAG_DEFAULT, "默认(用于清除授予的特殊权限)");
+        put(ApplicationManager.FLAG_ALLOW_AUTOSTART, "自启动");
+        put(ApplicationManager.FLAG_KEEP_ALIVE, "保活");
+        put(ApplicationManager.FLAG_PREVENT_UNINSTALLATION, "防卸载");
+        put(ApplicationManager.FLAG_GRANT_ALL_RUNTIME_PERMISSION, "授予运行时权限");
+    }};
+
+    private static final SparseArray<String> sAppRestrictModeArray = new SparseArray<String>() {{
+        put(ApplicationManager.RESTRICTION_MODE_BLACK_LIST, "黑名单模式");
+        put(ApplicationManager.RESTRICTION_MODE_WHITE_LIST, "白名单模式");
+        put(ApplicationManager.RESTRICTION_MODE_DEFAULT, "默认模式");
+    }};
+
+
+
+    public static ArraySet<String> getControlStatusFieldReflect(){
         try {
-            // 获取Application类对象（这是一个Android系统类）
-            Class<?> applicationClass = Class.forName("android.app.Application");
+            @SuppressLint("PrivateApi")
+            Class<?> cStub =  Class.forName("com.miui.enterprise.sdk.RestrictionsManager");
+            ArraySet<String> fields= new ArraySet<>();
+            for (Field value : cStub.getFields()){
+                if (value.getName().contains("_STATE")){
+                    fields.add((String) value.get(null));
+                }
+            }
+            return fields;
+        } catch (Exception e2) {
+            e2.printStackTrace();
+            throw new SecurityException(e2);
+        }
+    }
 
-            // 获取createPackageContext方法
-            Method createPackageContextMethod = applicationClass.getDeclaredMethod(
-                    "createPackageContext", String.class, int.class);
-            // 调用createPackageContext方法
-            Context packageContext = (Context) createPackageContextMethod.invoke(
-                    null, packageName, Context.CONTEXT_INCLUDE_CODE | Context.CONTEXT_IGNORE_SECURITY);
-            return packageContext;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+    public static ArraySet<String> getDisallowsFieldReflect(){
+        try {
+            @SuppressLint("PrivateApi")
+            Class<?> cStub =  Class.forName("com.miui.enterprise.sdk.RestrictionsManager");
+            ArraySet<String> fields= new ArraySet<>();
+            for (Field value : cStub.getFields()){
+                if (value.getName().contains("DISALLOW_")){
+                    fields.add((String) value.get(null));
+                }
+            }
+            return fields;
+        } catch (Exception e2) {
+            e2.printStackTrace();
+            throw new SecurityException(e2);
         }
     }
 
@@ -199,15 +287,48 @@ public class Main {
                     System.out.println("共 " + userPowerSaveList.length + " 个用户级电池优化白名单已移除");
                 }
 
-                for (Account account : iAccountManager.getAccountsAsUser(null, getIdentifier(), "com.android.settings")) {
-                    removeAccount(account);
-                    System.out.println("尝试移除账号: " + account.type);
+                // 取消<强制开启且无法关闭>限制
+                for (String key : getControlStatusFieldReflect()){
+                    if (restrictionsManager.getControlStatus(key) == RestrictionsManager.FORCE_OPEN){
+                        restrictionsManager.setControlStatus(key, RestrictionsManager.ENABLE);
+                        System.out.println(key+" 被设置为 "+sMsgArray.get(RestrictionsManager.FORCE_OPEN)+" \n已取消此限制");
+                    }
                 }
 
-            } catch (Exception ignored) {
+                for (String key : getDisallowsFieldReflect()){
+                    if (restrictionsManager.hasRestriction(key)){
+                        restrictionsManager.setRestriction(key,false);
+                        System.out.println("已取消 "+key+" 的限制");
+                    }
+                }
 
+                if (!applicationManager.getDisallowedRunningAppList().isEmpty()){
+                    System.out.println("获取到运行黑名单:"+ Collections.singletonList(applicationManager.getDisallowedRunningAppList()));
+                    applicationManager.setDisallowedRunningAppList(null);
+                    System.out.println("运行黑名单已清空");
+                }
+
+                if (applicationManager.getApplicationRestriction() != ApplicationManager.RESTRICTION_MODE_DEFAULT){
+                    System.out.println("获取到当前应用限制模式为 "+sAppRestrictModeArray.get(applicationManager.getApplicationRestriction()));
+                    applicationManager.setApplicationRestriction(ApplicationManager.RESTRICTION_MODE_DEFAULT);
+                    System.out.println("限制模式已更改为"+sAppRestrictModeArray.get(applicationManager.getApplicationRestriction()));
+                }
+
+                String[] pkgs = (String[]) PackageManagerUtils.IPackageManagerNative().getClass().getMethod("getAllPackages").invoke(PackageManagerUtils.IPackageManagerNative());
+                for (String packageName : pkgs){
+                    if (applicationManager.getApplicationSettings(packageName) != ApplicationManager.FLAG_DEFAULT){
+                        System.out.println(packageName+" 被授权 "+sAppPrivilegeArray.get(applicationManager.getApplicationSettings(packageName)));
+                        applicationManager.setApplicationSettings(packageName, ApplicationManager.FLAG_DEFAULT);
+                        System.out.println(packageName+" 的特权已被撤销");
+                    }
+                }
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw new RuntimeException(e);
             }
-            serviceThread.getLooper().quitSafely();
+
+            handler.postDelayed(() -> serviceThread.getLooper().quitSafely(), 2000);
         }
 
     }
@@ -259,7 +380,7 @@ public class Main {
             throw new RuntimeException(e2);
         }
         //输出setUserRestriction的key和value
-        System.out.println("设置用户限制: " + key + "\n当前状态：" + getUserRestrictionsReflect().getBoolean(key));
+        System.out.println("设置用户限制: " + key + " --> " + value);
     }
 
     private static Bundle getUserRestrictionsReflect() {
