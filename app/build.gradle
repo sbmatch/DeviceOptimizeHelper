@@ -3,15 +3,15 @@ plugins {
 }
 
 android {
-    namespace 'ma.DeviceOptimizeHelper'
+    namespace 'com.ma.enterprisemodepolicymanager'
     compileSdk 34
 
     defaultConfig {
-        applicationId "ma.DeviceOptimizeHelper"
+        applicationId "com.ma.enterprisemodepolicymanager"
         minSdk 26
         targetSdk 34
         versionCode 1
-        versionName "1.1.7"
+        versionName "1.1.8"
 
         // testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -40,7 +40,7 @@ android {
             // 获取应用的版本名
             def versionName = variant.versionName
             // 设置输出文件名
-            outputFileName = "DeviceOptimizeHelper_v${versionName}.apk"
+            outputFileName = "enterprisemodepolicymanager_v${versionName}.apk"
         }
     }
 
@@ -64,8 +64,6 @@ dependencies {
     implementation 'com.google.android.material:material:1.11.0-alpha03'
     implementation 'dev.rikka.rikkax.preference:simplemenu-preference:1.0.3'
     implementation 'org.lsposed.hiddenapibypass:hiddenapibypass:4.3'
-    //api 'com.tencent.mm.opensdk:wechat-sdk-android:6.8.24'
-    implementation "io.github.iamr0s:Dhizuku-API:2.4"
     implementation files('libs/EnterpriseSDK.jar')
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
 }
