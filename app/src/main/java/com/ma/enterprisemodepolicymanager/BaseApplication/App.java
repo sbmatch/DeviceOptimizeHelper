@@ -19,7 +19,7 @@ import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-public class BaseApplication extends Application {
+public class App extends Application {
     private static Context context;
     private static SharedPreferences sharedPreferences;
     @Override

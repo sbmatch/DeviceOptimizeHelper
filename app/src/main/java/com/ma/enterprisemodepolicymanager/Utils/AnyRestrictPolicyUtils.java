@@ -28,7 +28,7 @@ import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.List;
 
-import com.ma.enterprisemodepolicymanager.BaseApplication.BaseApplication;
+import com.ma.enterprisemodepolicymanager.BaseApplication.App;
 
 public class AnyRestrictPolicyUtils {
     public static PackageManager packageManager = ServiceManager.getPackageManager();
@@ -142,7 +142,7 @@ public class AnyRestrictPolicyUtils {
 
 
     public static int getInt(String key){
-        return Settings.Secure.getInt(BaseApplication.getContext().getContentResolver(), key, 0);
+        return Settings.Secure.getInt(App.getContext().getContentResolver(), key, 0);
     }
 
     public static void setUrlBlackList(List<String> urls){
@@ -324,9 +324,9 @@ public class AnyRestrictPolicyUtils {
     }
 
     public static final ArrayMap<String,String> getInstalledApplicationsArray = new ArrayMap<String, String>(){{
-        if (BaseApplication.getContext() != null){
+        if (App.getContext() != null){
             for (String pkg : AnyRestrictPolicyUtils.getInstalledApplications()){
-                put(pkg, packageManager.getAppNameForPackageName(BaseApplication.getContext(),pkg));
+                put(pkg, packageManager.getAppNameForPackageName(App.getContext(),pkg));
             }
         }
     }};

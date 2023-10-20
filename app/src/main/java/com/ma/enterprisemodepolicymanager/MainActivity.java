@@ -31,27 +31,20 @@ import androidx.preference.PreferenceCategory;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceScreen;
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.ma.enterprisemodepolicymanager.BaseApplication.App;
 import com.ma.enterprisemodepolicymanager.Fragments.ApplicationManagerFragment;
 import com.ma.enterprisemodepolicymanager.Fragments.DeviceManagerFragment;
+import com.ma.enterprisemodepolicymanager.Fragments.RestrictionsManagerFragment;
+import com.ma.enterprisemodepolicymanager.Model.BinderParcel;
+import com.ma.enterprisemodepolicymanager.Utils.AnyRestrictPolicyUtils;
 import com.ma.enterprisemodepolicymanager.Utils.CommandExecutor;
 import com.ma.enterprisemodepolicymanager.Utils.FilesUtils;
 import com.ma.enterprisemodepolicymanager.Utils.ResourcesUtils;
 import com.ma.enterprisemodepolicymanager.Utils.ServiceManager;
 import com.ma.enterprisemodepolicymanager.ViewModels.FragmentShareIBinder;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.io.File;
-
-import com.ma.enterprisemodepolicymanager.BaseApplication.BaseApplication;
-import com.ma.enterprisemodepolicymanager.Fragments.RestrictionsManagerFragment;
-import com.ma.enterprisemodepolicymanager.Utils.AnyRestrictPolicyUtils;
-
-
-// TODO 注释！！！可以用codegeex或者chatgpt一键生成即可（文心就是垃圾）
-
-// TODO 新功能加注释！！！
-
-// TODO 修bug的提交，请把commit描述写清楚！！！！！！
 
 public class MainActivity extends AppCompatActivity {
 
@@ -125,7 +118,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction("ma.deviceOptimizeHelper.deviceOptSendBroadcast");
+        intentFilter.addAction("com.ma.enterprisemodepolicymanager.deviceOptSendBroadcast");
         intentFilter.setPriority(Integer.MAX_VALUE);
 
         remoteLinuxProcessBroadcast = registerReceiver(null, intentFilter, RECEIVER_EXPORTED);
@@ -134,8 +127,8 @@ public class MainActivity extends AppCompatActivity {
 
         if (remoteLinuxProcessBroadcast != null){
             System.out.println("已获取广播, 正在解析...");
-            BinderContainer deviceOptServiceBinder = remoteLinuxProcessBroadcast.getParcelableExtra("deviceOptServiceBinder");
-            BinderContainer enterpriseManagerBinder = remoteLinuxProcessBroadcast.getParcelableExtra("enterpriseManagerBinder");
+            BinderParcel deviceOptServiceBinder = remoteLinuxProcessBroadcast.getParcelableExtra("deviceOptServiceBinder");
+            BinderParcel enterpriseManagerBinder = remoteLinuxProcessBroadcast.getParcelableExtra("enterpriseManagerBinder");
 
             if (enterpriseManagerBinder.getBinder().pingBinder()) shareIBinder.setEnterpriseManager(enterpriseManagerBinder);
 
@@ -152,9 +145,8 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
             }
-        }else {
-            Toast.makeText(this, "服务端进程未运行...", Toast.LENGTH_SHORT).show();
         }
+
     }
 
     @Override
@@ -195,23 +187,23 @@ public class MainActivity extends AppCompatActivity {
                 // 设置分享文件的类型
                 intent.setType("text/plain");
                 // 获取最新的文件
-                File shareFile = FilesUtils.getLatestFileInDirectory(BaseApplication.getLogsDir(getBaseContext()).getAbsolutePath());
+                File shareFile = FilesUtils.getLatestFileInDirectory(App.getLogsDir(getBaseContext()).getAbsolutePath());
                 // 添加权限
                 intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
                 if (output.isEmpty()) {
                     if (shareFile != null) {
                         // 将文件转换为Uri
-                        intent.putExtra(Intent.EXTRA_STREAM, FileProvider.getUriForFile(getBaseContext(), "ma.DeviceOptimizeHelper.provider", shareFile));
+                        intent.putExtra(Intent.EXTRA_STREAM, FileProvider.getUriForFile(getBaseContext(), BuildConfig.APPLICATION_ID+".provider", shareFile));
                         // 启动分享
                         getApplicationContext().startActivity(intent);
                     } else {
                         Looper.prepare();
-                        Toast.makeText(BaseApplication.getContext(), "暂无崩溃日志", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(App.getContext(), "暂无崩溃日志", Toast.LENGTH_SHORT).show();
                         Looper.loop();
                     }
                 } else {
                     intent.putExtra(Intent.EXTRA_TEXT, output);
-                    BaseApplication.getContext().startActivity(intent);
+                    App.getContext().startActivity(intent);
                 }
             }
 
@@ -228,6 +220,8 @@ public class MainActivity extends AppCompatActivity {
         private PreferenceScreen preferenceScreen;
         @Override
         public void onCreate(@Nullable Bundle savedInstanceState) {
+
+
 
             super.onCreate(savedInstanceState);
         }

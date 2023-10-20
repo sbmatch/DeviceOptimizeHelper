@@ -18,5 +18,5 @@ dependencyResolutionManagement {
         maven { url 'https://maven.aliyun.com/repository/jcenter' }
     }
 }
-rootProject.name = "DeviceOptimizeHelper"
+rootProject.name = "enterprisemodepolicymanager"
 include ':app'

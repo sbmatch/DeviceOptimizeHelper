@@ -17,9 +17,15 @@ import android.os.Message;
 import android.os.Process;
 import android.os.RemoteException;
 
+import com.ma.enterprisemodepolicymanager.Model.BinderParcel;
 import com.ma.enterprisemodepolicymanager.Model.ProcessInfo;
+import com.ma.enterprisemodepolicymanager.Services.DeviceOptServiceImpl;
+import com.ma.enterprisemodepolicymanager.Utils.ActivityManager;
+import com.ma.enterprisemodepolicymanager.Utils.AnyRestrictPolicyUtils;
 import com.ma.enterprisemodepolicymanager.Utils.ContextUtils;
 import com.ma.enterprisemodepolicymanager.Utils.FilesUtils;
+import com.ma.enterprisemodepolicymanager.Utils.OsUtils;
+import com.ma.enterprisemodepolicymanager.Utils.PackageManager;
 import com.ma.enterprisemodepolicymanager.Utils.ServiceManager;
 import com.ma.enterprisemodepolicymanager.Utils.ShellUtils;
 import com.ma.enterprisemodepolicymanager.Utils.UserManager;
@@ -34,11 +40,6 @@ import java.util.Set;
 
 import dalvik.system.DexClassLoader;
 
-import com.ma.enterprisemodepolicymanager.Services.DeviceOptServiceImpl;
-import com.ma.enterprisemodepolicymanager.Utils.ActivityManager;
-import com.ma.enterprisemodepolicymanager.Utils.AnyRestrictPolicyUtils;
-import com.ma.enterprisemodepolicymanager.Utils.OsUtils;
-import com.ma.enterprisemodepolicymanager.Utils.PackageManager;
 
 public class Main {
     // 引入 Android 的 IAccountManager 接口，用于操作帐户管理
@@ -53,22 +54,22 @@ public class Main {
     // 创建一个线程对象，用于执行后台服务
     private static ServiceThread serviceThread;
     // 用于处理消息的处理程序
-    private static ClassLoader parentClassloader = ClassLoader.getSystemClassLoader();
+    //private static ClassLoader parentClassloader = ClassLoader.getSystemClassLoader();
     private static DeviceOptServiceImpl iDeviceOptService = DeviceOptServiceImpl.getInstance();
     private static final Intent intent;
 
     static {
-        intent = new Intent("ma.deviceOptimizeHelper.deviceOptSendBroadcast")
-                .setPackage("ma.DeviceOptimizeHelper")
-                .putExtra("enterpriseManagerBinder", new BinderContainer(ServiceManager.getService("EnterpriseManager")))
-                .putExtra("deviceOptServiceBinder",new BinderContainer(iDeviceOptService));
+        intent = new Intent("com.ma.enterprisemodepolicymanager.deviceOptSendBroadcast")
+                .setPackage("com.ma.enterprisemodepolicymanager")
+                .putExtra("enterpriseManagerBinder", new BinderParcel(ServiceManager.getService("EnterpriseManager")))
+                .putExtra("deviceOptServiceBinder",new BinderParcel(iDeviceOptService));
     }
 
     private static final IProcessObserver processObserver = new IProcessObserver.Stub() {
         @Override
         public void onForegroundActivitiesChanged(int pid, int uid, boolean foregroundActivities) throws RemoteException {
             String packageName = packageManager.getNameForUid(uid);
-            if (packageName.equals("ma.DeviceOptimizeHelper")){
+            if (packageName.equals("com.ma.enterprisemodepolicymanager")){
                 activityManager.broadcastIntent(intent, true);
                 System.out.println("监听到App运行, 发送广播...");
             }
@@ -83,7 +84,7 @@ public class Main {
         @Override
         public void onProcessDied(int pid, int uid) throws RemoteException {
             String packageName = packageManager.getNameForUid(uid);
-            if (packageName.equals("ma.DeviceOptimizeHelper")) {
+            if (packageName.equals("com.ma.enterprisemodepolicymanager")) {
                 activityManager.unbroadcastIntent(intent);
                 System.out.println("监听到App关闭, 取消广播...");
             }
