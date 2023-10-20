@@ -31,6 +31,7 @@ android {
 
     buildFeatures {
         aidl true
+        buildConfig = true
     }
 
     applicationVariants.all { variant ->
@@ -61,8 +62,10 @@ dependencies {
     implementation 'androidx.preference:preference:1.2.1'
     implementation 'androidx.activity:activity:1.7.2'
     implementation 'com.google.android.material:material:1.11.0-alpha03'
+    implementation 'dev.rikka.rikkax.preference:simplemenu-preference:1.0.3'
     implementation 'org.lsposed.hiddenapibypass:hiddenapibypass:4.3'
-    api 'com.tencent.mm.opensdk:wechat-sdk-android:6.8.24'
+    //api 'com.tencent.mm.opensdk:wechat-sdk-android:6.8.24'
     implementation "io.github.iamr0s:Dhizuku-API:2.4"
-    implementation files('libs\\EnterpriseSDK.jar')
+    implementation files('libs/EnterpriseSDK.jar')
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
 }

@@ -3,16 +3,38 @@ package ma.DeviceOptimizeHelper.Utils;
 
 import android.annotation.SuppressLint;
 import android.os.Bundle;
-import android.os.IBinder;
+import android.os.IInterface;
 import android.os.Process;
 import android.os.UserHandle;
-import android.util.ArrayMap;
 import android.util.ArraySet;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
-public class UserManagerUtils {
+public class UserManager {
+
+    private IInterface manager;
+    private Method setUserRestrictionMethod;
+    private Method getUserRestrictionsMethod;
+    public UserManager(IInterface manager){
+        this.manager = manager;
+    }
+
+    private Method setUserRestrictionMethod() throws NoSuchMethodException {
+
+        if (setUserRestrictionMethod == null){
+            setUserRestrictionMethod = manager.getClass().getMethod("setUserRestriction",String.class, boolean.class, int.class);
+        }
+        return setUserRestrictionMethod;
+
+    }
+
+    private Method getUserRestrictionsMethod() throws NoSuchMethodException {
+        if (getUserRestrictionsMethod == null){
+            getUserRestrictionsMethod = manager.getClass().getMethod("getUserRestrictions", int.class);
+        }
+        return getUserRestrictionsMethod;
+    }
 
     public static ArraySet<String> getALLUserRestrictionsReflectForUserManager(){
         try {
@@ -31,31 +53,20 @@ public class UserManagerUtils {
         }
     }
 
-    public static void setUserRestrictionReflect(String key, boolean value){
+    public void setUserRestrictionReflect(String key, boolean value){
         try {
-            @SuppressLint("PrivateApi")
-            Class<?> cStub =  Class.forName("android.os.IUserManager$Stub");
-            Method asInterface = cStub.getMethod("asInterface", IBinder.class);
-            Object obj = asInterface.invoke(null, ServiceManager.getSystemService("user"));
-            Method setUserRestrictionMethod =  obj.getClass().getMethod("setUserRestriction",String.class, boolean.class, int.class);
-            setUserRestrictionMethod.invoke(obj,key, value, getIdentifier());
+            Method setUserRestrictionMethod =  setUserRestrictionMethod();
+            setUserRestrictionMethod.invoke(manager ,key, value, myUserId());
         } catch (Exception e2) {
             throw new RuntimeException(e2);
         }
         System.out.println("setUserRestriction: "+key+" set to "+isUserRestrictionsReflectForKey(key));
     }
 
-    public static boolean isUserRestrictionsReflectForKey(String key){
+    public boolean isUserRestrictionsReflectForKey(String key){
         try {
-            // 通过反射获取 android.os.IUserManager$Stub 类
-            @SuppressLint("PrivateApi")
-            Class<?> cStub = Class.forName("android.os.IUserManager$Stub");
-            // 获取 asInterface 方法，用于创建 IUserManager 接口的实例
-            Method asInterface = cStub.getMethod("asInterface", IBinder.class);
-            // 通过 ServiceManager 获取 IUserManager 实例
-            Object obj = asInterface.invoke(null, ServiceManager.getSystemService("user"));
             // 调用 getUserRestrictions 方法获取用户限制
-            Bundle userRestrictions = (Bundle) obj.getClass().getMethod("getUserRestrictions", int.class).invoke(obj, getIdentifier());
+            Bundle userRestrictions = (Bundle) getUserRestrictionsMethod().invoke(manager, myUserId());
             // 根据给定的键获取用户限制的布尔值
             return userRestrictions.getBoolean(key);
         } catch (Exception e2) {
@@ -65,10 +76,9 @@ public class UserManagerUtils {
     }
 
 
-    public static int getIdentifier(){
-
+    public static int myUserId(){
         try {
-            return (int) UserHandle.class.getMethod("getIdentifier").invoke(Process.myUserHandle());
+            return (int) UserHandle.class.getMethod("myUserId").invoke(Process.myUserHandle());
         }catch (Throwable e){
             throw new RuntimeException(e);
         }

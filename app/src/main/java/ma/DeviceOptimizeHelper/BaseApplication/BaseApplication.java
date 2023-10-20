@@ -5,6 +5,7 @@ import android.app.Application;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Build;
 import android.widget.Toast;
 
@@ -19,12 +20,12 @@ import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+import ma.DeviceOptimizeHelper.Av.CrashInfoActivity;
 import ma.DeviceOptimizeHelper.Utils.FilesUtils;
 
 public class BaseApplication extends Application {
-    public static Context context;
-    public static String systemInfo;
-
+    private static Context context;
+    private static SharedPreferences sharedPreferences;
     @Override
     protected void attachBaseContext(Context base) {
         //调用父类的attachBaseContext方法
@@ -34,25 +35,18 @@ public class BaseApplication extends Application {
             //添加隐藏API的排除
             HiddenApiBypass.addHiddenApiExemptions("");
         }
-        //初始化Dhizuku
-        Dhizuku.init(base);
         //将当前上下文设置为base
-        this.context = base;
+        context = base;
     }
 
     @Override
     public void onCreate() {
         super.onCreate();
 
-        // 获取系统信息
-        String manufacturer = Build.MANUFACTURER;
-        String model = Build.MODEL;
-        String version = Build.VERSION.RELEASE;
-        int sdkVersion = Build.VERSION.SDK_INT;
-        // 创建包含系统信息的日志字符串
-        systemInfo = "Manufacturer: " + manufacturer + ", Model: " + model + ", Android Version: " + version + ", SDK Version: " + sdkVersion;
+        //初始化Dhizuku
+        //Dhizuku.init();
 
-        Thread.setDefaultUncaughtExceptionHandler(new GlobalExceptionHandler(context));
+        Thread.setDefaultUncaughtExceptionHandler(new GlobalExceptionHandler(getContext()));
     }
 
     public static File getLogsDir(Context context) {
@@ -84,11 +78,16 @@ public class BaseApplication extends Application {
         public void uncaughtException(@NonNull Thread thread, @NonNull Throwable throwable) {
             String logPath = getLogFile(context,"crash").getAbsolutePath();
             //获取崩溃日志文件的绝对路径
-            String stackTraceContext =  getStackTrace(throwable);
+            String stackTraceContext = getStackTrace(throwable);
             //将崩溃日志写入文件
-            FilesUtils.writeToFile(logPath,systemInfo+"\n"+stackTraceContext, false);
+            FilesUtils.writeToFile(logPath,stackTraceContext, false);
 
-            Toast.makeText(context, "崩溃已写入Android/data/../cache/logs", Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, "崩溃已记录Android/data/../cache/logs", Toast.LENGTH_SHORT).show();
+
+            Intent crash = new Intent(getContext(), CrashInfoActivity.class);
+            crash.putExtra(Intent.EXTRA_TEXT,stackTraceContext);
+            crash.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(crash);
 
             // 调用默认的异常处理
             defaultHandler.uncaughtException(thread,throwable);

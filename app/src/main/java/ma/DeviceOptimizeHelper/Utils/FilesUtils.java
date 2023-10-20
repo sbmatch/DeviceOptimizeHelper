@@ -178,13 +178,10 @@ public class FilesUtils {
         }
 
         // 使用文件的最后修改时间进行排序
-        Arrays.sort(files, new Comparator<File>() {
-            @Override
-            public int compare(File file1, File file2) {
-                long lastModified1 = file1.lastModified();
-                long lastModified2 = file2.lastModified();
-                return Long.compare(lastModified2, lastModified1); // 降序排列
-            }
+        Arrays.sort(files, (file1, file2) -> {
+            long lastModified1 = file1.lastModified();
+            long lastModified2 = file2.lastModified();
+            return Long.compare(lastModified2, lastModified1); // 降序排列
         });
 
         // 返回最新的文件
