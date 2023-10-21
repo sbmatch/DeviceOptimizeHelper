@@ -187,9 +187,9 @@ public class PackageManager {
         }
     }
 
-    public PackageInfo getPackageInfo(String packageName){
+    public PackageInfo getPackageInfo(String packageName, Object flag){
         try {
-            return (PackageInfo) getGetPackageInfoMethod().invoke(manager, packageName, 0, UserManager.myUserId());
+            return (PackageInfo) getGetPackageInfoMethod().invoke(manager, packageName, flag, UserManager.myUserId());
         }catch (Throwable e){
             throw new RuntimeException(e);
         }

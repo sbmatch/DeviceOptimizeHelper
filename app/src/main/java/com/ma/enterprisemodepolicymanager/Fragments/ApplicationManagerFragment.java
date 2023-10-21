@@ -34,7 +34,9 @@ import androidx.preference.PreferenceCategory;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceScreen;
 
+import com.google.android.material.textfield.TextInputEditText;
 import com.ma.enterprisemodepolicymanager.IDeviceOptService;
+import com.ma.enterprisemodepolicymanager.Utils.UserManager;
 import com.ma.enterprisemodepolicymanager.ViewModels.FragmentShareIBinder;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.switchmaterial.SwitchMaterial;
@@ -43,7 +45,10 @@ import com.miui.enterprise.sdk.IEpInstallPackageObserver;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import com.ma.enterprisemodepolicymanager.Utils.AnyRestrictPolicyUtils;
 import com.ma.enterprisemodepolicymanager.Utils.Enterprise.ApplicationManager;
@@ -60,7 +65,7 @@ public class ApplicationManagerFragment extends PreferenceFragmentCompat {
     SharedPreferences sharedPreferences;
     FragmentShareIBinder shareIBinder;
     EnterpriseManager enterpriseManager;
-    ApplicationManager applicationManager;
+    public static ApplicationManager applicationManager;
     LinearLayoutCompat layoutCompat;
     CompoundButton.OnCheckedChangeListener changeListener = (buttonView, isChecked) -> {
         int switchId = buttonView.getId();
@@ -132,14 +137,16 @@ public class ApplicationManagerFragment extends PreferenceFragmentCompat {
                 priv_default.setText(AnyRestrictPolicyUtils.sAppPrivilegeArray.get(priv_default.getId()));
                 layoutCompat.addView(priv_default,lp_4);
 
-                showDialog(filePath.contains("不要") ? null : "即将安装...", filePath, layoutCompat, filePath.contains("不要") ? null : (dialog, which) -> {
+                showDialog(filePath.contains("不要") ? null : "即将安装...", filePath, filePath.contains("不要") ? null : layoutCompat, filePath.contains("不要") ? null : (dialog, which) -> {
+
+                    Toast.makeText(requireContext(), "任务已提交至系统, 请稍等...", Toast.LENGTH_SHORT).show();
                     applicationManager.installPackage(filePath.trim(),  new IEpInstallPackageObserver.Stub() {
                         @Override
                         public void onPackageInstalled(String s, int i, String s1, Bundle bundle) {
                             Looper.prepare();
                             if (i == 1){
                                 System.out.println("Info: 安装完成... "+s);
-
+                                Toast.makeText(requireContext(), "安装完成", Toast.LENGTH_SHORT).show();
                                 if (grantRuntime.isChecked()){
                                     applicationManager.setApplicationSettings(s, com.miui.enterprise.sdk.ApplicationManager.FLAG_GRANT_ALL_RUNTIME_PERMISSION);
                                     Toast.makeText(requireContext(), "已授权"+AnyRestrictPolicyUtils.sAppPrivilegeArray.get(grantRuntime.getId())+"(用户无法更改)", Toast.LENGTH_SHORT).show();
@@ -167,10 +174,9 @@ public class ApplicationManagerFragment extends PreferenceFragmentCompat {
                                 }
 
                             }else {
-                                System.err.println("Error: 安装失败... 返回代码:"+i);
-                                Toast.makeText(requireContext(), "安装失败... 返回代码:"+i, Toast.LENGTH_SHORT).show();
+                                System.err.println("安装失败... 返回代码:"+i +" "+installStatusToString(i));
+                                Toast.makeText(requireContext(), "安装失败... 返回代码:"+i +" "+installStatusToString(i), Toast.LENGTH_SHORT).show();
                             }
-                            Toast.makeText(requireContext(), "安装完成", Toast.LENGTH_SHORT).show();
                             Looper.loop();
                         }
                     });
@@ -204,18 +210,22 @@ public class ApplicationManagerFragment extends PreferenceFragmentCompat {
         }
         preferenceScreen.removeAll();
 
+        // 将 int 类型的列表强制转换成 string
+        List<String> modeKey = AnyRestrictPolicyUtils.sAppRestrictModeArray.keySet().stream()
+                .map(String::valueOf).collect(Collectors.toList());
+        List<String> modeValue = new ArrayList<>(AnyRestrictPolicyUtils.sAppRestrictModeArray.values());
+
         PreferenceCategory appRestrictionCategory = new PreferenceCategory(requireContext());
         appRestrictionCategory.setIconSpaceReserved(false);
-        appRestrictionCategory.setTitle("应用管控");
         preferenceScreen.addPreference(appRestrictionCategory);
 
         PreferenceCategory apkSilentModeInstallOrUninstallCategory = new PreferenceCategory(requireContext());
         apkSilentModeInstallOrUninstallCategory.setIconSpaceReserved(false);
-        apkSilentModeInstallOrUninstallCategory.setTitle("静默卸载安装与特殊权限管控");
+        apkSilentModeInstallOrUninstallCategory.setTitle("静默安装与卸载");
         appRestrictionCategory.addPreference(apkSilentModeInstallOrUninstallCategory);
 
         Preference entInstall = new Preference(requireContext());
-        entInstall.setTitle("静默安装应用");
+        entInstall.setTitle("安装应用");
         entInstall.setIconSpaceReserved(false);
         entInstall.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
             @Override
@@ -230,7 +240,7 @@ public class ApplicationManagerFragment extends PreferenceFragmentCompat {
         List<String> appName = new ArrayList<>(AnyRestrictPolicyUtils.getInstalledApplicationsArray.values());
 
         SimpleMenuPreference entUninstall = new SimpleMenuPreference(requireContext());
-        entUninstall.setTitle("静默卸载应用");
+        entUninstall.setTitle("卸载应用");
         entUninstall.setIconSpaceReserved(false);
         entUninstall.setEntries(appName.toArray(new CharSequence[0]));
         entUninstall.setEntryValues(key.toArray(new CharSequence[0]));
@@ -253,12 +263,79 @@ public class ApplicationManagerFragment extends PreferenceFragmentCompat {
 
         PreferenceCategory appRunnerBlackWhiteListCategory = new PreferenceCategory(requireContext());
         appRunnerBlackWhiteListCategory.setIconSpaceReserved(false);
-        appRunnerBlackWhiteListCategory.setTitle("应用运行黑白名单管控");
+        appRunnerBlackWhiteListCategory.setTitle("禁止运行黑名单");
         appRestrictionCategory.addPreference(appRunnerBlackWhiteListCategory);
 
+        Preference setBlackRunnerMode = new Preference(requireContext());
+        setBlackRunnerMode.setIconSpaceReserved(false);
+        setBlackRunnerMode.setTitle("设置禁止运行黑名单");
+        setBlackRunnerMode.setOnPreferenceClickListener((preference) -> {
+            System.out.println(preference.getTitle());
+            TextInputEditText textInputEditText = new TextInputEditText(requireContext());
+            textInputEditText.setHint("[com.xxx.xxxxx, com.xxxxx.xxxxx]");
+            textInputEditText.setText(applicationManager.getDisallowedRunningAppList().size() > 0 ? applicationManager.getDisallowedRunningAppList().toString() : null);
+            showDialog("请输入需要禁止运行的包名", null, textInputEditText, (dialog, which) -> {
+                System.out.println("从输入框获取的黑名单: "+listToString(Collections.singletonList(textInputEditText.getText().toString().replaceAll(" ","").toString())));
+                applicationManager.setDisallowedRunningAppList(listToString(Collections.singletonList(textInputEditText.getText().toString().replaceAll(" ",""))));
+            });
+            return applicationManager != null;
+        });
+        appRunnerBlackWhiteListCategory.addPreference(setBlackRunnerMode);
 
+        PreferenceCategory apkInstallBlackWhiteModeCategory = new PreferenceCategory(requireContext());
+        apkInstallBlackWhiteModeCategory.setIconSpaceReserved(false);
+        apkInstallBlackWhiteModeCategory.setTitle("安装黑白名单");
+        appRestrictionCategory.addPreference(apkInstallBlackWhiteModeCategory);
 
+        SimpleMenuPreference switchBlackWhiteInstallMode = new SimpleMenuPreference(requireContext());
+        switchBlackWhiteInstallMode.setIconSpaceReserved(false);
+        switchBlackWhiteInstallMode.setTitle("设置安装黑白名单模式");
+        switchBlackWhiteInstallMode.setDefaultValue(String.valueOf(applicationManager.getApplicationRestriction()));
+        switchBlackWhiteInstallMode.setEntries(modeValue.toArray(new CharSequence[0]));
+        switchBlackWhiteInstallMode.setEntryValues(modeKey.toArray(new CharSequence[0]));
+        switchBlackWhiteInstallMode.setSummaryProvider(preference -> AnyRestrictPolicyUtils.sAppRestrictModeArray.get(applicationManager.getApplicationRestriction()));
+        switchBlackWhiteInstallMode.setOnPreferenceChangeListener((preference, newValue) -> {
+            applicationManager.setApplicationRestriction(Integer.parseInt((String) newValue));
+            TextInputEditText textInputEditText = new TextInputEditText(requireContext());
+            textInputEditText.setHint("[com.xxx.xxxxx, com.xxxxx.xxxxx]");
+
+            if (!newValue.equals("0")){
+
+                List<String> blackList = applicationManager.getApplicationBlackList(UserManager.myUserId());
+                List<String> whiteList = applicationManager.getApplicationWhiteList(UserManager.myUserId());
+                String blackListTpString = blackList.size() > 0  ? listToString(blackList).toString() : null;
+                String whiteListTpString = whiteList.size() > 0  ? listToString(whiteList).toString() : null;
+
+                textInputEditText.setText(applicationManager.getApplicationRestriction() == 2 ? blackListTpString : whiteListTpString);
+                showDialog(AnyRestrictPolicyUtils.sAppRestrictModeArray.get(Integer.parseInt((String)newValue)), null, textInputEditText, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        if (newValue.equals("2")) {
+                            System.out.println("从输入框获取的黑名单: "+listToString(Collections.singletonList(textInputEditText.getText().toString().replaceAll(" ","").toString())));
+                            applicationManager.setApplicationBlackList(listToString(Collections.singletonList(textInputEditText.getText().toString().replaceAll(" ",""))), UserManager.myUserId());
+                            System.out.println("设置之后的黑名单: "+applicationManager.getApplicationBlackList(UserManager.myUserId()));
+                        } else if (newValue.equals("1")){
+                            System.out.println("从输入框获取的白名单: "+listToString(Collections.singletonList(textInputEditText.getText().toString().replaceAll(" ","").toString())));
+                            applicationManager.setApplicationWhiteList(listToString(Collections.singletonList(textInputEditText.getText().toString().replaceAll(" ",""))), UserManager.myUserId());
+                            System.out.println("设置之后的白名单: "+applicationManager.getApplicationWhiteList(UserManager.myUserId()));
+                        }
+
+                    }
+                });
+            }
+
+            return applicationManager != null;
+        });
+        apkInstallBlackWhiteModeCategory.addPreference(switchBlackWhiteInstallMode);
+        
         setPreferenceScreen(preferenceScreen);
+    }
+
+    private List<String> listToString(List<String> list) {
+        boolean isWrapped = list.toString().contains("[") && list.toString().contains("]");
+        return isWrapped
+                ? Arrays.asList(list.toString().replaceAll("[\\[\\]]","").split(","))
+                : Arrays.asList(list.toString().split(","));
     }
 
     private void showDialog(String title, String msg, View view, DialogInterface.OnClickListener positive){
@@ -274,6 +351,17 @@ public class ApplicationManagerFragment extends PreferenceFragmentCompat {
             throw new RuntimeException(e);
         }
     }
+
+    public static String installStatusToString(int status){
+        try {
+           Class<?> clazz  = Class.forName("android.content.pm.PackageManager");
+           Method installStatusToStringMethod = clazz.getMethod("installStatusToString", int.class);
+           return (String) installStatusToStringMethod.invoke(null, status);
+        }catch (Throwable ee) {
+            throw new RuntimeException(ee);
+        }
+    }
+
     private String getPathFromUri(Uri uri) {
         String filePath = null;
         if (DocumentsContract.isDocumentUri(requireContext(), uri)) {

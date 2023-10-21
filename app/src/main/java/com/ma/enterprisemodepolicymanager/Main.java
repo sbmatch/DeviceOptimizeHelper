@@ -107,8 +107,10 @@ public class Main {
 
         if (Binder.getCallingUid() == 0 || Binder.getCallingUid() == 1000 || Binder.getCallingUid() == 2000) {
 
-            System.out.println("欢迎使用! uid:"+uid +" pid:"+pid);
+            if (!FilesUtils.isDirExists("/data/local/log")) FilesUtils.createDir("/data/local/log");
 
+            System.out.println("欢迎使用! uid:"+uid +" pid:"+pid);
+            System.out.println("激活成功, 现在可以继续使用了");
             activityManager.registerProcessObserver(processObserver);
             serviceThread.start();
             serviceThread.quitSafely();
@@ -121,6 +123,9 @@ public class Main {
                 }
              }
 
+        }else {
+            System.err.println("权限不足, 您需要通过adb shell 或者 root 启动");
+            System.exit(255);
         }
 
         Looper.loop();

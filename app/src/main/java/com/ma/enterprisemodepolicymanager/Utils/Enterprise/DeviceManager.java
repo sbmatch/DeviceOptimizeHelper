@@ -45,9 +45,33 @@ public class DeviceManager {
         return manager.getClass().getMethod("setWifiApSsidWhiteList", List.class, int.class);
     }
 
+    private Method getGetUrlBlackListMethod() throws NoSuchMethodException {
+        return manager.getClass().getMethod("getUrlBlackList", int.class);
+    }
+
+    private Method getSetUrlBlackListMethod() throws NoSuchMethodException {
+        return manager.getClass().getMethod("setUrlBlackList", List.class, int.class);
+    }
+
     public void enableUsbDebug(boolean enable){
         try {
             getEnableUsbDebugMethod().invoke(manager,enable);
+        }catch (Throwable e){
+            throw new RuntimeException(e);
+        }
+    }
+
+    public List<String> getUrlBlackList(int userId){
+        try {
+            return (List<String>) getGetUrlBlackListMethod().invoke(manager, userId);
+        }catch (Throwable e){
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void setUrlBlackList(List<String> urls, int userId) {
+        try {
+            getSetUrlBlackListMethod().invoke(manager, urls, userId);
         }catch (Throwable e){
             throw new RuntimeException(e);
         }

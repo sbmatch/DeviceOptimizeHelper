@@ -1,14 +1,19 @@
 package com.ma.enterprisemodepolicymanager;
 
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.content.pm.ActivityInfo;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageInfo;
 import android.content.res.Configuration;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.IInterface;
 import android.os.Looper;
 import android.os.RemoteException;
 import android.util.Log;
@@ -17,6 +22,10 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
@@ -39,28 +48,48 @@ import com.ma.enterprisemodepolicymanager.Fragments.RestrictionsManagerFragment;
 import com.ma.enterprisemodepolicymanager.Model.BinderParcel;
 import com.ma.enterprisemodepolicymanager.Utils.AnyRestrictPolicyUtils;
 import com.ma.enterprisemodepolicymanager.Utils.CommandExecutor;
+import com.ma.enterprisemodepolicymanager.Utils.Enterprise.ApplicationManager;
+import com.ma.enterprisemodepolicymanager.Utils.Enterprise.EnterpriseManager;
 import com.ma.enterprisemodepolicymanager.Utils.FilesUtils;
+import com.ma.enterprisemodepolicymanager.Utils.PackageManager;
 import com.ma.enterprisemodepolicymanager.Utils.ResourcesUtils;
 import com.ma.enterprisemodepolicymanager.Utils.ServiceManager;
+import com.ma.enterprisemodepolicymanager.Utils.UserManager;
 import com.ma.enterprisemodepolicymanager.ViewModels.FragmentShareIBinder;
 
 import java.io.File;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
     private final CommandExecutor commandExecutor = CommandExecutor.getInstance();
-    public static Handler MainHandle;
+    public static Handler MainHandle = new Handler(Looper.getMainLooper());
     private static FragmentManager fragmentManager;
     private static SharedPreferences sharedPreferences;
     private static ActionBar actionBar;
     private static Intent remoteLinuxProcessBroadcast;
+    private static ApplicationManager applicationManager;
     private static FragmentShareIBinder shareIBinder;
+    private static PackageManager packageManager = ServiceManager.getPackageManager();
+
     private static IBinder.DeathRecipient deviceoptIbinder = () -> {
         sharedPreferences.edit().putBoolean("remoteProcessBinderlinkToDeath", false).apply();
         sharedPreferences.edit().putBoolean("remoteProcessBinder", false).apply();
         System.err.println("驱动服务端死亡");
     };;
+
+    private final ActivityResultLauncher<Intent> getExecResult = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), new ActivityResultCallback<ActivityResult>() {
+        @Override
+        public void onActivityResult(ActivityResult o) {
+            if (o.getResultCode() == 0){
+                Toast.makeText(MainActivity.this, "欢迎使用", Toast.LENGTH_SHORT).show();
+                App.restartApp(App.getContext());
+            }
+        }
+    });
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -117,13 +146,13 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        shareIBinder =  new ViewModelProvider(this).get(FragmentShareIBinder.class);
+
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction("com.ma.enterprisemodepolicymanager.deviceOptSendBroadcast");
         intentFilter.setPriority(Integer.MAX_VALUE);
-
         remoteLinuxProcessBroadcast = registerReceiver(null, intentFilter, RECEIVER_EXPORTED);
 
-        shareIBinder =  new ViewModelProvider(this).get(FragmentShareIBinder.class);
 
         if (remoteLinuxProcessBroadcast != null){
             System.out.println("已获取广播, 正在解析...");
@@ -147,12 +176,40 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
+        if (!sharedPreferences.getBoolean("remoteProcessBinder", false)){
+            for (String pkg : packageManager.getInstalledApplications()){
+                if (pkg.equals("com.shizuku.uninstaller")){
+                    System.out.println(pkg);
+                    Intent runCommandPleaseItApp = new Intent();
+                    PackageInfo pkgInfo = packageManager.getPackageInfo(pkg, android.content.pm.PackageManager.GET_ACTIVITIES);
+                    if (pkgInfo.activities.length > 0) {
+                        for (ActivityInfo activityInfo : pkgInfo.activities) {
+                            if (activityInfo.name.endsWith("Exec")) {
+                                ComponentName targetClass = new ComponentName(pkgInfo.packageName, activityInfo.name);
+                                runCommandPleaseItApp.setComponent(targetClass);
+                                runCommandPleaseItApp.putExtra("content", "nohup app_process -Djava.class.path=" + packageManager.getApplicationInfo(BuildConfig.APPLICATION_ID).sourceDir + "  /system/bin/sh  --nice-name=deviceopt_server " + Main.class.getName() +" > /data/local/log/entpolicyServer.log 2>&1 &");
+                            }
+                        }
+                        showDialog(this, "远程代理驱动对象不存在", "这可能是服务端进程未启动导致的, 借助ShizukuRunner我们提供了一键启动功能, 现在您只需点击确认按钮即可", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                getExecResult.launch(runCommandPleaseItApp);
+                            }
+                        });
+                    }
+                }
+            }
+        }
+
+
     }
 
     @Override
     protected void onResume() {
+
         super.onResume();
     }
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -172,6 +229,16 @@ public class MainActivity extends AppCompatActivity {
     private static void showDialog(Context context,String title, String msg, DialogInterface.OnClickListener positive){
         new MaterialAlertDialogBuilder(context).setTitle(title).setMessage(msg)
                 .setPositiveButton("确定", positive).setNegativeButton("取消", null).create().show();
+    }
+
+
+    private static IInterface getService(IBinder binder, String type){
+        try {
+            Method asInterfaceMethod = Class.forName(type + "$Stub").getMethod("asInterface", IBinder.class);
+            return (IInterface) asInterfaceMethod.invoke(null, binder);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private void shareLogs() {
