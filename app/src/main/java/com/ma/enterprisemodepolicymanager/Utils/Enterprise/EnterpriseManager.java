@@ -33,18 +33,27 @@ public class EnterpriseManager {
             Method asInterfaceMethod = Class.forName(type + "$Stub").getMethod("asInterface", IBinder.class);
             return (IInterface) asInterfaceMethod.invoke(null, binder);
         }catch (Throwable e){
+            e.printStackTrace();
             throw new RuntimeException(e);
         }
     }
 
     public DeviceManager getDeviceManager(){
-        if (deviceManager == null) deviceManager = new DeviceManager(getService(DEVICE_MANAGER,"com.miui.enterprise.IDeviceManager"));
-        return deviceManager;
+       try {
+           if (deviceManager == null) deviceManager = new DeviceManager(getService(DEVICE_MANAGER,"com.miui.enterprise.IDeviceManager"));
+           return deviceManager;
+       }catch (Throwable e){
+           throw new RuntimeException(e);
+       }
     }
 
     public ApplicationManager getApplicationManager(){
-        if (applicationManager == null) applicationManager = new ApplicationManager(getService(APPLICATION_MANAGER,"com.miui.enterprise.IApplicationManager"));
-        return applicationManager;
+       try {
+           if (applicationManager == null) applicationManager = new ApplicationManager(getService(APPLICATION_MANAGER,"com.miui.enterprise.IApplicationManager"));
+           return applicationManager;
+       }catch (Throwable e){
+           throw new RuntimeException(e);
+       }
     }
 
 }

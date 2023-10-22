@@ -9,9 +9,9 @@ public class ShellUtils {
     private static final String TAG = "ShellUtils";
     private ShellUtils() {
     }
-    public static String execCommand(String command) {
+    public static String execCommand(String command , boolean isSystem) {
         try {
-            Process process = Runtime.getRuntime().exec(new String[]{"sh"});
+            Process process = isSystem ? Runtime.getRuntime().exec(new String[]{"su","system"}) : Runtime.getRuntime().exec(new String[]{"sh"});
 
             OutputStream outputStream = process.getOutputStream();
             outputStream.write((command + "\n").getBytes());

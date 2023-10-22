@@ -1,5 +1,6 @@
 package com.ma.enterprisemodepolicymanager.Fragments;
 
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -8,11 +9,15 @@ import android.content.SharedPreferences;
 import android.content.pm.ResolveInfo;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
+import android.os.IBinder;
+import android.os.IInterface;
 import android.os.RemoteException;
 import android.view.View;
+import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.widget.LinearLayoutCompat;
 import androidx.collection.ArrayMap;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.preference.Preference;
@@ -21,12 +26,20 @@ import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceScreen;
 import androidx.preference.SwitchPreferenceCompat;
 
+import com.google.android.material.textfield.TextInputEditText;
+import com.ma.enterprisemodepolicymanager.BuildConfig;
 import com.ma.enterprisemodepolicymanager.IDeviceOptService;
+import com.ma.enterprisemodepolicymanager.Utils.Enterprise.ApplicationManager;
+import com.ma.enterprisemodepolicymanager.Utils.Enterprise.DeviceManager;
+import com.ma.enterprisemodepolicymanager.Utils.Enterprise.EnterpriseManager;
+import com.ma.enterprisemodepolicymanager.Utils.UserManager;
 import com.ma.enterprisemodepolicymanager.ViewModels.FragmentShareIBinder;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.switchmaterial.SwitchMaterial;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -39,7 +52,12 @@ import rikka.preference.SimpleMenuPreference;
 public class DeviceManagerFragment extends PreferenceFragmentCompat {
     private PreferenceScreen preferenceScreen;
     private IDeviceOptService deviceOptService;
+    DeviceManager deviceManager;
+    ApplicationManager applicationManager;
+    private Context context;
     private PackageManager packageManager = ServiceManager.getPackageManager();
+    private LinearLayoutCompat.LayoutParams lp_4 = getLayoutParams();
+    private LinearLayoutCompat layoutCompat;
     private FragmentShareIBinder shareIBinder;
     private SharedPreferences sharedPreferences;
     private boolean isCanUse;
@@ -57,6 +75,13 @@ public class DeviceManagerFragment extends PreferenceFragmentCompat {
     @Override
     public void onCreatePreferences(@Nullable Bundle savedInstanceState, @Nullable String rootKey) {
         deviceOptService = shareIBinder.getDeviceOptService();
+        try {
+            deviceManager = new DeviceManager(getService(shareIBinder.getEnterpriseManager().getService(EnterpriseManager.DEVICE_MANAGER),"com.miui.enterprise.IDeviceManager"));
+            applicationManager = new ApplicationManager(getService(shareIBinder.getEnterpriseManager().getService(EnterpriseManager.APPLICATION_MANAGER),"com.miui.enterprise.IApplicationManager"));
+        } catch (RemoteException e) {
+            throw new RuntimeException(e);
+        }
+
         // 获取根布局，如果不存在则创建一个
         if (preferenceScreen == null) {
             preferenceScreen = getPreferenceManager().createPreferenceScreen(requireContext());
@@ -152,19 +177,55 @@ public class DeviceManagerFragment extends PreferenceFragmentCompat {
         browserRestriction.setTitle("设置浏览器限制模式");
         browserRestriction.setIconSpaceReserved(false);
         browserRestriction.setKey(AnyRestrictPolicyUtils.sEntDeviceRestrictionArray.get("HOST_RESRTICTION_MODE"));
+        browserRestriction.setEntries(value.toArray(new CharSequence[0]));
+        browserRestriction.setEntryValues(key.toArray(new CharSequence[0]));
         browserRestriction.setDefaultValue(String.valueOf(AnyRestrictPolicyUtils.getInt(browserRestriction.getKey())));
-        browserRestriction.setEntries(value.toArray(new CharSequence[value.size()]));
-        browserRestriction.setEntryValues(key.toArray(new CharSequence[key.size()]));
-        browserRestriction.setSummaryProvider(preference -> AnyRestrictPolicyUtils.sAppRestrictModeArray.get(AnyRestrictPolicyUtils.getInt(preference.getKey())));
+        browserRestriction.setSummaryProvider(preference -> browserRestriction.getEntry());
         browserRestriction.setOnPreferenceChangeListener((preference, newValue) -> {
-            try {
-                deviceOptService.setBrowserRestriction(Integer.parseInt((String) newValue));
-            } catch (RemoteException e) {
-                throw new RuntimeException(e);
+
+            layoutCompat = new LinearLayoutCompat(requireContext());
+            layoutCompat.setOrientation(LinearLayoutCompat.VERTICAL);
+
+            TextInputEditText inputUriText = new TextInputEditText(requireContext());
+            switch ((String) newValue){
+                case "1":
+                    inputUriText.setText(AnyRestrictPolicyUtils.generateListSettings(deviceManager.getUrlWhiteList(UserManager.myUserId())));
+                    break;
+                case "2":
+                    inputUriText.setText(AnyRestrictPolicyUtils.generateListSettings(deviceManager.getUrlBlackList(UserManager.myUserId())));
+                    break;
             }
+            layoutCompat.addView(inputUriText, lp_4);
+
+            deviceManager.setBrowserRestriction(Integer.parseInt((String) newValue), UserManager.myUserId());
+
+            if (!newValue.equals("0")){
+                showDialog(AnyRestrictPolicyUtils.sAppRestrictModeArray.get(Integer.parseInt((String) newValue)), null, layoutCompat, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        List<String> list = Arrays.asList(inputUriText.getText().toString());
+                        switch ((String) newValue){
+                            case "1":
+                                deviceManager.setUrlWhiteList(list,UserManager.myUserId());
+                                System.out.println("白名单: "+list);
+                                break;
+                            case "2":
+//                                for(String perm : packageManager.getPackageInfo(BuildConfig.APPLICATION_ID, android.content.pm.PackageManager.GET_PERMISSIONS).requestedPermissions){
+//                                    if (getContext().checkSelfPermission(perm) != android.content.pm.PackageManager.PERMISSION_GRANTED){
+//                                        applicationManager.grantRuntimePermission(BuildConfig.APPLICATION_ID,perm);
+//                                        System.out.println("Call System API Grant Perm " + perm);
+//                                    }
+//                                }
+                                //System.out.println("黑名单: "+list);
+                                break;
+                        }
+                    }
+                });
+            }
+
             return isCanUse;
         });
-        deviceRestrictionCategory.addPreference(browserRestriction);
+        //deviceRestrictionCategory.addPreference(browserRestriction);
 
         Preference reboot = new Preference(requireContext());
         reboot.setTitle("强制重启设备");
@@ -201,19 +262,23 @@ public class DeviceManagerFragment extends PreferenceFragmentCompat {
         setPreferenceScreen(preferenceScreen);
     }
 
-    public String generateListSettings(List<String> value) {
-        StringBuilder sb = new StringBuilder();
-        if (value == null) {
-            value = new ArrayList();
-        }
-        for (String single : value) {
-            sb.append(single).append(";");
-        }
-        if (sb.length() > 0) {
-            sb.deleteCharAt(sb.length() - 1);
-        }
-        return sb.toString();
+    private LinearLayoutCompat.LayoutParams getLayoutParams(){
+        LinearLayoutCompat.LayoutParams lp_4 = new LinearLayoutCompat.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp_4.leftMargin = 60;
+        lp_4.rightMargin = 60;
+        return lp_4;
     }
+
+
+    private IInterface getService(IBinder binder, String type){
+        try {
+            Method asInterfaceMethod = Class.forName(type + "$Stub").getMethod("asInterface", IBinder.class);
+            return (IInterface) asInterfaceMethod.invoke(null, binder);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private Drawable getAppIconForPackageName(String packageName) {
         return packageManager.getApplicationInfo(packageName).loadIcon(requireContext().getPackageManager());
     }

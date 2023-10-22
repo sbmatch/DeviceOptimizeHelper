@@ -65,7 +65,7 @@ public class RestrictionsManagerFragment extends PreferenceFragmentCompat {
             switchPreferenceCompat.setKey(pkg);
             switchPreferenceCompat.setIconSpaceReserved(true);
             switchPreferenceCompat.setTitle(AnyRestrictPolicyUtils.sEntRestrictionArray.get(pkg));
-            switchPreferenceCompat.setDefaultValue(AnyRestrictPolicyUtils.restrictionsManager.hasRestriction(pkg));
+            switchPreferenceCompat.setDefaultValue(AnyRestrictPolicyUtils.hasRestriction(pkg));
             // 添加开关变化监听器
             switchPreferenceCompat.setOnPreferenceChangeListener((preference, newValue) -> {
                 if ((deviceOptService != null) && sharedPreferences.getBoolean("remoteProcessBinder", false)) {

@@ -3,12 +3,14 @@ package com.ma.enterprisemodepolicymanager.Utils;
 import android.accessibilityservice.AccessibilityServiceInfo;
 import android.annotation.SuppressLint;
 import android.content.ComponentName;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.pm.ServiceInfo;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.IDeviceIdleController;
+import android.os.Looper;
 import android.provider.Settings;
 import android.util.ArraySet;
 import android.util.SparseArray;
@@ -16,6 +18,7 @@ import android.util.SparseArray;
 import androidx.collection.ArrayMap;
 
 import com.ma.enterprisemodepolicymanager.Main;
+import com.ma.enterprisemodepolicymanager.Utils.Enterprise.EnterpriseManager;
 import com.miui.enterprise.sdk.ApplicationManager;
 import com.miui.enterprise.sdk.DeviceManager;
 import com.miui.enterprise.sdk.IEpInstallPackageObserver;
@@ -25,21 +28,35 @@ import com.miui.enterprise.sdk.RestrictionsManager;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 import com.ma.enterprisemodepolicymanager.BaseApplication.App;
 
 public class AnyRestrictPolicyUtils {
-    public static PackageManager packageManager = ServiceManager.getPackageManager();
-    public static IDeviceIdleController iDeviceIdleController = IDeviceIdleController.Stub.asInterface(ServiceManager.getService("deviceidle"));
-    public static RestrictionsManager restrictionsManager = RestrictionsManager.getInstance();
-    public static DeviceManager deviceManager = DeviceManager.getInstance();
-    private static final com.ma.enterprisemodepolicymanager.Utils.Enterprise.DeviceManager ideviceManager = ServiceManager.getEnterpriseManager().getDeviceManager();
+    static PackageManager packageManager = ServiceManager.getPackageManager();
+    static IDeviceIdleController iDeviceIdleController = IDeviceIdleController.Stub.asInterface(ServiceManager.getService("deviceidle"));
+    static RestrictionsManager restrictionsManager;
+    static DeviceManager deviceManager;
+    static com.ma.enterprisemodepolicymanager.Utils.Enterprise.DeviceManager ideviceManager ;
+    static com.ma.enterprisemodepolicymanager.Utils.Enterprise.ApplicationManager iapplicationManager;
+    static ApplicationManager applicationManager ;
+    //public static PhoneManager phoneManager = PhoneManager.getInstance();
 
-    private static final com.ma.enterprisemodepolicymanager.Utils.Enterprise.ApplicationManager iapplicationManager = ServiceManager.getEnterpriseManager().getApplicationManager();
-    public static ApplicationManager applicationManager = ApplicationManager.getInstance();
-    public static PhoneManager phoneManager = PhoneManager.getInstance();
+    static {
+        if (ServiceManager.checkService("EnterpriseManager") != null){
+            deviceManager = DeviceManager.getInstance();
+            restrictionsManager = RestrictionsManager.getInstance();
+            applicationManager = ApplicationManager.getInstance();
+            iapplicationManager = ServiceManager.getEnterpriseManager().getApplicationManager();
+            ideviceManager = ServiceManager.getEnterpriseManager().getDeviceManager();
+        }
+    }
+    private AnyRestrictPolicyUtils(){
+
+    }
+
     public static void setAllEntRestrict(boolean newValue){
         for (String key : getDisallowsFieldReflect()){
             restrictionsManager.setRestriction(key, newValue);
@@ -126,9 +143,18 @@ public class AnyRestrictPolicyUtils {
     }
 
     public static String getAPIVersion(){
-        String apiVersion = deviceManager.getAPIVersion();
-        System.out.println("Info: 获取API版本...  "+apiVersion);
-        return apiVersion;
+        try {
+            Class<?> clazz = Class.forName("com.miui.enterprise.sdk.DeviceManager");
+            for (Field field: clazz.getFields()){
+                if (field.getName().equals("VERSION")){
+                    field.setAccessible(true);
+                    return (String) field.get(null);
+                }
+            }
+        }catch (Throwable e){
+            e.printStackTrace();
+        }
+        return null;
     }
 
     public static void enableUsbDebug(boolean enable){
@@ -145,8 +171,23 @@ public class AnyRestrictPolicyUtils {
         return Settings.Secure.getInt(App.getContext().getContentResolver(), key, 0);
     }
 
+
+    public static String generateListSettings(List<String> value) {
+        StringBuilder sb = new StringBuilder();
+        if (value == null) {
+            value = new ArrayList();
+        }
+        for (String single : value) {
+            sb.append(single).append("\n");
+        }
+        if (sb.length() > 0) {
+            sb.deleteCharAt(sb.length() - 1);
+        }
+        return sb.toString();
+    }
     public static void setUrlBlackList(List<String> urls){
-        deviceManager.setUrlBlackList(urls);
+        //deviceManager.setUrlBlackList(urls);
+        Settings.Secure.putString(App.getContext().getContentResolver(),"ep_url_black_list",generateListSettings(urls));
         System.out.println("Info: 设置Url黑名单...  "+urls);
     }
 
@@ -213,6 +254,10 @@ public class AnyRestrictPolicyUtils {
     public static void deviceShutDown(){
         System.out.println("Info: 强制关机...");
         deviceManager.deviceShutDown();
+    }
+
+    public static boolean hasRestriction(String pkg){
+        return restrictionsManager.hasRestriction(pkg);
     }
 
     public static void recoveryFactory(boolean formatSdcard){
@@ -325,7 +370,7 @@ public class AnyRestrictPolicyUtils {
 
     public static final ArrayMap<String,String> getInstalledApplicationsArray = new ArrayMap<String, String>(){{
         if (App.getContext() != null){
-            for (String pkg : AnyRestrictPolicyUtils.getInstalledApplications()){
+            for (String pkg : packageManager.getInstalledApplications()){
                 put(pkg, packageManager.getAppNameForPackageName(App.getContext(),pkg));
             }
         }

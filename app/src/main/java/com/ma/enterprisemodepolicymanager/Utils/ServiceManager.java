@@ -40,9 +40,26 @@ public final class ServiceManager {
     public static IBinder getService(String service){
         try {
             @SuppressLint({"DiscouragedPrivateApi", "PrivateApi"})
-            Method getServiceMethod = Class.forName("android.os.ServiceManager").getDeclaredMethod("getService", String.class);
-            IBinder binder = (IBinder) getServiceMethod.invoke(null, service);
-             return binder;
+            Method getServiceMethod = Class.forName("android.os.ServiceManager").getMethod("getService", String.class);
+            return  (IBinder) getServiceMethod.invoke(null, service);
+        } catch (NullPointerException | IllegalAccessException | InvocationTargetException | ClassNotFoundException | NoSuchMethodException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static IBinder checkService(String name){
+        try {
+            @SuppressLint({"DiscouragedPrivateApi", "PrivateApi"})
+            Method getServiceMethod = Class.forName("android.os.ServiceManager").getMethod("checkService", String.class);
+            return  (IBinder) getServiceMethod.invoke(null, name);
+        } catch (NullPointerException | IllegalAccessException | InvocationTargetException | ClassNotFoundException | NoSuchMethodException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static String[] listServices() {
+        try {
+            return (String[]) Class.forName("android.os.ServiceManager").getMethod("listServices").invoke(null);
         } catch (NullPointerException | IllegalAccessException | InvocationTargetException | ClassNotFoundException | NoSuchMethodException e) {
             throw new RuntimeException(e);
         }

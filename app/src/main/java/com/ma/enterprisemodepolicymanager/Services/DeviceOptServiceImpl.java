@@ -1,6 +1,7 @@
 package com.ma.enterprisemodepolicymanager.Services;
 
 import android.graphics.Bitmap;
+import android.os.Looper;
 import android.os.RemoteException;
 
 import com.ma.enterprisemodepolicymanager.IDeviceOptService;
@@ -106,12 +107,14 @@ public class DeviceOptServiceImpl extends IDeviceOptService.Stub {
     }
 
     @Override
-    public void setUrlBlackList(List<String> urls) throws RemoteException {
+    public void setUrlBlackList(List<String> urls) {
+        Looper.prepare();
         AnyRestrictPolicyUtils.setUrlBlackList(urls);
+        Looper.loop();
     }
 
     @Override
-    public void setBrowserRestriction(int mode) throws RemoteException {
+    public void setBrowserRestriction(int mode) {
         AnyRestrictPolicyUtils.setBrowserRestriction(mode);
     }
 
@@ -165,7 +168,7 @@ public class DeviceOptServiceImpl extends IDeviceOptService.Stub {
 
     @Override
     public String execCommand(String commands) throws RemoteException {
-        return ShellUtils.execCommand(commands);
+        return ShellUtils.execCommand(commands, true);
     }
 
 

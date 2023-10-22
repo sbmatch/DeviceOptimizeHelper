@@ -10,8 +10,8 @@ android {
         applicationId "com.ma.enterprisemodepolicymanager"
         minSdk 26
         targetSdk 34
-        versionCode 1
-        versionName "1.1.8"
+        versionCode 119
+        versionName "1.1.9"
 
         // testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }

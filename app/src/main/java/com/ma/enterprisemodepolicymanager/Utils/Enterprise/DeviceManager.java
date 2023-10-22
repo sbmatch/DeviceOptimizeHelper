@@ -49,13 +49,33 @@ public class DeviceManager {
         return manager.getClass().getMethod("getUrlBlackList", int.class);
     }
 
+    private Method getSetUrlWhiteListMethod() throws NoSuchMethodException {
+        return manager.getClass().getMethod("setUrlWhiteList", List.class, int.class);
+    }
+
     private Method getSetUrlBlackListMethod() throws NoSuchMethodException {
         return manager.getClass().getMethod("setUrlBlackList", List.class, int.class);
+    }
+
+    private Method getGetUrlWhiteListMethod() throws NoSuchMethodException {
+        return manager.getClass().getMethod("getUrlWhiteList", int.class);
+    }
+
+    private Method getSetBrowserRestrictionMethod() throws NoSuchMethodException {
+        return manager.getClass().getMethod("setBrowserRestriction", int.class, int.class);
     }
 
     public void enableUsbDebug(boolean enable){
         try {
             getEnableUsbDebugMethod().invoke(manager,enable);
+        }catch (Throwable e){
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void setBrowserRestriction(int mode, int userId){
+        try {
+            getSetBrowserRestrictionMethod().invoke(manager, mode, userId);
         }catch (Throwable e){
             throw new RuntimeException(e);
         }
@@ -69,9 +89,25 @@ public class DeviceManager {
         }
     }
 
+    public List<String> getUrlWhiteList(int userId){
+        try {
+            return (List<String>) getGetUrlWhiteListMethod().invoke(manager, userId);
+        }catch (Throwable e){
+            throw new RuntimeException(e);
+        }
+    }
+
     public void setUrlBlackList(List<String> urls, int userId) {
         try {
-            getSetUrlBlackListMethod().invoke(manager, urls, userId);
+            //getSetUrlBlackListMethod().invoke(manager, urls, userId);
+        }catch (Throwable e){
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void setUrlWhiteList(List<String> urls, int userId){
+        try {
+            getSetUrlWhiteListMethod().invoke(manager, urls, userId);
         }catch (Throwable e){
             throw new RuntimeException(e);
         }

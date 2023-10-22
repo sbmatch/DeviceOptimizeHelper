@@ -134,7 +134,7 @@ public class ApplicationManager {
     }
     public void grantRuntimePermission(String packageName, String permission){
         try {
-            getGrantRuntimePermissionMethod().invoke(manager, packageName, permission);
+            getGrantRuntimePermissionMethod().invoke(manager, packageName, permission, UserManager.myUserId());
         }catch (Throwable e){
             throw new RuntimeException(e);
         }

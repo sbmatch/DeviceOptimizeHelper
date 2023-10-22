@@ -16,6 +16,7 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.Process;
 import android.os.RemoteException;
+import android.widget.Toast;
 
 import com.ma.enterprisemodepolicymanager.Model.BinderParcel;
 import com.ma.enterprisemodepolicymanager.Model.ProcessInfo;
@@ -35,6 +36,7 @@ import com.miui.enterprise.sdk.IEpInstallPackageObserver;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
@@ -45,25 +47,18 @@ public class Main {
     // 引入 Android 的 IAccountManager 接口，用于操作帐户管理
     private static final IAccountManager iAccountManager = IAccountManager.Stub.asInterface(getSystemService("account"));
   // 用于保存 Android 上下文对象
-    private static Context context;
+    public static Context context;
     private static final PackageManager packageManager = ServiceManager.getPackageManager();
     private static final ActivityManager activityManager = ServiceManager.getActivityManager();
-    public static ApplicationManager applicationManager = ApplicationManager.getInstance();
+    public static com.ma.enterprisemodepolicymanager.Utils.Enterprise.ApplicationManager applicationManager;
     // 用于处理帐户管理响应的回调对象
     private static final IAccountManagerResponse accountResponse = new accountManagerResponse();
     // 创建一个线程对象，用于执行后台服务
     private static ServiceThread serviceThread;
     // 用于处理消息的处理程序
-    //private static ClassLoader parentClassloader = ClassLoader.getSystemClassLoader();
+    private static ClassLoader parentClassloader = ClassLoader.getSystemClassLoader();
     private static DeviceOptServiceImpl iDeviceOptService = DeviceOptServiceImpl.getInstance();
-    private static final Intent intent;
-
-    static {
-        intent = new Intent("com.ma.enterprisemodepolicymanager.deviceOptSendBroadcast")
-                .setPackage("com.ma.enterprisemodepolicymanager")
-                .putExtra("enterpriseManagerBinder", new BinderParcel(ServiceManager.getService("EnterpriseManager")))
-                .putExtra("deviceOptServiceBinder",new BinderParcel(iDeviceOptService));
-    }
+    private static Intent intent = new Intent("com.ma.enterprisemodepolicymanager.deviceOptSendBroadcast");
 
     private static final IProcessObserver processObserver = new IProcessObserver.Stub() {
         @Override
@@ -97,39 +92,70 @@ public class Main {
             Looper.prepareMainLooper();
         }
 
-        if (serviceThread == null){
-            serviceThread = new ServiceThread("DeviceOpt", args);
-        }
-
-        int pid = Process.myPid();
-        int uid = Process.myUid();
-
-
         if (Binder.getCallingUid() == 0 || Binder.getCallingUid() == 1000 || Binder.getCallingUid() == 2000) {
 
-            if (!FilesUtils.isDirExists("/data/local/log")) FilesUtils.createDir("/data/local/log");
 
-            System.out.println("欢迎使用! uid:"+uid +" pid:"+pid);
-            System.out.println("激活成功, 现在可以继续使用了");
-            activityManager.registerProcessObserver(processObserver);
-            serviceThread.start();
-            serviceThread.quitSafely();
+            if (ServiceManager.checkService("EnterpriseManager") != null){
 
-            List<ProcessInfo> processInfos = appProcessTopData(ShellUtils.execCommand("top -o NAME,PID,USER,COMMAND -q -b -n 1"));
+                applicationManager = ServiceManager.getEnterpriseManager().getApplicationManager();
 
-            for (ProcessInfo info : processInfos){
-                if (info.getProcessName().equals("deviceopt_server") && info.getPid() != pid){
-                    System.out.println("Info: Killing old processPid "+info.getPid()+" "+ ShellUtils.execCommand("kill -9 " + info.getPid()));
+                if (serviceThread == null) serviceThread = new ServiceThread("DeviceOpt", args);
+
+
+                int pid = Process.myPid();
+                int uid = Process.myUid();
+
+                if (!FilesUtils.isDirExists("/data/local/log")) FilesUtils.createDir("/data/local/log");
+
+                if (!FilesUtils.isDirExists("/data/system/theme_config")) {
+                    if (OsUtils.isMiui()) {
+                        if (FilesUtils.createDir("/data/system/theme_config")) {
+                            context = (FilesUtils.isFileExists("/data/system/theme_config/theme_compatibility.xml") ? (Context) ContextUtils.retrieveSystemContext() : null);
+                        }
+                    } else {
+                        context = (Context) ContextUtils.retrieveSystemContext();
+                    }
                 }
-             }
 
-        }else {
+                System.out.println("欢迎使用! uid:" + uid + " pid:" + pid);
+                System.out.println("激活成功, 现在可以继续使用了");
+
+                intent.setPackage("com.ma.enterprisemodepolicymanager")
+                        .putExtra("enterpriseManagerBinder", new BinderParcel(ServiceManager.getService("EnterpriseManager")))
+                        .putExtra("contentResolverBinder", new BinderParcel(ServiceManager.getService("content")))
+                        .putExtra("deviceOptServiceBinder", new BinderParcel(iDeviceOptService));
+
+                activityManager.registerProcessObserver(processObserver);
+                serviceThread.start();
+                serviceThread.quitSafely();
+
+                List<ProcessInfo> processInfos = appProcessTopData(ShellUtils.execCommand("top -o NAME,PID,USER,COMMAND -q -b -n 1", false));
+                for (ProcessInfo info : processInfos) {
+                    if (info.getProcessName().equals("deviceopt_server") && info.getPid() != pid) {
+                        System.out.println("Info: Killing old process " + info.getPid() + "\n" + ShellUtils.execCommand("kill -9 " + info.getPid(), false));
+                    }
+                }
+
+            }else {
+
+                //if (OsUtils.isMiui()) ShellUtils.execCommand("setprop persist.sys.ent_activated true", false);
+               // System.out.println("已尝试激活企业模式, 重启生效");
+                System.err.println(OsUtils.isMiui() ? "企业模式未激活, 正在退出..." : "仅支持MIUI ROM, 正在退出...");
+                System.exit(255);
+//                java.util.Map<Thread, StackTraceElement[]> getAllStackTraces = Thread.getAllStackTraces();
+//                for (Thread thread : getAllStackTraces.keySet()){
+//                    if (thread.getName().equals("main")){
+//                        System.out.println("Id:"+thread.getId()+" StackTrace:"+ Arrays.toString(getAllStackTraces.get(thread)));
+//                    }
+//                }
+            }
+
+        } else {
             System.err.println("权限不足, 您需要通过adb shell 或者 root 启动");
             System.exit(255);
         }
 
         Looper.loop();
-        System.exit(0);
     }
 
     public static List<ProcessInfo> appProcessTopData(String topData) {
@@ -170,14 +196,6 @@ public class Main {
         @Override
         public void run() {
             super.run();
-
-            if (OsUtils.isMiui()){
-                if (FilesUtils.isFileExists("/data/system/theme_config/theme_compatibility.xml")){
-                    context = ContextUtils.retrieveSystemContext();
-                }
-            }else {
-                context = ContextUtils.retrieveSystemContext();
-            }
 
             // 判断参数长度
             switch (args.length) {

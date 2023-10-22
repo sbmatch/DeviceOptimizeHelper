@@ -7,7 +7,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
-import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.res.Configuration;
 import android.os.Bundle;
@@ -54,13 +53,10 @@ import com.ma.enterprisemodepolicymanager.Utils.FilesUtils;
 import com.ma.enterprisemodepolicymanager.Utils.PackageManager;
 import com.ma.enterprisemodepolicymanager.Utils.ResourcesUtils;
 import com.ma.enterprisemodepolicymanager.Utils.ServiceManager;
-import com.ma.enterprisemodepolicymanager.Utils.UserManager;
 import com.ma.enterprisemodepolicymanager.ViewModels.FragmentShareIBinder;
 
 import java.io.File;
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -84,8 +80,7 @@ public class MainActivity extends AppCompatActivity {
     private final ActivityResultLauncher<Intent> getExecResult = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), new ActivityResultCallback<ActivityResult>() {
         @Override
         public void onActivityResult(ActivityResult o) {
-            if (o.getResultCode() == 0){
-                Toast.makeText(MainActivity.this, "欢迎使用", Toast.LENGTH_SHORT).show();
+            if (remoteLinuxProcessBroadcast != null){
                 App.restartApp(App.getContext());
             }
         }
@@ -130,21 +125,17 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        if (ServiceManager.getService("EnterpriseManager").pingBinder()) {
-            fragmentManager.beginTransaction()
-                    .replace(R.id.settings, HeaderFragment.class, null)
-                    .setReorderingAllowed(true)
-                    .commit();
-        }else {
-            showDialog(this,"小丑? 一级警报!","您可能没有激活企业模式或者不是MIUI系统.",null);
-        }
-
         // 监听BackStackChanged事件，当BackStack的顺序发生变化时，且栈为0时
         fragmentManager.addOnBackStackChangedListener(() -> {
             if (getSupportFragmentManager().getBackStackEntryCount() == 0) {
                 actionBar.setDisplayHomeAsUpEnabled(false);
             }
         });
+
+        fragmentManager.beginTransaction()
+                .replace(R.id.settings, HeaderFragment.class, null)
+                .setReorderingAllowed(true)
+                .commit();
 
         shareIBinder =  new ViewModelProvider(this).get(FragmentShareIBinder.class);
 
@@ -159,9 +150,10 @@ public class MainActivity extends AppCompatActivity {
             BinderParcel deviceOptServiceBinder = remoteLinuxProcessBroadcast.getParcelableExtra("deviceOptServiceBinder");
             BinderParcel enterpriseManagerBinder = remoteLinuxProcessBroadcast.getParcelableExtra("enterpriseManagerBinder");
 
-            if (enterpriseManagerBinder.getBinder().pingBinder()) shareIBinder.setEnterpriseManager(enterpriseManagerBinder);
 
-            if (deviceOptServiceBinder.getBinder().pingBinder()) {
+            if (enterpriseManagerBinder != null) shareIBinder.setEnterpriseManager(enterpriseManagerBinder);
+
+            if (deviceOptServiceBinder != null) {
                 System.out.println("已获取远程代理驱动对象...");
                 shareIBinder.setDeviceOptService(deviceOptServiceBinder);
                 sharedPreferences.edit().putBoolean("remoteProcessBinder", true).apply();
@@ -182,34 +174,18 @@ public class MainActivity extends AppCompatActivity {
                     System.out.println(pkg);
                     Intent runCommandPleaseItApp = new Intent();
                     PackageInfo pkgInfo = packageManager.getPackageInfo(pkg, android.content.pm.PackageManager.GET_ACTIVITIES);
-                    if (pkgInfo.activities.length > 0) {
-                        for (ActivityInfo activityInfo : pkgInfo.activities) {
-                            if (activityInfo.name.endsWith("Exec")) {
-                                ComponentName targetClass = new ComponentName(pkgInfo.packageName, activityInfo.name);
-                                runCommandPleaseItApp.setComponent(targetClass);
-                                runCommandPleaseItApp.putExtra("content", "nohup app_process -Djava.class.path=" + packageManager.getApplicationInfo(BuildConfig.APPLICATION_ID).sourceDir + "  /system/bin/sh  --nice-name=deviceopt_server " + Main.class.getName() +" > /data/local/log/entpolicyServer.log 2>&1 &");
-                            }
+                    for (ActivityInfo activityInfo : pkgInfo.activities) {
+                        if (activityInfo.name.endsWith("Exec")) {
+                            ComponentName targetClass = new ComponentName(pkgInfo.packageName, activityInfo.name);
+                            runCommandPleaseItApp.setComponent(targetClass);
+                            runCommandPleaseItApp.putExtra("content", "nohup app_process -Djava.class.path=" + packageManager.getApplicationInfo(BuildConfig.APPLICATION_ID).sourceDir + "  /system/bin/sh  --nice-name=deviceopt_server " + Main.class.getName() + " > /data/local/log/entpolicyServer.log 2>&1 &");
+                            if (ServiceManager.checkService(EnterpriseManager.SERVICE_NAME) != null) getExecResult.launch(runCommandPleaseItApp);
                         }
-                        showDialog(this, "远程代理驱动对象不存在", "这可能是服务端进程未启动导致的, 借助ShizukuRunner我们提供了一键启动功能, 现在您只需点击确认按钮即可", new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                getExecResult.launch(runCommandPleaseItApp);
-                            }
-                        });
                     }
                 }
             }
         }
-
-
     }
-
-    @Override
-    protected void onResume() {
-
-        super.onResume();
-    }
-
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -287,9 +263,9 @@ public class MainActivity extends AppCompatActivity {
         private PreferenceScreen preferenceScreen;
         @Override
         public void onCreate(@Nullable Bundle savedInstanceState) {
-
-
-
+            if (ServiceManager.getService("EnterpriseManager") == null) {
+                showDialog(requireContext(),"👎","您可能没有激活企业模式或者不是MIUI系统.",null);
+            }
             super.onCreate(savedInstanceState);
         }
 
