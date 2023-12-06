@@ -94,7 +94,11 @@ public class AnyRestrictPolicyUtils {
     }
 
     public static String getControlStatus(String key){
-        return String.valueOf(restrictionsManager.getControlStatus(key));
+        try {
+            return String.valueOf(restrictionsManager.getControlStatus(key));
+        }catch (Throwable e){
+            return String.valueOf(-1);
+        }
     }
 
     public static void setControlStatus(String key, int value){
