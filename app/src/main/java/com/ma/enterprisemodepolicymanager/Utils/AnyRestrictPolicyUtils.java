@@ -152,7 +152,7 @@ public class AnyRestrictPolicyUtils {
                 }
             }
         }catch (Throwable e){
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
         return null;
     }
@@ -257,7 +257,12 @@ public class AnyRestrictPolicyUtils {
     }
 
     public static boolean hasRestriction(String pkg){
-        return restrictionsManager.hasRestriction(pkg);
+        try {
+            return restrictionsManager.hasRestriction(pkg);
+        }catch (Throwable e){
+            e.printStackTrace();
+            return false;
+        }
     }
 
     public static void recoveryFactory(boolean formatSdcard){

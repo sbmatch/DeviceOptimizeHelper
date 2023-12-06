@@ -1,11 +1,15 @@
 package com.ma.enterprisemodepolicymanager.Fragments;
 
+import android.content.ClipData;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.RemoteException;
+import android.util.Log;
+import android.widget.Toast;
 
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.collection.ArrayMap;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.preference.PreferenceCategory;
@@ -13,7 +17,10 @@ import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceScreen;
 import androidx.preference.SwitchPreferenceCompat;
 
+import com.ma.enterprisemodepolicymanager.BuildConfig;
 import com.ma.enterprisemodepolicymanager.IDeviceOptService;
+import com.ma.enterprisemodepolicymanager.Main;
+import com.ma.enterprisemodepolicymanager.Utils.ServiceManager;
 import com.ma.enterprisemodepolicymanager.ViewModels.FragmentShareIBinder;
 
 import java.util.ArrayList;
@@ -63,7 +70,7 @@ public class RestrictionsManagerFragment extends PreferenceFragmentCompat {
         for (String pkg : AnyRestrictPolicyUtils.getDisallowsFieldReflect()) {
             SwitchPreferenceCompat switchPreferenceCompat = new SwitchPreferenceCompat(requireContext());
             switchPreferenceCompat.setKey(pkg);
-            switchPreferenceCompat.setIconSpaceReserved(true);
+            switchPreferenceCompat.setIconSpaceReserved(false);
             switchPreferenceCompat.setTitle(AnyRestrictPolicyUtils.sEntRestrictionArray.get(pkg));
             switchPreferenceCompat.setDefaultValue(AnyRestrictPolicyUtils.hasRestriction(pkg));
             // 添加开关变化监听器
@@ -72,10 +79,10 @@ public class RestrictionsManagerFragment extends PreferenceFragmentCompat {
                     try {
                         deviceOptService.setEntRestrict(preference.getKey(), (Boolean) newValue);
                     } catch (RemoteException e) {
-                        throw new RuntimeException(e);
+                        e.printStackTrace();
                     }
                 }
-                return deviceOptService != null;
+                return deviceOptService.asBinder().isBinderAlive();
             });
 
             restrictionSystemFeatureCategory.addPreference(switchPreferenceCompat);
@@ -94,18 +101,19 @@ public class RestrictionsManagerFragment extends PreferenceFragmentCompat {
             SimpleMenuPreference sysSwitcherStatus = new SimpleMenuPreference(requireContext());
             sysSwitcherStatus.setKey(key);
             sysSwitcherStatus.setTitle(AnyRestrictPolicyUtils.sRestrictionStateArray.get(key));
-            sysSwitcherStatus.setEntries(value.toArray(new CharSequence[value.size()]));
-            sysSwitcherStatus.setEntryValues(items.toArray(new CharSequence[items.size()]));
+            sysSwitcherStatus.setIconSpaceReserved(false);
+            sysSwitcherStatus.setEntries(value.toArray(new CharSequence[0]));
+            sysSwitcherStatus.setEntryValues(items.toArray(new CharSequence[0]));
             sysSwitcherStatus.setDefaultValue(AnyRestrictPolicyUtils.getControlStatus(key));
             sysSwitcherStatus.setOnPreferenceChangeListener((preference, newValue) -> {
                 if ((deviceOptService != null) && sharedPreferences.getBoolean("remoteProcessBinder", false)) {
                     try {
                         deviceOptService.setControlStatus(key, Integer.parseInt((String) newValue));
                     } catch (RemoteException e) {
-                        throw new RuntimeException(e);
+                        e.printStackTrace();
                     }
                 }
-                return deviceOptService != null;
+                return deviceOptService.asBinder().isBinderAlive();
             });
             sysSwitcherStatus.setSummaryProvider(preference -> AnyRestrictPolicyUtils.sSystemSwitchStatusArray.get(Integer.parseInt(sysSwitcherStatus.getValue())));
             systemSwitcherStatusCategory.addPreference(sysSwitcherStatus);

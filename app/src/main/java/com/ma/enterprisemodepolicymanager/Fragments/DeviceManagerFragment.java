@@ -124,6 +124,7 @@ public class DeviceManagerFragment extends PreferenceFragmentCompat {
 
         SwitchPreferenceCompat switchUsbDebug = new SwitchPreferenceCompat(requireContext());
         switchUsbDebug.setTitle("设置USB调试开关状态");
+        switchUsbDebug.setIconSpaceReserved(false);
         switchUsbDebug.setDefaultValue(AnyRestrictPolicyUtils.isEnableAdb());
         switchUsbDebug.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
             @Override

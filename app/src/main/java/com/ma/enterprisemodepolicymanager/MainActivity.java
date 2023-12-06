@@ -1,33 +1,28 @@
 package com.ma.enterprisemodepolicymanager;
 
-import android.content.ComponentName;
+import android.content.ClipData;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
-import android.content.pm.ActivityInfo;
-import android.content.pm.PackageInfo;
 import android.content.res.Configuration;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.IInterface;
 import android.os.Looper;
-import android.os.RemoteException;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
-import androidx.activity.result.ActivityResult;
-import androidx.activity.result.ActivityResultCallback;
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.content.FileProvider;
@@ -44,10 +39,7 @@ import com.ma.enterprisemodepolicymanager.BaseApplication.App;
 import com.ma.enterprisemodepolicymanager.Fragments.ApplicationManagerFragment;
 import com.ma.enterprisemodepolicymanager.Fragments.DeviceManagerFragment;
 import com.ma.enterprisemodepolicymanager.Fragments.RestrictionsManagerFragment;
-import com.ma.enterprisemodepolicymanager.Model.BinderParcel;
-import com.ma.enterprisemodepolicymanager.Utils.AnyRestrictPolicyUtils;
 import com.ma.enterprisemodepolicymanager.Utils.CommandExecutor;
-import com.ma.enterprisemodepolicymanager.Utils.Enterprise.ApplicationManager;
 import com.ma.enterprisemodepolicymanager.Utils.Enterprise.EnterpriseManager;
 import com.ma.enterprisemodepolicymanager.Utils.FilesUtils;
 import com.ma.enterprisemodepolicymanager.Utils.PackageManager;
@@ -66,25 +58,14 @@ public class MainActivity extends AppCompatActivity {
     private static FragmentManager fragmentManager;
     private static SharedPreferences sharedPreferences;
     private static ActionBar actionBar;
-    private static Intent remoteLinuxProcessBroadcast;
-    private static ApplicationManager applicationManager;
-    private static FragmentShareIBinder shareIBinder;
-    private static PackageManager packageManager = ServiceManager.getPackageManager();
-
-    private static IBinder.DeathRecipient deviceoptIbinder = () -> {
+    Intent remoteLinuxProcessBroadcast;
+    FragmentShareIBinder shareIBinder;
+    private static final PackageManager packageManager = ServiceManager.getPackageManager();
+    private static IBinder.DeathRecipient deviceoptIBinder = () -> {
         sharedPreferences.edit().putBoolean("remoteProcessBinderlinkToDeath", false).apply();
         sharedPreferences.edit().putBoolean("remoteProcessBinder", false).apply();
         System.err.println("驱动服务端死亡");
-    };;
-
-    private final ActivityResultLauncher<Intent> getExecResult = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), new ActivityResultCallback<ActivityResult>() {
-        @Override
-        public void onActivityResult(ActivityResult o) {
-            if (remoteLinuxProcessBroadcast != null){
-                App.restartApp(App.getContext());
-            }
-        }
-    });
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -111,10 +92,12 @@ public class MainActivity extends AppCompatActivity {
         actionBar = getSupportActionBar();
         actionBar.setBackgroundDrawable(null);  // 如果ActionBar为空，则设置ActionBar的背景图片为null
 
-        if (sharedPreferences == null) sharedPreferences = getSharedPreferences("main_sharePreference", MODE_PRIVATE);
+        sharedPreferences = getSharedPreferences("main_sharePreference", MODE_PRIVATE);
 
-        sharedPreferences.edit().putBoolean("remoteProcessBinder", false).apply();
-        sharedPreferences.edit().putBoolean("remoteProcessBinderlinkToDeath", false).apply();
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction("com.ma.enterprisemodepolicymanager.deviceOptSendBroadcast");
+        intentFilter.setPriority(Integer.MAX_VALUE);
+        remoteLinuxProcessBroadcast = registerReceiver(null, intentFilter);
 
         fragmentManager = getSupportFragmentManager();
         fragmentManager.setFragmentResultListener("applicationFragment", this, new FragmentResultListener() {
@@ -139,52 +122,22 @@ public class MainActivity extends AppCompatActivity {
 
         shareIBinder =  new ViewModelProvider(this).get(FragmentShareIBinder.class);
 
-        IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction("com.ma.enterprisemodepolicymanager.deviceOptSendBroadcast");
-        intentFilter.setPriority(Integer.MAX_VALUE);
-        remoteLinuxProcessBroadcast = registerReceiver(null, intentFilter, RECEIVER_EXPORTED);
+        try {
+            shareIBinder.setDeviceOptService(remoteLinuxProcessBroadcast.getParcelableExtra("deviceOptServiceBinder"));
+            shareIBinder.setEnterpriseManager(remoteLinuxProcessBroadcast.getParcelableExtra("enterpriseManagerBinder"));
+            shareIBinder.setContentService(remoteLinuxProcessBroadcast.getParcelableExtra("contentResolverBinder"));
 
-
-        if (remoteLinuxProcessBroadcast != null){
-            System.out.println("已获取广播, 正在解析...");
-            BinderParcel deviceOptServiceBinder = remoteLinuxProcessBroadcast.getParcelableExtra("deviceOptServiceBinder");
-            BinderParcel enterpriseManagerBinder = remoteLinuxProcessBroadcast.getParcelableExtra("enterpriseManagerBinder");
-
-
-            if (enterpriseManagerBinder != null) shareIBinder.setEnterpriseManager(enterpriseManagerBinder);
-
-            if (deviceOptServiceBinder != null) {
-                System.out.println("已获取远程代理驱动对象...");
-                shareIBinder.setDeviceOptService(deviceOptServiceBinder);
+            if (shareIBinder.getDeviceOptService().asBinder().isBinderAlive()) {
                 sharedPreferences.edit().putBoolean("remoteProcessBinder", true).apply();
-                if (!sharedPreferences.getBoolean("remoteProcessBinderlinkToDeath", false)) {
-                    try {
-                        deviceOptServiceBinder.getBinder().linkToDeath(deviceoptIbinder, 0);
-                        sharedPreferences.edit().putBoolean("remoteProcessBinderlinkToDeath", true).apply();
-                    } catch (RemoteException e) {
-                        throw new RuntimeException(e);
-                    }
-                }
             }
+        }catch (Throwable e){
+            e.printStackTrace();
         }
+    }
 
-        if (!sharedPreferences.getBoolean("remoteProcessBinder", false)){
-            for (String pkg : packageManager.getInstalledApplications()){
-                if (pkg.equals("com.shizuku.uninstaller")){
-                    System.out.println(pkg);
-                    Intent runCommandPleaseItApp = new Intent();
-                    PackageInfo pkgInfo = packageManager.getPackageInfo(pkg, android.content.pm.PackageManager.GET_ACTIVITIES);
-                    for (ActivityInfo activityInfo : pkgInfo.activities) {
-                        if (activityInfo.name.endsWith("Exec")) {
-                            ComponentName targetClass = new ComponentName(pkgInfo.packageName, activityInfo.name);
-                            runCommandPleaseItApp.setComponent(targetClass);
-                            runCommandPleaseItApp.putExtra("content", "nohup app_process -Djava.class.path=" + packageManager.getApplicationInfo(BuildConfig.APPLICATION_ID).sourceDir + "  /system/bin/sh  --nice-name=deviceopt_server " + Main.class.getName() + " > /data/local/log/entpolicyServer.log 2>&1 &");
-                            if (ServiceManager.checkService(EnterpriseManager.SERVICE_NAME) != null) getExecResult.launch(runCommandPleaseItApp);
-                        }
-                    }
-                }
-            }
-        }
+    @Override
+    protected void onResume() {
+        super.onResume();
     }
 
     @Override
@@ -277,7 +230,7 @@ public class MainActivity extends AppCompatActivity {
 
             PreferenceCategory mainCategory = new PreferenceCategory(requireContext());
             mainCategory.setIconSpaceReserved(false);
-            mainCategory.setSummary("企业SDK版本: "+ AnyRestrictPolicyUtils.getAPIVersion());
+            //mainCategory.setSummary("企业SDK版本: "+ AnyRestrictPolicyUtils.getAPIVersion());
             preferenceScreen.addPreference(mainCategory);
 
             Preference entRestrict = new Preference(requireContext());
@@ -286,20 +239,15 @@ public class MainActivity extends AppCompatActivity {
             entRestrict.setTitle("系统功能管控");
             entRestrict.setSummary("飞行模式、蓝牙、加速度传感器、自动云同步、系统备份、相机、恢复出厂设置、指纹传感器、IMEI读取、录音功能、MTP功能、OTG功能、截屏功能、外置SD卡挂载、网络共享（包括蓝牙，WiFi，usb）、修改系统时间、USB调试功能、VPN功能、GPS功能、NFC功能、WiFi功能。");
             entRestrict.setOnPreferenceClickListener(preference -> {
-                if (sharedPreferences.getBoolean("remoteProcessBinder", false)){
-
-                    actionBar.setDisplayHomeAsUpEnabled(true);
-                    if (getParentFragmentManager().findFragmentByTag("restrict") == null) {
-                        getParentFragmentManager().beginTransaction()
-                                .replace(R.id.settings, RestrictionsManagerFragment.class, null,"restrict")
-                                .setReorderingAllowed(true).addToBackStack(null)
-                                .commit();
-                    }else {
-                        System.out.println("从堆栈中获取fragment...");
-                        getParentFragmentManager().popBackStack("restrict",  FragmentManager.POP_BACK_STACK_INCLUSIVE);
-                    }
+                actionBar.setDisplayHomeAsUpEnabled(true);
+                if (getParentFragmentManager().findFragmentByTag("restrict") == null) {
+                    getParentFragmentManager().beginTransaction()
+                            .replace(R.id.settings, RestrictionsManagerFragment.class, null,"restrict")
+                            .setReorderingAllowed(true).addToBackStack(null)
+                            .commit();
                 }else {
-                    Toast.makeText(requireContext(), "服务未运行...", Toast.LENGTH_SHORT).show();
+                    System.out.println("从堆栈中获取fragment...");
+                    getParentFragmentManager().popBackStack("restrict",  FragmentManager.POP_BACK_STACK_INCLUSIVE);
                 }
               return true;
             });
@@ -311,20 +259,15 @@ public class MainActivity extends AppCompatActivity {
             entAppRestrict.setTitle("应用管控");
             entAppRestrict.setSummary("静默安装卸载、清除应用数据、清除应用缓存、运行时权限授予、防卸载、应用保活、应用安装黑白名单、静默激活注销设备管理器、静默激活注销辅助服务功能、杀应用进程、清除最近任务、应用运行黑白名单、添加可信应用市场。");
             entAppRestrict.setOnPreferenceClickListener(preference -> {
-                if (sharedPreferences.getBoolean("remoteProcessBinder", false)){
-
-                    actionBar.setDisplayHomeAsUpEnabled(true);
-                    if (getParentFragmentManager().findFragmentByTag("application") == null){
-                        getParentFragmentManager().beginTransaction()
-                                .replace(R.id.settings, ApplicationManagerFragment.class ,null, "application")
-                                .setReorderingAllowed(true).addToBackStack(null)
-                                .commit();
-                    }else {
-                        System.out.println("从堆栈中获取fragment...");
-                        getParentFragmentManager().popBackStack("application",  FragmentManager.POP_BACK_STACK_INCLUSIVE);
-                    }
+                actionBar.setDisplayHomeAsUpEnabled(true);
+                if (getParentFragmentManager().findFragmentByTag("application") == null){
+                    getParentFragmentManager().beginTransaction()
+                            .replace(R.id.settings, ApplicationManagerFragment.class ,null, "application")
+                            .setReorderingAllowed(true).addToBackStack(null)
+                            .commit();
                 }else {
-                    Toast.makeText(requireContext(), "服务未运行...", Toast.LENGTH_SHORT).show();
+                    System.out.println("从堆栈中获取fragment...");
+                    getParentFragmentManager().popBackStack("application",  FragmentManager.POP_BACK_STACK_INCLUSIVE);
                 }
                 return true;
             });
@@ -338,20 +281,15 @@ public class MainActivity extends AppCompatActivity {
             entDeviceRestrict.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
                 @Override
                 public boolean onPreferenceClick(@NonNull Preference preference) {
-                    if (sharedPreferences.getBoolean("remoteProcessBinder", false)){
-
-                        actionBar.setDisplayHomeAsUpEnabled(true);
-                        if (getParentFragmentManager().findFragmentByTag("device") == null){
-                            getParentFragmentManager().beginTransaction()
-                                    .replace(R.id.settings, DeviceManagerFragment.class,null, "device")
-                                    .setReorderingAllowed(true).addToBackStack(null)
-                                    .commit();
-                        }else {
-                            System.out.println("从堆栈中获取fragment...");
-                            getParentFragmentManager().popBackStack("device",FragmentManager.POP_BACK_STACK_INCLUSIVE);
-                        }
+                    actionBar.setDisplayHomeAsUpEnabled(true);
+                    if (getParentFragmentManager().findFragmentByTag("device") == null){
+                        getParentFragmentManager().beginTransaction()
+                                .replace(R.id.settings, DeviceManagerFragment.class,null, "device")
+                                .setReorderingAllowed(true).addToBackStack(null)
+                                .commit();
                     }else {
-                        Toast.makeText(requireContext(), "服务未运行...", Toast.LENGTH_SHORT).show();
+                        System.out.println("从堆栈中获取fragment...");
+                        getParentFragmentManager().popBackStack("device",FragmentManager.POP_BACK_STACK_INCLUSIVE);
                     }
                     return true;
                 }
@@ -362,29 +300,5 @@ public class MainActivity extends AppCompatActivity {
         }
 
     }
-
-
-//    public void requestRoot() {
-//        if (!sharedPreferences.getBoolean("first_checkRoot", false)) {
-//            commandExecutor.executeCommand("whoami", new CommandExecutor.CommandResultListener() {
-//                @Override
-//                public void onSuccess(String output) {
-//                    sharedPreferences.edit().putBoolean("first_checkRoot", true).apply();
-//                    CheckRootPermissionTask task = new CheckRootPermissionTask(hasRootPermission -> {
-//                        sharedPreferences.edit().putBoolean("isGrantRoot", hasRootPermission).apply();
-//                    });
-//                    task.execute();
-//                    Looper.prepare();
-//                    Toast.makeText(getApplicationContext(), "已授权Root", Toast.LENGTH_SHORT).show();
-//                }
-//
-//                @Override
-//                public void onError(String error, Exception e) {
-//                    Log.e("CommandExecutor", "root权限授权失败", e);
-//                }
-//
-//            }, true, false);
-//        }
-//    }
 
 }

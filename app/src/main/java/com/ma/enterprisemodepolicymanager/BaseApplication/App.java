@@ -2,16 +2,23 @@ package com.ma.enterprisemodepolicymanager.BaseApplication;
 
 import android.annotation.SuppressLint;
 import android.app.Application;
+import android.content.ClipData;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 
 import com.ma.enterprisemodepolicymanager.Av.CrashInfoActivity;
+import com.ma.enterprisemodepolicymanager.BuildConfig;
+import com.ma.enterprisemodepolicymanager.Main;
 import com.ma.enterprisemodepolicymanager.Utils.FilesUtils;
+import com.ma.enterprisemodepolicymanager.Utils.ServiceManager;
 
 import org.lsposed.hiddenapibypass.HiddenApiBypass;
 
@@ -21,6 +28,7 @@ import java.util.Date;
 
 public class App extends Application {
     private static Context context;
+    private static Handler uiHandler = new Handler(Looper.getMainLooper());
     private static SharedPreferences sharedPreferences;
     @Override
     protected void attachBaseContext(Context base) {
@@ -38,7 +46,6 @@ public class App extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
-
         Thread.setDefaultUncaughtExceptionHandler(new GlobalExceptionHandler(getContext()));
     }
 
@@ -64,25 +71,29 @@ public class App extends Application {
         private final Context context;
         Thread.UncaughtExceptionHandler defaultHandler = Thread.getDefaultUncaughtExceptionHandler();
         public GlobalExceptionHandler(Context context) {
-
             this.context = context;
         }
         @Override
         public void uncaughtException(@NonNull Thread thread, @NonNull Throwable throwable) {
             String logPath = getLogFile(context,"crash").getAbsolutePath();
             //获取崩溃日志文件的绝对路径
-            String stackTraceContext = getStackTrace(throwable);
+            String stackTraceContent = getStackTrace(throwable);
             //将崩溃日志写入文件
-            FilesUtils.writeToFile(logPath,stackTraceContext, false);
+            FilesUtils.writeToFile(logPath,stackTraceContent, false);
 
-            Toast.makeText(context, "崩溃已记录Android/data/../cache/logs", Toast.LENGTH_SHORT).show();
+            if (stackTraceContent.contains("android.os.DeadObjectException")){
+                String command = "nohup app_process -Djava.class.path=" + ServiceManager.getPackageManager().getApplicationInfo(BuildConfig.APPLICATION_ID).sourceDir + "  /system/bin/sh  --nice-name=deviceopt_server " + Main.class.getName();
+
+                stackTraceContent = "在电脑上执行以下命令启动服务:\n"+"adb shell \""+command+"\"\n\n" +
+                        "在shell命令行环境执行以下命令启动服务:\n" +
+                        ""+command+" > /data/local/tmp/ent.log &";
+            }
 
             Intent crash = new Intent(getContext(), CrashInfoActivity.class);
-            crash.putExtra(Intent.EXTRA_TEXT,stackTraceContext);
+            crash.putExtra(Intent.EXTRA_TEXT,stackTraceContent);
             crash.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
             getContext().startActivity(crash);
 
-            // 调用默认的异常处理
             defaultHandler.uncaughtException(thread,throwable);
         }
 
