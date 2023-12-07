@@ -251,9 +251,8 @@ public class MainActivity extends AppCompatActivity{
 
         StringBuffer stringBuffer = new StringBuffer();
         boolean isDhizuku = sharedPreferences.getBoolean("isGrantDhizuku", false);
-        boolean isRoot = sharedPreferences.getBoolean("isGrantRoot", false);
 
-        if (isDhizuku || isRoot) {
+        if (isDhizuku) {
 
             getmHandle().post(() -> {
                 // 在 catch 块之前添加一个标志
@@ -344,56 +343,61 @@ public class MainActivity extends AppCompatActivity{
 
                 switch (newValue) {
                     case 0: // 当 newValue 的值为 0 时，禁用指定的限制策略
-                        commandExecutor.executeCommand(command + key + " false", new CommandExecutor.CommandResultListener() {
-                            @Override
-                            public void onSuccess(String output) {
+                        try {
+                            if (userService != null) {
+                                // 使用 dhizuku 提供的权限执行任务
+                                userService.clearUserRestriction(DhizukuVariables.COMPONENT_NAME, key);
                                 Looper.prepare();
                                 Toast.makeText(context, "已禁用此限制策略", Toast.LENGTH_SHORT).show();
+                                Looper.loop();
                             }
-
-                            @Override
-                            public void onError(String error, Exception e) {
-                                try {
-                                    if (userService != null) {
-                                        // 使用 dhizuku 提供的权限执行任务
-                                        userService.clearUserRestriction(DhizukuVariables.COMPONENT_NAME, key);
-                                        Looper.prepare();
-                                        Toast.makeText(context, "已禁用此限制策略", Toast.LENGTH_SHORT).show();
-                                    }
-                                } catch (Exception e1) {
-                                    e1.printStackTrace();
-                                    Looper.prepare();
-                                    Toast.makeText(context, "任务执行失败", Toast.LENGTH_SHORT).show();
-                                }
-
-                            }
-                        }, true, true);
+                        } catch (Exception e1) {
+                            e1.printStackTrace();
+                            Looper.prepare();
+                            Toast.makeText(context, "任务执行失败", Toast.LENGTH_SHORT).show();
+                            Looper.loop();
+                        }
+//                        commandExecutor.executeCommand(command + key + " false", new CommandExecutor.CommandResultListener() {
+//                            @Override
+//                            public void onSuccess(String output) {
+//                                Looper.prepare();
+//                                Toast.makeText(context, "已禁用此限制策略", Toast.LENGTH_SHORT).show();
+//                            }
+//
+//                            @Override
+//                            public void onError(String error, Exception e) {
+//
+//                            }
+//                        }, true, true);
                         break;
                     case 1: // 当 newValue 的值为 1 时，启用指定的限制策略
-                        // 使用 root 权限执行任务
-                        commandExecutor.executeCommand(command + key + " true", new CommandExecutor.CommandResultListener() {
-                            @Override
-                            public void onSuccess(String output) {
+                        try {
+                            if (userService != null) {
+                                // 使用 dhizuku 提供的权限执行任务
+                                userService.addUserRestriction(DhizukuVariables.COMPONENT_NAME, key);
                                 Looper.prepare();
                                 Toast.makeText(context, "已启用此限制策略", Toast.LENGTH_SHORT).show();
+                                Looper.loop();
                             }
-
-                            @Override
-                            public void onError(String error, Exception e) {
-                                try {
-                                    if (userService != null) {
-                                        // 使用 dhizuku 提供的权限执行任务
-                                        userService.addUserRestriction(DhizukuVariables.COMPONENT_NAME, key);
-                                        Looper.prepare();
-                                        Toast.makeText(context, "已启用此限制策略", Toast.LENGTH_SHORT).show();
-                                    }
-                                } catch (Exception e2) {
-                                    e2.printStackTrace();
-                                    Looper.prepare();
-                                    Toast.makeText(getContext(), "任务执行失败", Toast.LENGTH_SHORT).show();
-                                }
-                            }
-                        }, true, true);
+                        } catch (Exception e2) {
+                            e2.printStackTrace();
+                            Looper.prepare();
+                            Toast.makeText(getContext(), "任务执行失败", Toast.LENGTH_SHORT).show();
+                            Looper.loop();
+                        }
+//                        // 使用 root 权限执行任务
+//                        commandExecutor.executeCommand(command + key + " true", new CommandExecutor.CommandResultListener() {
+//                            @Override
+//                            public void onSuccess(String output) {
+//                                Looper.prepare();
+//                                Toast.makeText(context, "已启用此限制策略", Toast.LENGTH_SHORT).show();
+//                            }
+//
+//                            @Override
+//                            public void onError(String error, Exception e) {
+//
+//                            }
+//                        }, true, true);
                         break;
                     default:
                         // 如果 newValue 的值不是 0 或 1，则不执行任何操作
@@ -406,7 +410,7 @@ public class MainActivity extends AppCompatActivity{
             if ((sharedPreferences.getBoolean("isGrantDhizuku", false) || sharedPreferences.getBoolean("isGrantRoot", false))) {
                 Toast.makeText(context, "欢迎使用", Toast.LENGTH_SHORT).show();
             } else {
-                new MaterialAlertDialogBuilder(context).setTitle("应用说明").setMessage("本应用支持 Dhizuku 与 Root 两种使用方式，其中Root模式可设置所有系统支持的限制策略，Dhizuku模式下各家深度定制ROM对<设备所有者>权限的限制则各有不同，接下来我们会向您请求这两种权限, 优先级为: Root > Dhizuku ，请注意: 在我们获取到Dhizuku权限后会继续尝试申请Root权限, 现在，我们将尝试申请您设备上的Dhizuku权限, 成功后会继续尝试申请Root权限 \n如果您了解自己在干什么，请点击继续按钮")
+                new MaterialAlertDialogBuilder(context).setTitle("应用说明").setMessage("本应用仅支持 Dhizuku 使用方式，此模式下各家深度定制ROM对<设备所有者>权限的限制则各有不同，接下来我们会向您请求权限, 现在，我们将尝试申请您设备上的Dhizuku权限 \n如果您了解自己在干什么，请点击继续按钮")
                         .setPositiveButton("继续", (dialog, which) -> {
                             tryRequestsDhizukuPermission(context);
                             dialog.cancel();
@@ -444,7 +448,7 @@ public class MainActivity extends AppCompatActivity{
 
                     Log.i("SwitchPreferenceChangeListener", "newValue(创建新值): " + newValue);
 
-                    return (sharedPreferences.getBoolean("isGrantDhizuku", false) || sharedPreferences.getBoolean("isGrantRoot", false));
+                    return sharedPreferences.getBoolean("isGrantDhizuku", false);
                 });
                 // 将动态生成的SwitchPreferenceCompat对象添加进一个列表中
                 switchPreferenceCompatArraySet.add(switchPreferenceCompat);
@@ -465,7 +469,7 @@ public class MainActivity extends AppCompatActivity{
             CheckRootPermissionTask task = new CheckRootPermissionTask(hasRootPermission -> {
                 sharedPreferences.edit().putBoolean("isGrantRoot", hasRootPermission).apply();
             });
-            task.execute();
+            //task.execute();
 
             return super.onPreferenceTreeClick(preference);
 
@@ -481,7 +485,7 @@ public class MainActivity extends AppCompatActivity{
                     sharedPreferences.edit().putBoolean("isGrantRoot", hasRootPermission).apply();
                 });
                 // 执行task
-                task.execute();
+                //task.execute();
             }
             bindDhizukuservice();
 
@@ -551,7 +555,6 @@ public class MainActivity extends AppCompatActivity{
                                 public void onRequestPermission(int grantResult) {
                                     if (grantResult == PackageManager.PERMISSION_GRANTED) {
                                         sharedPreferences.edit().putBoolean("isGrantDhizuku", true).apply();
-                                        tryRequestRoot();
                                         Looper.prepare();
                                         Toast.makeText(context, "Dhizuku 已授权", Toast.LENGTH_SHORT).show();
                                     }
@@ -561,7 +564,6 @@ public class MainActivity extends AppCompatActivity{
             } catch (IllegalStateException e) {
                 e.printStackTrace();
                 Toast.makeText(context, "Dhizuku 未安装或未激活", Toast.LENGTH_SHORT).show();
-                tryRequestRoot();
             }
         }
 
