@@ -77,6 +77,7 @@ public class AnyRestrictPolicyUtils {
             System.out.println("Info: 企业限制策略 "+ sEntRestrictionArray.get(key) +" ("+key+") --> "+(restrictionsManager.hasRestriction(key) ? "已禁用" : "已恢复"));
         }else {
             System.err.println("Error: 企业限制字段 "+key+" 不存在，请阅读相关源码或文档");
+            System.out.println(getDisallowsFieldReflect());
         }
     }
 
@@ -86,11 +87,32 @@ public class AnyRestrictPolicyUtils {
             System.out.println("Info: 设置用户限制 "+key +" "+newValue);
         }else {
             System.out.println("Info: 用户限制字段 "+key+" 不存在，请阅读相关源码或文档");
+            System.out.println(UserManager.getALLUserRestrictionsReflectForUserManager());
         }
     }
 
     public static int getApplicationSettings(String packageName){
         return applicationManager.getApplicationSettings(packageName, UserManager.myUserId());
+    }
+
+    public static void setApplicationSettings(String packageName, int flags){
+        if (sAppPrivilegeArray.contains(flags)) {
+            applicationManager.setApplicationSettings(packageName, flags);
+            System.out.println("Info: setApplicationSettings PkgName: "+packageName +" flags: "+flags +" "+sAppPrivilegeArray.get(flags));
+            return;
+        }
+        System.out.println(sAppPrivilegeArray);
+    }
+
+    public void setDisallowedRunningAppList(String packagesList){
+        ArrayList<String> newPkgLists = new ArrayList<>();
+        for (String pkg : packagesList.split("&")){
+            if (packageManager.isPackageAvailable(pkg)){
+                newPkgLists.add(pkg);
+            }
+        }
+        applicationManager.setDisallowedRunningAppList(newPkgLists);
+        System.out.println("Info: setDisallowedRunningAppList "+newPkgLists);
     }
 
     public static String getControlStatus(String key){
@@ -179,7 +201,7 @@ public class AnyRestrictPolicyUtils {
     public static String generateListSettings(List<String> value) {
         StringBuilder sb = new StringBuilder();
         if (value == null) {
-            value = new ArrayList();
+            value = new ArrayList<>();
         }
         for (String single : value) {
             sb.append(single).append("\n");

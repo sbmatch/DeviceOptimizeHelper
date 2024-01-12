@@ -216,6 +216,7 @@ public class Main {
                             AnyRestrictPolicyUtils.removeDeviceIdleAndAllRestrict();
                         }
                     }
+                    System.exit(0);
                     break;
                 case 2:
                     // 有两个参数 根据提供的参数设置对应key的值
@@ -245,22 +246,25 @@ public class Main {
                    } else if (args[0].equals("setWifiApSsidBlackList")){
 
                    }
-
+                    System.exit(0);
                     break;
                 case 3:
                     // 有三个参数 根据提供的参数设置对应key的值
                     String key3 = args[1];
-                    boolean newValue3 = Boolean.parseBoolean(args[2]);
+                    String newValue3 = args[2];
                     switch (args[0]){
                         case "setEntRestrict":
-                            AnyRestrictPolicyUtils.setEntRestrict(key3, newValue3);
+                            AnyRestrictPolicyUtils.setEntRestrict(key3, Boolean.parseBoolean(newValue3));
                             break;
                         case "setUserRestrict":
-                            AnyRestrictPolicyUtils.setUserRestrict(key3, newValue3);
+                            AnyRestrictPolicyUtils.setUserRestrict(key3, Boolean.parseBoolean(newValue3));
+                            break;
+                        case "setEntAppSetting":
+                            AnyRestrictPolicyUtils.setApplicationSettings(key3, Integer.parseInt(newValue3));
                             break;
                     }
+                    System.exit(0);
                     break;
-                default:
 
             }
         }
