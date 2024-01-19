@@ -585,14 +585,8 @@ public class MainActivity extends AppCompatActivity{
             //获取字段的值
             return field.getInt(null);
         } catch (Resources.NotFoundException | NoSuchFieldException | IllegalAccessException e) {
-            e.printStackTrace();
-            //抛出异常
-            Looper.prepare();
-            //显示提示信息
-            Toast.makeText(mContext, "捕获到崩溃，已写入日志文件", Toast.LENGTH_SHORT).show();
+            throw new RuntimeException(e);
         }
-        //返回0
-        return 0;
     }
 
     public static int getIdentifierReflect(String name, String defType, String defPackage) {
