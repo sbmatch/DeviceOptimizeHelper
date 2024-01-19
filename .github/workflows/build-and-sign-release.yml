@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - enterpriseModePolicyManager
 
 jobs:
   build:
@@ -33,7 +34,7 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v2
         with:
-          sdk-platform: '31'
+          sdk-platform: '34'
           ndk-version: '21.4.7075529'
 
       - name: Sign APK with Keystore
@@ -42,7 +43,7 @@ jobs:
           echo "${{ secrets.RELEASE_KEYSTORE_FILE }}" | base64 -d > keystore.jks
           # 使用 apksigner 签名 APK 引用环境变量中的密码和别名密码
           ./gradlew signingConfigWriterRelease
-          $ANDROID_HOME/build-tools/31.0.0/apksigner sign --ks keystore.jks --ks-key-alias ${{ secrets.RELEASE_KEY_ALIAS }} --ks-pass env:RELEASE_KEYSTORE_PASSWORD --key-pass env:RELEASE_KEY_PASSWORD --in app/build/outputs/apk/release/DeviceOptimizeHelper_v*.apk
+          $ANDROID_HOME/build-tools/34.0.0/apksigner sign --ks keystore.jks --ks-key-alias ${{ secrets.RELEASE_KEY_ALIAS }} --ks-pass env:RELEASE_KEYSTORE_PASSWORD --key-pass env:RELEASE_KEY_PASSWORD --in app/build/outputs/apk/release/DeviceOptimizeHelper_v*.apk
 
       - name: Get versionName from Android app
         id: get_version

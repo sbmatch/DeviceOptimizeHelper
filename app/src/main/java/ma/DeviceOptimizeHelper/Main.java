@@ -5,12 +5,8 @@ import android.accounts.Account;
 import android.accounts.IAccountManager;
 import android.accounts.IAccountManagerResponse;
 import android.annotation.SuppressLint;
-import android.app.admin.DevicePolicyManager;
 import android.content.ComponentName;
 import android.content.Context;
-import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.content.pm.ResolveInfo;
 import android.content.pm.ServiceInfo;
 import android.os.Binder;
 import android.os.Bundle;
@@ -39,13 +35,11 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 import dalvik.system.DexClassLoader;
 import ma.DeviceOptimizeHelper.Utils.AccessibilityManagerUtils;
-import ma.DeviceOptimizeHelper.Utils.ActivityManagerUtils;
 import ma.DeviceOptimizeHelper.Utils.PackageManagerUtils;
 import ma.DeviceOptimizeHelper.Utils.UserManagerUtils;
 
