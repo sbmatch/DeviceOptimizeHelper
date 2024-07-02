@@ -32,7 +32,7 @@ jobs:
           curl -Lo cmdline-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-8512546_latest.zip
           unzip cmdline-tools.zip -d cmdline-tools
           mkdir -p /usr/local/lib/android/sdk/cmdline-tools/latest
-          rsync -a --ignore-existing cmdline-tools/cmdline-tools/* /usr/local/lib/android/sdk/cmdline-tools/latest/
+          cp -r cmdline-tools/cmdline-tools/* /usr/local/lib/android/sdk/cmdline-tools/latest/
           yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=/usr/local/lib/android/sdk --licenses
           /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=/usr/local/lib/android/sdk "platforms;android-31" "ndk;21.4.7075529"
 
