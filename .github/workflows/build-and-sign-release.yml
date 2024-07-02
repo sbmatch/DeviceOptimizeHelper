@@ -26,22 +26,20 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v1
+        with:
+          sdk-version: '34'
+          ndk-version: '21.4.7075529'
+
       - name: Build APK
         run: |
           chmod +x ./gradlew
           ./gradlew assembleRelease
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v2
-        with:
-          sdk-platform: '34'
-          ndk-version: '21.4.7075529'
-
       - name: Sign APK with Keystore
         run: |
-          # 恢复密钥库
           echo "${{ secrets.RELEASE_KEYSTORE_FILE }}" | base64 -d > keystore.jks
-          # 使用 apksigner 签名 APK 引用环境变量中的密码和别名密码
           ./gradlew signingConfigWriterRelease
           $ANDROID_HOME/build-tools/34.0.0/apksigner sign --ks keystore.jks --ks-key-alias ${{ secrets.RELEASE_KEY_ALIAS }} --ks-pass env:RELEASE_KEYSTORE_PASSWORD --key-pass env:RELEASE_KEY_PASSWORD --in app/build/outputs/apk/release/DeviceOptimizeHelper_v*.apk
 
@@ -50,7 +48,7 @@ jobs:
         run: |
           VERSION_NAME=$(grep -oP 'versionName "\K[^"]+' app/build.gradle)
           echo "Version Name: $VERSION_NAME"
-          echo "::set-output name=tag_name::$VERSION_NAME"
+          echo "tag_name=$VERSION_NAME" >> $GITHUB_ENV
 
       - name: Create release
         id: create_release
@@ -58,5 +56,5 @@ jobs:
         with:
           files: |
             app/build/outputs/apk/release/DeviceOptimizeHelper_v*.apk
-          tag_name: "v${{ steps.get_version.outputs.tag_name }}"
+          tag_name: "v${{ env.tag_name }}"
           token: ${{ secrets.RELEASE_GITHUB_TOKEN }}
