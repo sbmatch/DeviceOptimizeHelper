@@ -60,11 +60,17 @@ jobs:
           echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
           echo "Version Name: $VERSION_NAME"
 
-      - name: Create release
-        id: create_release
-        uses: softprops/action-gh-release@v1
+      - name: Display APK information
+        run: |
+          echo "::set-output name=apk_path::$(find app/build/outputs/apk/release -name 'DeviceOptimizeHelper_v*.apk')"
+          ls -lh $(find app/build/outputs/apk/release -name 'DeviceOptimizeHelper_v*.apk')
+
+        # Store the APK path as a job output
+        id: apk_info
+        continue-on-error: true
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v2
         with:
-          files: |
-            app/build/outputs/apk/release/DeviceOptimizeHelper_v*.apk
-          tag_name: "v${{ env.VERSION_NAME }}"
-          token: ${{ secrets.RELEASE_GITHUB_TOKEN }}
+          name: DeviceOptimizeHelper-APK
+          path: ${{ steps.apk_info.outputs.apk_path }}
