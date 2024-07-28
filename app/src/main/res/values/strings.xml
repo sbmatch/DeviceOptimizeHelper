@@ -5,6 +5,7 @@
     <string name="no_set_user_icon">禁止设置用户头像</string>
     <string name="no_usb_file_transfer">禁止通过USB传输文件</string>
     <string name="no_data_roaming">禁止数据漫游时使用网络</string>
+    <string name="no_non_market_app_by_knox">通过 Knox 禁止非市场应用安装</string>
     <string name="no_config_vpn">禁止配置VPN</string>
     <string name="no_outgoing_calls">禁止拨打电话(紧急电话除外)</string>
     <string name="no_wallpaper">禁止使用墙纸</string>

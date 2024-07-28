@@ -6,6 +6,7 @@
     <string name="no_set_user_icon">Disallow setting user icon</string>
     <string name="no_usb_file_transfer">Disallow file transfer via USB</string>
     <string name="no_data_roaming">Disallow using network during data roaming</string>
+    <string name="no_non_market_app_by_knox">Disallow non-Market app installation via Knox</string>
     <string name="no_config_vpn">Disallow configuring VPN</string>
     <string name="no_outgoing_calls">Disallow outgoing calls (except emergency calls)</string>
     <string name="no_wallpaper">Disallow using wallpaper</string>

@@ -1,5 +1,8 @@
 # DeviceOptimizeHelper
 
+DeviceOptimizeHelper是一个 Android APP，它允许管理员配置和管理 Android 设备上的用户限制政策。该工具提供了一组功能和实用工具，允许管理员配置和管理 Android 设备上的用户权限，类似于 Windows 系统中的组策略
+
+# DeviceOptimizeHelper-Main
 DeviceOptimizeHelper-Main 是一个 Android 上的可执行文件，以 root 权限执行 `app_process` 命令，从 `/data/local/tmp/` 目录加载预编译的 Dex 文件，用于配置和管理 Android 设备上的用户限制政策。该工具提供了一组功能和实用工具，允许管理员配置和管理 Android 设备上的用户权限，类似于 Windows 系统中的组策略功能。
 
 ## 特点
