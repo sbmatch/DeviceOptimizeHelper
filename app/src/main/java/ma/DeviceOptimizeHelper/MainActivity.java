@@ -7,18 +7,15 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.content.res.Resources;
-import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
-import android.util.ArrayMap;
 import android.util.ArraySet;
 import android.util.Log;
 import android.view.Menu;
@@ -29,7 +26,6 @@ import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
@@ -51,14 +47,11 @@ import java.io.File;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.List;
-import java.util.Map;
 
 import ma.DeviceOptimizeHelper.BaseApplication.BaseApplication;
 import ma.DeviceOptimizeHelper.Utils.CheckRootPermissionTask;
 import ma.DeviceOptimizeHelper.Utils.CommandExecutor;
 import ma.DeviceOptimizeHelper.Utils.FilesUtils;
-import ma.DeviceOptimizeHelper.Utils.PackageManagerUtils;
 import ma.DeviceOptimizeHelper.Utils.UserManagerUtils;
 import ma.DeviceOptimizeHelper.Utils.UserService;
 
@@ -438,7 +431,10 @@ public class MainActivity extends AppCompatActivity{
                 switchPreferenceCompat.setIconSpaceReserved(false);
                 switchPreferenceCompat.setDefaultValue(UserManagerUtils.isUserRestrictionsReflectForKey(key));
                 // 添加限制策略的描述 目前支持中，英文
-                switchPreferenceCompat.setSummary(getResIdReflect(key));
+                switchPreferenceCompat.setSummaryProvider(preference -> {
+                    if (getResIdReflect(key) == -1) return key;
+                    return getString(getResIdReflect(key));
+                });
                 // 添加开关变化监听器
                 switchPreferenceCompat.setOnPreferenceChangeListener((preference, newValue) -> {
                     Message message = Message.obtain();
@@ -585,8 +581,10 @@ public class MainActivity extends AppCompatActivity{
             //获取字段的值
             return field.getInt(null);
         } catch (Resources.NotFoundException | NoSuchFieldException | IllegalAccessException e) {
-            throw new RuntimeException(e);
+            //throw new RuntimeException(e);
+            e.printStackTrace();
         }
+        return -1;
     }
 
     public static int getIdentifierReflect(String name, String defType, String defPackage) {
