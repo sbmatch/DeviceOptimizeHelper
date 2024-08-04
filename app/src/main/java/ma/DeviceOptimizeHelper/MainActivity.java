@@ -31,7 +31,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.content.FileProvider;
 import androidx.fragment.app.FragmentManager;
-import androidx.preference.Preference;
 import androidx.preference.PreferenceCategory;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceScreen;
@@ -52,7 +51,9 @@ import ma.DeviceOptimizeHelper.BaseApplication.BaseApplication;
 import ma.DeviceOptimizeHelper.Utils.CheckRootPermissionTask;
 import ma.DeviceOptimizeHelper.Utils.CommandExecutor;
 import ma.DeviceOptimizeHelper.Utils.FilesUtils;
-import ma.DeviceOptimizeHelper.Utils.UserManagerUtils;
+import ma.DeviceOptimizeHelper.Utils.NotificationHelper;
+import ma.DeviceOptimizeHelper.Utils.ServiceManager;
+import ma.DeviceOptimizeHelper.Utils.UserManager;
 import ma.DeviceOptimizeHelper.Utils.UserService;
 
 
@@ -75,13 +76,14 @@ public class MainActivity extends AppCompatActivity{
     public int count;
     public boolean dialogShown = false;
     private static SharedPreferences sharedPreferences;
-    public static Handler mHandle;
+    public static Handler mHandle = new Handler(Looper.getMainLooper());
     private static FragmentManager fragmentManager;
     @SuppressLint("StaticFieldLeak")
     private static PreferenceCategory preferenceCategory;
     private static Context mContext;
 
     private final HeaderFragment headerFragment = new HeaderFragment();
+    static final NotificationHelper notificationHelper = NotificationHelper.newInstance();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -130,8 +132,6 @@ public class MainActivity extends AppCompatActivity{
             // 如果ActionBar为空，则设置ActionBar的背景图片为null
             actionBar.setBackgroundDrawable(null);
         }
-
-        command = "app_process -Djava.class.path=" + getApkPath(this) + "  /system/bin   ma.DeviceOptimizeHelper.Main  ";
 
         // 开发者是个小黑子
         if (!serviceThread2.isAlive()) {
@@ -200,8 +200,8 @@ public class MainActivity extends AppCompatActivity{
             });
 
 
-    public static Handler getmHandle() {
-        return (mHandle != null) ? mHandle : (new Handler(Looper.getMainLooper()));
+    public static Handler getMainUIHandle() {
+        return (mHandle != null) ? mHandle : new Handler(Looper.getMainLooper());
     }
 
     private void share_runtime_logs() {
@@ -247,7 +247,7 @@ public class MainActivity extends AppCompatActivity{
 
         if (isDhizuku) {
 
-            getmHandle().post(() -> {
+            getMainUIHandle().post(() -> {
                 // 在 catch 块之前添加一个标志
                 for (SwitchPreferenceCompat compat : switchPreferenceCompatArraySet) {
                     try {
@@ -305,10 +305,24 @@ public class MainActivity extends AppCompatActivity{
         }
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (!notificationHelper.hasPostPermission()) notificationHelper.requestPermission(this, new String[]{"android.permission.POST_NOTIFICATIONS"}, 999);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == 999 && grantResults[0] == 0){
+            notificationHelper.createNotificationChannel("msgToast", "异常通知", 4, null);
+        }
+    }
 
     public static class HeaderFragment extends PreferenceFragmentCompat {
 
         Handler handler;
+        Context context;
 
         // 获取 SharedPreferences
         @SuppressLint("ResourceAsColor")
@@ -316,18 +330,20 @@ public class MainActivity extends AppCompatActivity{
         public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
 
             // 引入context
-            Context context = requireContext();
+            context = requireContext();
+
+            UserManager userManager = ServiceManager.getUserManager;
 
             // 获取所有用户的限制
-            ArraySet<String> getALLUserRestrictions = UserManagerUtils.getALLUserRestrictionsReflectForUserManager();
+            ArraySet<String> getALLUserRestrictions = userManager.getALLUserRestrictionsWithReflect();
 
             // 如果sharedPreferences为空，则获取sharedPreferences
             if (sharedPreferences == null) {
                 sharedPreferences = getPreferenceManager().getSharedPreferences();
             }
 
-// 创建一个 Handler 对象，将它关联到指定线程的 Looper 上
-// 这里的 serviceThread2 是一个线程对象，通过 getLooper() 获取它的消息循环
+            // 创建一个 Handler 对象，将它关联到指定线程的 Looper 上
+            // 这里的 serviceThread2 是一个线程对象，通过 getLooper() 获取它的消息循环
             handler = new Handler(serviceThread2.getLooper(), msg -> {
                 // 获取限制策略的键
                 String key = (String) msg.obj;
@@ -341,16 +357,10 @@ public class MainActivity extends AppCompatActivity{
                                 // 使用 dhizuku 提供的权限执行任务
                                 userService.clearUserRestriction(DhizukuVariables.COMPONENT_NAME, key);
                                 // 显示 Toast 在主线程中执行
-                                new Handler(Looper.getMainLooper()).post(() ->
-                                        Toast.makeText(context, "已禁用此限制策略", Toast.LENGTH_SHORT).show()
-                                );
+                                Toast.makeText(context, "已禁用此限制策略", Toast.LENGTH_SHORT).show();
                             }
-                        } catch (Exception e1) {
-                            e1.printStackTrace();
-                            // 显示 Toast 在主线程中执行
-                            new Handler(Looper.getMainLooper()).post(() ->
-                                    Toast.makeText(context, "任务执行失败", Toast.LENGTH_SHORT).show()
-                            );
+                        } catch (Throwable e1) {
+                            notificationHelper.showNotification("msgToast", "禁用失败", e1.getMessage(), 888, true, new Intent(), null, null);
                         }
                         break;
                     case 1: // 当 newValue 的值为 1 时，启用指定的限制策略
@@ -358,17 +368,10 @@ public class MainActivity extends AppCompatActivity{
                             if (userService != null) {
                                 // 使用 dhizuku 提供的权限执行任务
                                 userService.addUserRestriction(DhizukuVariables.COMPONENT_NAME, key);
-                                // 显示 Toast 在主线程中执行
-                                new Handler(Looper.getMainLooper()).post(() ->
-                                        Toast.makeText(context, "已启用此限制策略", Toast.LENGTH_SHORT).show()
-                                );
+                                Toast.makeText(context, "已启用此限制策略", Toast.LENGTH_SHORT).show();
                             }
-                        } catch (Exception e2) {
-                            e2.printStackTrace();
-                            // 显示 Toast 在主线程中执行
-                            new Handler(Looper.getMainLooper()).post(() ->
-                                    Toast.makeText(context, "任务执行失败", Toast.LENGTH_SHORT).show()
-                            );
+                        } catch (Throwable e2) {
+                            notificationHelper.showNotification("msgToast", "启用失败", e2.getMessage(), 888, true, new Intent(), null, null);
                         }
                         break;
                     default:
@@ -409,7 +412,7 @@ public class MainActivity extends AppCompatActivity{
                 switchPreferenceCompat.setKey(key);
                 switchPreferenceCompat.setTitle(key);
                 switchPreferenceCompat.setIconSpaceReserved(false);
-                switchPreferenceCompat.setDefaultValue(UserManagerUtils.isUserRestrictionsReflectForKey(key));
+                switchPreferenceCompat.setDefaultValue(userManager.hasUserRestriction(key));
                 // 添加限制策略的描述 目前支持中，英文
                 switchPreferenceCompat.setSummaryProvider(preference -> {
                     if (getResIdReflect(key) == -1) return key;
@@ -435,37 +438,16 @@ public class MainActivity extends AppCompatActivity{
                 //Log.d(TAG, "创建SwitchPreference: " + key + "\n当前次数/总次数" + SwitchPreference_create_count + "/" + getALLUserRestrictions.size());
             }
 
-            preferenceCategory.setTitle("* 注: 限制策略的数量受Android版本的影响");
+            preferenceCategory.setTitle("* 注: 限制策略的数量受Android版本及OEM厂商的影响");
             setPreferenceScreen(preferenceScreen); // 将这些都显示出来
 
         }
 
         @Override
-        public boolean onPreferenceTreeClick(@NonNull Preference preference) {
-            CheckRootPermissionTask task = new CheckRootPermissionTask(hasRootPermission -> {
-                sharedPreferences.edit().putBoolean("isGrantRoot", hasRootPermission).apply();
-            });
-            //task.execute();
-
-            return super.onPreferenceTreeClick(preference);
-
-        }
-
-        @Override
         public void onResume() {
-
-            if (sharedPreferences.getBoolean("first_checkRoot", false)) {
-                // 创建一个CheckRootPermissionTask实例
-                CheckRootPermissionTask task = new CheckRootPermissionTask(hasRootPermission -> {
-                    // 将hasRootPermission设置到sharedPreferences中
-                    sharedPreferences.edit().putBoolean("isGrantRoot", hasRootPermission).apply();
-                });
-                // 执行task
-                //task.execute();
-            }
-            bindDhizukuservice();
-
             super.onResume();
+            // 只有已授权Dhizuku 且 未绑定userService 时才执行绑定， 避免多次执行造成卡顿
+            if (sharedPreferences.getBoolean("isGrantDhizuku", false) && userService == null) bindDhizukuservice();
         }
 
 
@@ -486,7 +468,6 @@ public class MainActivity extends AppCompatActivity{
                     @Override
                     public void onServiceDisconnected(ComponentName name) {
                         Log.e("Dhizuku", name + "  is Disconnected");
-                        bindDhizukuservice();
                     }
                 });
             } catch (IllegalStateException e) {
@@ -495,31 +476,31 @@ public class MainActivity extends AppCompatActivity{
             }
         }
 
-        public void tryRequestRoot() {
-            if (!sharedPreferences.getBoolean("first_checkRoot", false)) {
-                commandExecutor.executeCommand(command, new CommandExecutor.CommandResultListener() {
-                    @Override
-                    public void onSuccess(String output) {
-
-                        sharedPreferences.edit().putBoolean("first_checkRoot", true).apply();
-
-                        CheckRootPermissionTask task = new CheckRootPermissionTask(hasRootPermission -> {
-                            sharedPreferences.edit().putBoolean("isGrantRoot", hasRootPermission).apply();
-                        });
-                        task.execute();
-
-                        Looper.prepare();
-                        Toast.makeText(requireContext(), "已授权Root", Toast.LENGTH_SHORT).show();
-                    }
-
-                    @Override
-                    public void onError(String error, Exception e) {
-                        Log.e("CommandExecutor", "root权限授权失败", e);
-                    }
-
-                }, true, true);
-            }
-        }
+//        public void tryRequestRoot() {
+//            if (!sharedPreferences.getBoolean("first_checkRoot", false)) {
+//                commandExecutor.executeCommand(command, new CommandExecutor.CommandResultListener() {
+//                    @Override
+//                    public void onSuccess(String output) {
+//
+//                        sharedPreferences.edit().putBoolean("first_checkRoot", true).apply();
+//
+//                        CheckRootPermissionTask task = new CheckRootPermissionTask(hasRootPermission -> {
+//                            sharedPreferences.edit().putBoolean("isGrantRoot", hasRootPermission).apply();
+//                        });
+//                        task.execute();
+//
+//                        Looper.prepare();
+//                        Toast.makeText(requireContext(), "已授权Root", Toast.LENGTH_SHORT).show();
+//                    }
+//
+//                    @Override
+//                    public void onError(String error, Exception e) {
+//                        Log.e("CommandExecutor", "root权限授权失败", e);
+//                    }
+//
+//                }, true, true);
+//            }
+//        }
 
         public void tryRequestsDhizukuPermission(Context context) {
             try {
