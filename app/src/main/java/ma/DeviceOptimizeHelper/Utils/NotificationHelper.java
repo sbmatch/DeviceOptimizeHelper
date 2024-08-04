@@ -49,7 +49,7 @@ public class NotificationHelper {
                 .setSmallIcon(android.R.drawable.ic_dialog_info) // 设置通知图标
                 .setContentTitle(title) // 设置通知标题
                 .setContentText(content)
-                .setStyle(new NotificationCompat.BigTextStyle().bigText(content)) // 设置通知内容
+                .setStyle(new NotificationCompat.BigTextStyle().setSummaryText(content)) // 设置通知内容
                 .setAutoCancel(autoCancel) // 点击后是否自动取消
                 .setContentIntent(pendingIntent) // 设置点击动作
                 .setSound(soundUri) // 设置通知声音
