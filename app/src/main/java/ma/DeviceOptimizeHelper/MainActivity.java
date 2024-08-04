@@ -243,9 +243,8 @@ public class MainActivity extends AppCompatActivity{
         // 重写了一键切换限制策略的实现，现在会首先使用Dhizuku进行执行， 遇到无法设置的限制则尝试使用root进行设置
 
         StringBuffer stringBuffer = new StringBuffer();
-        boolean isDhizuku = sharedPreferences.getBoolean("isGrantDhizuku", false);
 
-        if (isDhizuku) {
+        if (userService != null) {
 
             getMainUIHandle().post(() -> {
                 // 在 catch 块之前添加一个标志
@@ -270,31 +269,13 @@ public class MainActivity extends AppCompatActivity{
                         }
                         count = stringBuffer.toString().split("\n").length;
 
-                        commandExecutor.executeCommand(command + compat.getKey() + z, new CommandExecutor.CommandResultListener() {
-                            @Override
-                            public void onSuccess(String output) {
-                                if (!dialogShown) {
-                                    dialogShown = true; // 设置标志，表示已经弹出了对话框
-
-                                    runOnUiThread(() -> {
-                                        compat.setChecked(z);
-                                        String title = String.format(getString(getResIdReflect("set_error_count_title")), count, z ? "启用" : "禁用");
-                                        new MaterialAlertDialogBuilder(MainActivity.this).setTitle(title).setMessage(stringBuffer.toString()).setPositiveButton("Ok", null).create().show();
-                                    });
-                                }
-                            }
-
-                            @Override
-                            public void onError(String error, Exception e) {
-                                if (!dialogShown) {
-                                    dialogShown = true; // 设置标志，表示已经弹出了对话框
-                                    runOnUiThread(() -> {
-                                        String title = String.format(getString(getResIdReflect("set_error_count_title")), count, "失败");
-                                        new MaterialAlertDialogBuilder(MainActivity.this).setTitle(title).setMessage(stringBuffer.toString()).setPositiveButton("Ok", null).create().show();
-                                    });
-                                }
-                            }
-                        }, true, true);
+                        if (!dialogShown) {
+                            dialogShown = true; // 设置标志，表示已经弹出了对话框
+                            runOnUiThread(() -> {
+                                String title = String.format(getString(getResIdReflect("set_error_count_title")), count, "失败");
+                                new MaterialAlertDialogBuilder(MainActivity.this).setTitle(title).setMessage(stringBuffer.toString()).setPositiveButton("Ok", null).create().show();
+                            });
+                        }
                     }
                 }
                 dialogShown = false;
@@ -383,10 +364,10 @@ public class MainActivity extends AppCompatActivity{
 
 
 
-            if ((sharedPreferences.getBoolean("isGrantDhizuku", false) || sharedPreferences.getBoolean("isGrantRoot", false))) {
+            if ((sharedPreferences.getBoolean("isGrantDhizuku", false))) {
                 Toast.makeText(context, "欢迎使用", Toast.LENGTH_SHORT).show();
             } else {
-                new MaterialAlertDialogBuilder(context).setTitle("应用说明").setMessage("本应用仅支持 Dhizuku 使用方式，此模式下各家深度定制ROM对<设备所有者>权限的限制则各有不同，接下来我们会向您请求权限, 现在，我们将尝试申请您设备上的Dhizuku权限 \n如果您了解自己在干什么，请点击继续按钮")
+                new MaterialAlertDialogBuilder(context).setTitle("应用说明").setMessage("本应用仅支持 Dhizuku 使用方式，此模式下各家深度定制ROM对<设备所有者>权限的限制则各有不同. \n")
                         .setPositiveButton("继续", (dialog, which) -> {
                             tryRequestsDhizukuPermission(context);
                             dialog.cancel();
@@ -427,7 +408,13 @@ public class MainActivity extends AppCompatActivity{
 
                     Log.i("SwitchPreferenceChangeListener", "newValue(创建新值): " + newValue);
 
-                    return sharedPreferences.getBoolean("isGrantDhizuku", false);
+                    // 延迟500ms判断是否设置成功并更新ui
+                    getMainUIHandle().postDelayed(() -> {
+                        SwitchPreferenceCompat switchPrefer = findPreference(preference.getKey());
+                        switchPrefer.setChecked(userManager.hasUserRestriction(preference.getKey()));
+                    }, 500);
+
+                    return userService != null;
                 });
                 // 将动态生成的SwitchPreferenceCompat对象添加进一个列表中
                 switchPreferenceCompatArraySet.add(switchPreferenceCompat);
@@ -439,6 +426,7 @@ public class MainActivity extends AppCompatActivity{
             }
 
             preferenceCategory.setTitle("* 注: 限制策略的数量受Android版本及OEM厂商的影响");
+
             setPreferenceScreen(preferenceScreen); // 将这些都显示出来
 
         }
@@ -519,7 +507,6 @@ public class MainActivity extends AppCompatActivity{
                             })).setNegativeButton("取消", null).create().show();
                 }
             } catch (IllegalStateException e) {
-                e.printStackTrace();
                 Toast.makeText(context, "Dhizuku 未安装或未激活", Toast.LENGTH_SHORT).show();
             }
         }
@@ -546,36 +533,6 @@ public class MainActivity extends AppCompatActivity{
             e.printStackTrace();
         }
         return -1;
-    }
-
-    public static int getIdentifierReflect(String name, String defType, String defPackage) {
-        //获取R.string.class对象
-        try {
-            Class<?> clazz = Resources.class;
-            //获取key对应的字段
-            Method m1 = clazz.getMethod("getIdentifier",String.class, String.class, String.class);
-
-            return (int)m1.invoke(null,name,defType,defPackage);
-        } catch (Resources.NotFoundException | IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public static String getApkPath(Context context) {
-        //获取apk路径
-        String apkPath;
-        try {
-            //获取packageManager
-            PackageManager packageManager = context.getPackageManager();
-            //获取applicationInfo
-            ApplicationInfo applicationInfo = packageManager.getApplicationInfo(context.getPackageName(), 0);
-            //获取apk路径
-            apkPath = applicationInfo.sourceDir;
-            return apkPath;
-        } catch (PackageManager.NameNotFoundException e) {
-            //抛出异常
-            throw new RuntimeException(e);
-        }
     }
 
 }
