@@ -9,6 +9,7 @@ import android.os.Build;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.FileProvider;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.rosan.dhizuku.api.Dhizuku;
@@ -25,7 +26,7 @@ import ma.DeviceOptimizeHelper.Utils.NotificationHelper;
 public class BaseApplication extends Application {
     public static Context context;
     public static String systemInfo;
-    static NotificationHelper notificationHelper = NotificationHelper.newInstance();
+    static NotificationHelper notificationHelper;
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -51,13 +52,15 @@ public class BaseApplication extends Application {
     public void onCreate() {
         super.onCreate();
 
+        notificationHelper = NotificationHelper.newInstance();
+
         // 获取系统信息
         String manufacturer = Build.MANUFACTURER;
         String model = Build.MODEL;
         String version = Build.VERSION.RELEASE;
         int sdkVersion = Build.VERSION.SDK_INT;
         // 创建包含系统信息的日志字符串
-        systemInfo = "Manufacturer: " + manufacturer + ", Model: " + model + ", Android Version: " + version + ", SDK Version: " + sdkVersion;
+        systemInfo = "供应商: " + manufacturer + ", 型号: " + model + ", Android版本: " + version + ", SDK版本: " + sdkVersion;
 
         Thread.setDefaultUncaughtExceptionHandler(new GlobalExceptionHandler(context));
     }
@@ -94,7 +97,16 @@ public class BaseApplication extends Application {
             //将崩溃日志写入文件
             FilesUtils.writeToFile(logPath,systemInfo+"\n"+stackTraceContext, false);
 
-            notificationHelper.showNotification("msgToast", "崩了。。。",stackTraceContext,888, false, new Intent(), null, null);
+            // 使用系统分享发送文件
+            Intent intent = new Intent(Intent.ACTION_SEND);
+            // 设置分享文件的类型
+            intent.setType("text/plain");
+            // 将文件转换为Uri
+            intent.putExtra(Intent.EXTRA_TEXT, systemInfo+"\n"+stackTraceContext);
+            // 添加权限
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+            notificationHelper.showNotification("msgToast", "崩溃日志(点我可拉起分享)",stackTraceContext,888, false, intent, null, null);
 
             // 调用默认的异常处理
             defaultHandler.uncaughtException(thread,throwable);
