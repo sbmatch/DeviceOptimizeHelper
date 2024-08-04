@@ -20,10 +20,12 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import ma.DeviceOptimizeHelper.Utils.FilesUtils;
+import ma.DeviceOptimizeHelper.Utils.NotificationHelper;
 
 public class BaseApplication extends Application {
     public static Context context;
     public static String systemInfo;
+    static NotificationHelper notificationHelper = NotificationHelper.newInstance();
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -38,6 +40,11 @@ public class BaseApplication extends Application {
         Dhizuku.init(base);
         //将当前上下文设置为base
         this.context = base;
+    }
+
+    @Override
+    public Context getApplicationContext() {
+        return super.getApplicationContext();
     }
 
     @Override
@@ -77,7 +84,6 @@ public class BaseApplication extends Application {
         private final Context context;
         Thread.UncaughtExceptionHandler defaultHandler = Thread.getDefaultUncaughtExceptionHandler();
         public GlobalExceptionHandler(Context context) {
-
             this.context = context;
         }
         @Override
@@ -88,7 +94,7 @@ public class BaseApplication extends Application {
             //将崩溃日志写入文件
             FilesUtils.writeToFile(logPath,systemInfo+"\n"+stackTraceContext, false);
 
-            Toast.makeText(context, "崩溃已写入Android/data/../cache/logs", Toast.LENGTH_SHORT).show();
+            notificationHelper.showNotification("msgToast", "崩了。。。",stackTraceContext,888, false, new Intent(), null, null);
 
             // 调用默认的异常处理
             defaultHandler.uncaughtException(thread,throwable);
