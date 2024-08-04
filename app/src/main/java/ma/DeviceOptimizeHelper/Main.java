@@ -2,6 +2,7 @@ package ma.DeviceOptimizeHelper;
 
 import android.accessibilityservice.AccessibilityServiceInfo;
 import android.accounts.Account;
+import android.accounts.AccountManager;
 import android.accounts.IAccountManager;
 import android.accounts.IAccountManagerResponse;
 import android.annotation.SuppressLint;
@@ -19,6 +20,7 @@ import android.os.Message;
 import android.os.Process;
 import android.os.RemoteException;
 import android.os.UserHandle;
+import android.system.Os;
 import android.util.ArraySet;
 import android.util.SparseArray;
 
@@ -29,7 +31,6 @@ import com.miui.enterprise.sdk.DeviceManager;
 import com.miui.enterprise.sdk.PhoneManager;
 import com.miui.enterprise.sdk.RestrictionsManager;
 
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -39,9 +40,11 @@ import java.util.List;
 import java.util.Set;
 
 import dalvik.system.DexClassLoader;
-import ma.DeviceOptimizeHelper.Utils.AccessibilityManagerUtils;
-import ma.DeviceOptimizeHelper.Utils.PackageManagerUtils;
-import ma.DeviceOptimizeHelper.Utils.UserManagerUtils;
+import ma.DeviceOptimizeHelper.Utils.AccessibilityManager;
+import ma.DeviceOptimizeHelper.Utils.ContextUtils;
+import ma.DeviceOptimizeHelper.Utils.PackageManager;
+import ma.DeviceOptimizeHelper.Utils.ServiceManager;
+import ma.DeviceOptimizeHelper.Utils.UserManager;
 
 public class Main {
     // 引入 Android 的 IAccountManager 接口，用于操作帐户管理
@@ -60,17 +63,36 @@ public class Main {
 
     private static MultiJarClassLoader classLoader;
 
-    private static RestrictionsManager restrictionsManager;
-    private static DeviceManager deviceManager;
-    private static ApplicationManager applicationManager;
-    private static PhoneManager phoneManager;
+    static RestrictionsManager restrictionsManager;
+    static DeviceManager deviceManager;
+    static ApplicationManager applicationManager;
+    static PhoneManager phoneManager;
+    static final PackageManager packageManager = ServiceManager.getPackageManager;
 
+    static final UserManager userManager = ServiceManager.getUserManager;
+
+    static ArrayList<String> exemptList = new ArrayList<>();
+
+
+
+    static {
+        exemptList.add("com.android.deskclock");
+        exemptList.add("com.google.android.gms");
+        exemptList.add("com.tencent.mm");
+
+       try {
+           restrictionsManager = RestrictionsManager.getInstance();
+           deviceManager = DeviceManager.getInstance();
+           applicationManager = ApplicationManager.getInstance();
+           phoneManager = PhoneManager.getInstance();
+       }catch (Throwable e) {}
+    }
 
     public static void main(String[] args) {
 
-        if (Binder.getCallingUid() == 0 || Binder.getCallingUid() == 1000) {
+        if (Binder.getCallingUid() == 0 || Binder.getCallingUid() == 2000) {
             Looper.prepare();
-            context = retrieveSystemContext();
+            context = (Context) ContextUtils.getContext();
             // 用于保存父类加载器
             ClassLoader parentClassloader = context.getClassLoader();
             // 创建一个自定义的类加载器，用于加载外部 JAR 文件
@@ -78,56 +100,68 @@ public class Main {
             classLoader.addJar("/system/framework/services.jar");
             classLoader.addJar("/system_ext/framework/miui-framework.jar");
 
-            restrictionsManager = RestrictionsManager.getInstance();
-            deviceManager = DeviceManager.getInstance();
-            applicationManager = ApplicationManager.getInstance();
-            phoneManager = PhoneManager.getInstance();
+            try {
 
-            // 判断参数长度
-            switch (args.length) {
+                // 如果是 root 用户 则切换到 system
+                if (Binder.getCallingUid() == 0) Os.setuid(1000);
 
-                case 1:
-                    // 有一个参数
-                    if (args[0].equals("disable")){
-                        for (String key : getDisallowsFieldReflect()){
-                            restrictionsManager.setRestriction(key,true);
-                            System.out.println("已设置 "+sRestrictionArray.get(key) +" --> "+(restrictionsManager.hasRestriction(key) ? "禁用" : "启用"));
-                        }
-                    }
+                // 判断参数长度
+                switch (args.length) {
 
-                    //判断参数为remove 启动一个进程移除设备上的电池优化白名单和同步账号
-                    if (args[0].equals("remove")) {
-                        serviceThread.start();
-                        if (Binder.getCallingUid() == 1000){
-                            try {
-                                for (Account account : iAccountManager.getAccountsAsUser(null, getIdentifier(), "com.android.settings")) {
-                                    removeAccount(account);
-                                }
-                            }catch (Exception e){
-                                e.printStackTrace();
+                    case 1:
+                        // 有一个参数
+                        if (args[0].equals("disable")){
+                            for (String key : getDisallowsFieldReflect()){
+                                restrictionsManager.setRestriction(key,true);
+                                System.out.println("已设置 "+sRestrictionArray.get(key) +" --> "+(restrictionsManager.hasRestriction(key) ? "禁用" : "启用"));
                             }
                         }
-                    }
 
-                    if (args[0].equals("true") || args[0].equals("false")){
-                        // 若不是 根据这个参数的值启用或禁用设备上所有可用的限制策略
-                        boolean value = Boolean.parseBoolean(args[0]);
-                        for (String key : UserManagerUtils.getALLUserRestrictionsReflectForUserManager()) {
-                            setUserRestrictionReflect(key, value);
+                        //判断参数为remove 启动一个进程移除设备上的电池优化白名单和同步账号
+                        if (args[0].equals("removeTask")) {
+
+                            String[] sysPowerSaveList = iDeviceIdleController.getSystemPowerWhitelist();
+                            for (String sps : sysPowerSaveList) {
+                                if (exemptList.contains(sps)) continue;
+                                iDeviceIdleController.removeSystemPowerWhitelistApp(sps);
+                                System.out.println("正在移除系统级优化白名单: " + sps + "\n");
+                            }
+
+                            String[] userPowerSaveList = iDeviceIdleController.getUserPowerWhitelist();
+                            for (String ups : userPowerSaveList) {
+                                if (exemptList.contains(ups)) continue;
+                                iDeviceIdleController.removePowerSaveWhitelistApp(ups);
+                                System.out.println("正在移除用户级优化白名单: " + ups);
+                            }
+
+                            AccountManager accountManager = (AccountManager) ContextUtils.createContextAsUser().getSystemService(Context.ACCOUNT_SERVICE);
+                            for (Account acc : accountManager.getAccounts()){
+                                System.out.println(acc+"\n");
+                                removeAccount(acc);
+                            }
                         }
-                    }
-                    break;
-                case 2:
-                    // 有两个参数 根据提供的参数设置对应key的值
-                    String name = args[0];
-                    boolean newValue = Boolean.parseBoolean(args[1]);
-                    setUserRestrictionReflect(name, newValue);
-                    break;
-                default:
-                    System.err.print("好小子， 总爱给我玩点新花样");
+
+                        if (args[0].equals("true") || args[0].equals("false")){
+                            // 若不是 根据这个参数的值启用或禁用设备上所有可用的限制策略
+                            boolean value = Boolean.parseBoolean(args[0]);
+                            for (String key : userManager.getALLUserRestrictionsWithReflect()) {
+                                setUserRestrictionReflect(key, value);
+                            }
+                        }
+                        break;
+                    case 2:
+                        // 有两个参数 根据提供的参数设置对应key的值
+                        String name = args[0];
+                        boolean newValue = Boolean.parseBoolean(args[1]);
+                        setUserRestrictionReflect(name, newValue);
+                        break;
+                    default:
+                        System.err.print("好小子， 总爱给我玩点新花样");
+                }
+            }catch (Throwable e){
+                System.err.println(e);
             }
-        } else {
-            System.err.print("   You must execute with root privileges!   ");
+
         }
 
     }
@@ -319,23 +353,7 @@ public class Main {
 
             handler = new Handler(serviceThread.getLooper(), new ChildCallback());
 
-
             try {
-
-                String[] sysPowerSaveList = iDeviceIdleController.getSystemPowerWhitelist();
-                for (String sPwt : sysPowerSaveList) {
-                    iDeviceIdleController.removeSystemPowerWhitelistApp(sPwt);
-                    System.out.println("正在移除系统级优化白名单: " + sPwt + "\n");
-                }
-
-                String[] userPowerSaveList = iDeviceIdleController.getUserPowerWhitelist();
-                if (userPowerSaveList.length > 0) {
-                    for (String uPws : userPowerSaveList) {
-                        iDeviceIdleController.removePowerSaveWhitelistApp(uPws);
-                        System.out.println("正在移除用户级优化白名单: " + uPws);
-                    }
-                    System.out.println("共 " + userPowerSaveList.length + " 个用户级电池优化白名单已移除");
-                }
 
                 // 取消<强制开启且无法关闭>限制
                 for (String key : getControlStatusFieldReflect()){
@@ -400,7 +418,7 @@ public class Main {
                     System.out.println("双开黑名单已清空");
                 }
 
-                for (String packageName : (String[]) PackageManagerUtils.IPackageManagerNative().getClass().getMethod("getAllPackages").invoke(PackageManagerUtils.IPackageManagerNative())){
+                for (String packageName : packageManager.getInstalledPackageName(android.content.pm.PackageManager.MATCH_ALL)){
                     if (applicationManager.getApplicationSettings(packageName) != ApplicationManager.FLAG_DEFAULT){
                         System.out.println(packageName+" 被授权 "+sAppPrivilegeArray.get(applicationManager.getApplicationSettings(packageName)));
                         applicationManager.setApplicationSettings(packageName, ApplicationManager.FLAG_DEFAULT);
@@ -408,11 +426,11 @@ public class Main {
                     }
                 }
 
-                for (AccessibilityServiceInfo serviceInfo : AccessibilityManagerUtils.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_GENERIC, getIdentifier())){
+                for (AccessibilityServiceInfo serviceInfo : AccessibilityManager.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_GENERIC, getIdentifier())){
                         ServiceInfo componentInfo = serviceInfo.getResolveInfo().serviceInfo;
                         ComponentName componentName = new ComponentName(componentInfo.packageName, componentInfo.name);
                         applicationManager.enableAccessibilityService(componentName, false);
-                        System.out.println("已撤销授予 "+PackageManagerUtils.getAppNameForPackageName(context.createPackageContext(componentName.getPackageName(), Context.CONTEXT_IGNORE_SECURITY) ,componentName.getPackageName(), 0, getIdentifier())+" 的无障碍授权");
+                        System.out.println("已撤销授予 "+packageManager.getAppNameForPackageName(context.createPackageContext(componentName.getPackageName(), Context.CONTEXT_IGNORE_SECURITY) ,componentName.getPackageName())+" 的无障碍授权");
                 }
 
                 for (ComponentName componentName : getDeviceAdminsReflect()){
@@ -553,24 +571,6 @@ public class Main {
 //            throw new SecurityException(e2);
 //        }
 //    }
-
-    private static Context retrieveSystemContext() {
-        try {
-            @SuppressLint("PrivateApi")
-            Class<?> activityThreadClass = Class.forName("android.app.ActivityThread");
-            Constructor<?> activityThreadConstructor = activityThreadClass.getDeclaredConstructor();
-            activityThreadConstructor.setAccessible(true);
-            Object activityThread = activityThreadConstructor.newInstance();
-            Method getSystemContextMethod = activityThread.getClass().getDeclaredMethod("getSystemContext");
-            getSystemContextMethod.setAccessible(true);
-            return (Context) getSystemContextMethod.invoke(activityThread);
-
-        } catch (ClassNotFoundException | InvocationTargetException | IllegalAccessException |
-                 InstantiationException | NoSuchMethodException e) {
-            e.printStackTrace();
-            throw new RuntimeException(e);
-        }
-    }
 
 
     public static class MultiJarClassLoader extends ClassLoader {
