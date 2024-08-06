@@ -26,7 +26,7 @@ public class ContextUtils {
         }
     }
 
-    public static Object getContext() {
+    public static Context getContext() {
 
         // 如果调用方是系统进程则获取SystemContext
         if (Process.myUid() == 0 || Process.myUid() == 1000){
@@ -34,7 +34,7 @@ public class ContextUtils {
                 Object activityThread = getActivityThreadWithReflect();
                 Method getSystemContextMethod = activityThread.getClass().getDeclaredMethod("getSystemContext");
                 getSystemContextMethod.setAccessible(true);
-                return getSystemContextMethod.invoke(activityThread);
+                return (Context) getSystemContextMethod.invoke(activityThread);
             } catch (Throwable e) {
                 throw new RuntimeException(e);
             }
@@ -48,7 +48,7 @@ public class ContextUtils {
     }
 
     public static Context createPackageContext(String packageName){
-        return (Context) ReflectUtil.callObjectMethod2(getContext(),"createPackageContext",packageName, Context.CONTEXT_INCLUDE_CODE | Context.CONTEXT_IGNORE_SECURITY);
+        return (Context) ReflectUtil.callObjectMethod2(getContext(),"createPackageContext",packageName, Context.CONTEXT_IGNORE_SECURITY);
     }
 
     public static Context createContextAsUser(){
