@@ -1,19 +1,15 @@
 package ma.DeviceOptimizeHelper;
 
 import android.annotation.SuppressLint;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.content.SharedPreferences;
-import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
-import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
 import android.util.ArraySet;
@@ -39,22 +35,20 @@ import androidx.preference.SwitchPreferenceCompat;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.rosan.dhizuku.api.Dhizuku;
 import com.rosan.dhizuku.api.DhizukuRequestPermissionListener;
-import com.rosan.dhizuku.api.DhizukuUserServiceArgs;
 import com.rosan.dhizuku.shared.DhizukuVariables;
 
 import java.io.File;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 
 import ma.DeviceOptimizeHelper.BaseApplication.BaseApplication;
-import ma.DeviceOptimizeHelper.Utils.CheckRootPermissionTask;
+import ma.DeviceOptimizeHelper.IInterface.DhizukuUserServiceFactory;
+import ma.DeviceOptimizeHelper.IInterface.IUserServiceCallback;
 import ma.DeviceOptimizeHelper.Utils.CommandExecutor;
+import ma.DeviceOptimizeHelper.Utils.ContextUtils;
 import ma.DeviceOptimizeHelper.Utils.FilesUtils;
 import ma.DeviceOptimizeHelper.Utils.NotificationHelper;
 import ma.DeviceOptimizeHelper.Utils.ServiceManager;
 import ma.DeviceOptimizeHelper.Utils.UserManager;
-import ma.DeviceOptimizeHelper.Utils.UserService;
 
 
 // TODO 注释！！！可以用codegeex或者chatgpt一键生成即可（文心就是垃圾）
@@ -70,17 +64,17 @@ public class MainActivity extends AppCompatActivity{
     public static PreferenceScreen preferenceScreen;
     public static ArraySet<SwitchPreferenceCompat> switchPreferenceCompatArraySet = new ArraySet<>();
     public static CommandExecutor commandExecutor = CommandExecutor.getInstance();
-    public static IUserService userService;
-    private static String command;
+    private static IUserService userService;
     private static final MainActivity.ServiceThread2 serviceThread2 = new ServiceThread2("你干嘛哎呦");
     public int count;
     public boolean dialogShown = false;
     private static SharedPreferences sharedPreferences;
     public static Handler mHandle = new Handler(Looper.getMainLooper());
-    private static FragmentManager fragmentManager;
     @SuppressLint("StaticFieldLeak")
     private static PreferenceCategory preferenceCategory;
     private static Context mContext;
+
+    private static DhizukuUserServiceFactory dhizukuUserServiceFactory;
 
     private final HeaderFragment headerFragment = new HeaderFragment();
     static final NotificationHelper notificationHelper = NotificationHelper.newInstance();
@@ -90,9 +84,9 @@ public class MainActivity extends AppCompatActivity{
         super.onCreate(savedInstanceState);
         setContentView(R.layout.settings_activity);
 
-        mContext = getApplicationContext();
+        mContext = MainActivity.this;
 
-        fragmentManager = getSupportFragmentManager();
+        FragmentManager fragmentManager = getSupportFragmentManager();
 
         if (savedInstanceState != null) {
             // 如果savedInstanceState不为空，则设置标题
@@ -138,6 +132,11 @@ public class MainActivity extends AppCompatActivity{
             serviceThread2.start();
         }
 
+        if (!notificationHelper.hasPostPermission()) notificationHelper.requestPermission(this, new String[]{"android.permission.POST_NOTIFICATIONS"}, 999);
+
+        dhizukuUserServiceFactory = new DhizukuUserServiceFactory(service -> {
+            userService = service;
+        });
     }
 
     @Override
@@ -145,12 +144,6 @@ public class MainActivity extends AppCompatActivity{
         super.onSaveInstanceState(outState);
         // Save current activity title so we can set it again after a configuration change
         outState.putCharSequence(TITLE_TAG, getTitle());
-    }
-
-    @Override
-    public void onConfigurationChanged(@NonNull Configuration newConfig) {
-        super.onConfigurationChanged(newConfig);
-
     }
 
     @Override
@@ -221,7 +214,7 @@ public class MainActivity extends AppCompatActivity{
                     // 获取最新的文件
                     File shareFile = FilesUtils.getLatestFileInDirectory(BaseApplication.getLogsDir(getBaseContext()).getAbsolutePath());
                     // 将文件转换为Uri
-                    intent.putExtra(Intent.EXTRA_STREAM, FileProvider.getUriForFile(getBaseContext(), "ma.DeviceOptimizeHelper.provider", shareFile));
+                    intent.putExtra(Intent.EXTRA_STREAM, FileProvider.getUriForFile(ContextUtils.getContext(), "ma.DeviceOptimizeHelper.provider", shareFile));
                     // 添加权限
                     intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
                     // 启动分享
@@ -281,15 +274,15 @@ public class MainActivity extends AppCompatActivity{
                 dialogShown = false;
             });
 
-        } else {
-            Toast.makeText(this, "🤣👉🤡", Toast.LENGTH_SHORT).show();
         }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        if (!notificationHelper.hasPostPermission()) notificationHelper.requestPermission(this, new String[]{"android.permission.POST_NOTIFICATIONS"}, 999);
+        if (Dhizuku.isPermissionGranted() && userService == null){
+            dhizukuUserServiceFactory.createIUserService();
+        }
     }
 
     @Override
@@ -321,6 +314,16 @@ public class MainActivity extends AppCompatActivity{
             // 如果sharedPreferences为空，则获取sharedPreferences
             if (sharedPreferences == null) {
                 sharedPreferences = getPreferenceManager().getSharedPreferences();
+            }
+
+            if (Dhizuku.isPermissionGranted()) {
+                Toast.makeText(mContext, "欢迎使用", Toast.LENGTH_SHORT).show();
+            } else {
+                new MaterialAlertDialogBuilder(mContext).setTitle("应用说明").setMessage("本应用仅支持 Dhizuku 使用方式，此模式下各家深度定制ROM对<设备所有者>权限的限制则各有不同. \n")
+                        .setPositiveButton("继续", (dialog, which) -> {
+                            tryRequestsDhizukuPermission(mContext);
+                            dialog.cancel();
+                        }).setNegativeButton("取消", null).create().show();
             }
 
             // 创建一个 Handler 对象，将它关联到指定线程的 Looper 上
@@ -362,17 +365,6 @@ public class MainActivity extends AppCompatActivity{
                 return true;
             });
 
-
-
-            if ((sharedPreferences.getBoolean("isGrantDhizuku", false))) {
-                Toast.makeText(context, "欢迎使用", Toast.LENGTH_SHORT).show();
-            } else {
-                new MaterialAlertDialogBuilder(context).setTitle("应用说明").setMessage("本应用仅支持 Dhizuku 使用方式，此模式下各家深度定制ROM对<设备所有者>权限的限制则各有不同. \n")
-                        .setPositiveButton("继续", (dialog, which) -> {
-                            tryRequestsDhizukuPermission(context);
-                            dialog.cancel();
-                        }).setNegativeButton("取消", null).create().show();
-            }
 
             // 获取根布局，如果不存在则创建一个
             if (preferenceScreen == null) {
@@ -431,36 +423,26 @@ public class MainActivity extends AppCompatActivity{
 
         }
 
-        @Override
-        public void onResume() {
-            super.onResume();
-            // 只有已授权Dhizuku 且 未绑定userService 时才执行绑定， 避免多次执行造成卡顿
-            if (sharedPreferences.getBoolean("isGrantDhizuku", false) && userService == null) bindDhizukuservice();
-        }
 
-
-        private void bindDhizukuservice() {
-
-            DhizukuUserServiceArgs args = new DhizukuUserServiceArgs(new ComponentName(requireContext(), UserService.class));
-
+        public void tryRequestsDhizukuPermission(Context context) {
             try {
-                Dhizuku.bindUserService(args, new ServiceConnection() {
-                    @Override
-                    public void onServiceConnected(ComponentName name, IBinder service) {
-                        if (userService == null) {
-                            userService = IUserService.Stub.asInterface(service);
-                        }
-                        sharedPreferences.edit().putBoolean("isGrantDhizuku", true).apply();
-                    }
-
-                    @Override
-                    public void onServiceDisconnected(ComponentName name) {
-                        Log.e("Dhizuku", name + "  is Disconnected");
-                    }
-                });
+                if (!Dhizuku.isPermissionGranted()) {
+                    new MaterialAlertDialogBuilder(context).setTitle("权限检查")
+                            .setMessage("好的! 让我们试试申请Dhizuku权限, 如果可以,请在接下来的权限申请对话框中允许授权")
+                            .setPositiveButton("好的", (dialog, which) -> Dhizuku.requestPermission(new DhizukuRequestPermissionListener() {
+                                @Override
+                                public void onRequestPermission(int grantResult) {
+                                    if (grantResult == PackageManager.PERMISSION_GRANTED) {
+                                        Looper.prepare();
+                                        dhizukuUserServiceFactory.createIUserService();
+                                        Toast.makeText(context, "Dhizuku 已授权", Toast.LENGTH_SHORT).show();
+                                        Looper.loop();
+                                    }
+                                }
+                            })).setNegativeButton("取消", null).create().show();
+                }
             } catch (IllegalStateException e) {
-                e.printStackTrace();
-                sharedPreferences.edit().putBoolean("isGrantDhizuku", false).apply();
+                Toast.makeText(context, "Dhizuku 未安装或未激活", Toast.LENGTH_SHORT).show();
             }
         }
 
@@ -489,27 +471,6 @@ public class MainActivity extends AppCompatActivity{
 //                }, true, true);
 //            }
 //        }
-
-        public void tryRequestsDhizukuPermission(Context context) {
-            try {
-                if (!Dhizuku.isPermissionGranted()) {
-                    new MaterialAlertDialogBuilder(context).setTitle("权限检查")
-                            .setMessage("好的! 让我们试试申请Dhizuku权限, 如果可以,请在接下来的权限申请对话框中允许授权")
-                            .setPositiveButton("好的", (dialog, which) -> Dhizuku.requestPermission(new DhizukuRequestPermissionListener() {
-                                @Override
-                                public void onRequestPermission(int grantResult) {
-                                    if (grantResult == PackageManager.PERMISSION_GRANTED) {
-                                        sharedPreferences.edit().putBoolean("isGrantDhizuku", true).apply();
-                                        Looper.prepare();
-                                        Toast.makeText(context, "Dhizuku 已授权", Toast.LENGTH_SHORT).show();
-                                    }
-                                }
-                            })).setNegativeButton("取消", null).create().show();
-                }
-            } catch (IllegalStateException e) {
-                Toast.makeText(context, "Dhizuku 未安装或未激活", Toast.LENGTH_SHORT).show();
-            }
-        }
 
     }
 
