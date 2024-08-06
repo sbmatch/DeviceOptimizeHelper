@@ -10,8 +10,8 @@ android {
         applicationId "ma.DeviceOptimizeHelper"
         minSdk 26
         targetSdk 34
-        versionCode 3
-        versionName "1.1.9"
+        versionCode 4
+        versionName "1.2.0"
 
         // testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
