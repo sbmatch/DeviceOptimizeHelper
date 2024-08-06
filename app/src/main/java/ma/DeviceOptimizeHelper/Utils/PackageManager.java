@@ -57,8 +57,8 @@ public class PackageManager {
     }
 
 
-    public String getAppNameForPackageName(Context context ,String packageName) {
-        return (String) getApplicationInfo(packageName).loadLabel(context.getPackageManager());
+    public String getAppNameForPackageName(String packageName) {
+        return (String) getApplicationInfo(packageName).loadLabel(ContextUtils.getContext().getPackageManager());
     }
 
     public int getUidForPackageName(String packageName){
