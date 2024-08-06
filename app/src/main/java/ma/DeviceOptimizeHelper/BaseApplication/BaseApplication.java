@@ -3,15 +3,11 @@ package ma.DeviceOptimizeHelper.BaseApplication;
 import android.annotation.SuppressLint;
 import android.app.Application;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Build;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.core.content.FileProvider;
 
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.rosan.dhizuku.api.Dhizuku;
 
 import org.lsposed.hiddenapibypass.HiddenApiBypass;
@@ -20,13 +16,14 @@ import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+import ma.DeviceOptimizeHelper.Utils.ContextUtils;
 import ma.DeviceOptimizeHelper.Utils.FilesUtils;
 import ma.DeviceOptimizeHelper.Utils.NotificationHelper;
 
 public class BaseApplication extends Application {
-    public static Context context;
+    private static Context context;
     public static String systemInfo;
-    static NotificationHelper notificationHelper;
+    private static NotificationHelper notificationHelper;
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -40,12 +37,7 @@ public class BaseApplication extends Application {
         //初始化Dhizuku
         Dhizuku.init(base);
         //将当前上下文设置为base
-        this.context = base;
-    }
-
-    @Override
-    public Context getApplicationContext() {
-        return super.getApplicationContext();
+        context = base;
     }
 
     @Override
@@ -120,10 +112,6 @@ public class BaseApplication extends Application {
             return sw.toString();
         }
 
-    }
-
-    public static Context getContext() {
-        return context;
     }
 
     public static void restartApp(Context context) {
