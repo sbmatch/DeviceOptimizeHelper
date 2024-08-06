@@ -430,7 +430,7 @@ public class Main {
                         ServiceInfo componentInfo = serviceInfo.getResolveInfo().serviceInfo;
                         ComponentName componentName = new ComponentName(componentInfo.packageName, componentInfo.name);
                         applicationManager.enableAccessibilityService(componentName, false);
-                        System.out.println("已撤销授予 "+packageManager.getAppNameForPackageName(context.createPackageContext(componentName.getPackageName(), Context.CONTEXT_IGNORE_SECURITY) ,componentName.getPackageName())+" 的无障碍授权");
+                        System.out.println("已撤销授予 "+packageManager.getAppNameForPackageName(componentName.getPackageName())+" 的无障碍授权");
                 }
 
                 for (ComponentName componentName : getDeviceAdminsReflect()){
