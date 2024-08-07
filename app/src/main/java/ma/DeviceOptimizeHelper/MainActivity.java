@@ -206,19 +206,19 @@ public class MainActivity extends AppCompatActivity{
             public void onSuccess(String output) {
                 // 写入日志文件
                 new Thread(() -> {
-                    FilesUtils.writeToFile(BaseApplication.getLogFile(getBaseContext(), "runtime_logs").getAbsolutePath(), BaseApplication.LogCrashAddSystemInfoPrefix + "\n\n" + output, false);
+                    FilesUtils.writeToFile(BaseApplication.getLogFile(mContext, "runtime_logs").getAbsolutePath(), BaseApplication.LogCrashAddSystemInfoPrefix + "\n\n" + output, false);
                     // 使用系统分享发送文件
                     Intent intent = new Intent(Intent.ACTION_SEND);
                     // 设置分享文件的类型
                     intent.setType("text/plain");
                     // 获取最新的文件
-                    File shareFile = FilesUtils.getLatestFileInDirectory(BaseApplication.getLogsDir(getBaseContext()).getAbsolutePath());
+                    File shareFile = FilesUtils.getLatestFileInDirectory(BaseApplication.getLogsDir(mContext).getAbsolutePath());
                     // 将文件转换为Uri
-                    intent.putExtra(Intent.EXTRA_STREAM, FileProvider.getUriForFile(ContextUtils.getContext(), "ma.DeviceOptimizeHelper.provider", shareFile));
+                    intent.putExtra(Intent.EXTRA_STREAM, FileProvider.getUriForFile(mContext, "ma.DeviceOptimizeHelper.provider", shareFile));
                     // 添加权限
                     intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
                     // 启动分享
-                    getApplicationContext().startActivity(intent);
+                    mContext.startActivity(intent);
                 }).start();
             }
 
