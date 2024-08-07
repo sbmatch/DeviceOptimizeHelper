@@ -27,9 +27,9 @@ public class BaseApplication extends Application {
             ", 型号: " + Build.MODEL +
             ", Android版本: " + Build.VERSION.RELEASE +
             ", SDK版本: " + Build.VERSION.SDK_INT +
-            "\n App版本: "+ BuildConfig.VERSION_NAME +
+            "\nApp版本: "+ BuildConfig.VERSION_NAME +
             ", App构建类型: " + BuildConfig.BUILD_TYPE +
-            "\n\n";
+            "\n";
 
     private static NotificationHelper notificationHelper;
 
