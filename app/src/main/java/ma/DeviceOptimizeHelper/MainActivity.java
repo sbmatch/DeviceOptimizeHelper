@@ -206,7 +206,7 @@ public class MainActivity extends AppCompatActivity{
             public void onSuccess(String output) {
                 // 写入日志文件
                 new Thread(() -> {
-                    FilesUtils.writeToFile(BaseApplication.getLogFile(getBaseContext(), "runtime_logs").getAbsolutePath(), BaseApplication.systemInfo + "\n\n" + output, false);
+                    FilesUtils.writeToFile(BaseApplication.getLogFile(getBaseContext(), "runtime_logs").getAbsolutePath(), BaseApplication.LogCrashAddSystemInfoPrefix + "\n\n" + output, false);
                     // 使用系统分享发送文件
                     Intent intent = new Intent(Intent.ACTION_SEND);
                     // 设置分享文件的类型
