@@ -5,6 +5,4 @@ public class AppRunningControlManager {
     public AppRunningControlManager(Object manager){
         appRunningControlManager = manager;
     }
-
-
 }
