@@ -16,13 +16,21 @@ import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+import ma.DeviceOptimizeHelper.BuildConfig;
 import ma.DeviceOptimizeHelper.Utils.ContextUtils;
 import ma.DeviceOptimizeHelper.Utils.FilesUtils;
 import ma.DeviceOptimizeHelper.Utils.NotificationHelper;
 
 public class BaseApplication extends Application {
     private static Context context;
-    public static String systemInfo;
+    public static final String LogCrashAddSystemInfoPrefix = "供应商: " + Build.MANUFACTURER +
+            ", 型号: " + Build.MODEL +
+            ", Android版本: " + Build.VERSION.RELEASE +
+            ", SDK版本: " + Build.VERSION.SDK_INT +
+            "\n App版本: "+ BuildConfig.VERSION_NAME +
+            ", App构建类型: " + BuildConfig.BUILD_TYPE +
+            "\n\n";
+
     private static NotificationHelper notificationHelper;
 
     @Override
@@ -45,14 +53,6 @@ public class BaseApplication extends Application {
         super.onCreate();
 
         notificationHelper = NotificationHelper.newInstance();
-
-        // 获取系统信息
-        String manufacturer = Build.MANUFACTURER;
-        String model = Build.MODEL;
-        String version = Build.VERSION.RELEASE;
-        int sdkVersion = Build.VERSION.SDK_INT;
-        // 创建包含系统信息的日志字符串
-        systemInfo = "供应商: " + manufacturer + ", 型号: " + model + ", Android版本: " + version + ", SDK版本: " + sdkVersion;
 
         Thread.setDefaultUncaughtExceptionHandler(new GlobalExceptionHandler(context));
     }
@@ -87,21 +87,21 @@ public class BaseApplication extends Application {
             //获取崩溃日志文件的绝对路径
             String stackTraceContext =  getStackTrace(throwable);
             //将崩溃日志写入文件
-            FilesUtils.writeToFile(logPath,systemInfo+"\n"+stackTraceContext, false);
+            FilesUtils.writeToFile(logPath,stackTraceContext, false);
 
             // 使用系统分享发送文件
             Intent intent = new Intent(Intent.ACTION_SEND);
             // 设置分享文件的类型
             intent.setType("text/plain");
             // 将文件转换为Uri
-            intent.putExtra(Intent.EXTRA_TEXT, systemInfo+"\n"+stackTraceContext);
+            intent.putExtra(Intent.EXTRA_TEXT, stackTraceContext);
             // 添加权限
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
             notificationHelper.showNotification("msgToast", "崩溃日志(点我可拉起分享)",stackTraceContext,888, false, intent, null, null);
 
             // 调用默认的异常处理
-            defaultHandler.uncaughtException(thread,throwable);
+            //defaultHandler.uncaughtException(thread,throwable);
         }
 
         public static String getStackTrace(Throwable throwable) {
@@ -109,7 +109,7 @@ public class BaseApplication extends Application {
             java.io.StringWriter sw = new java.io.StringWriter();
             java.io.PrintWriter pw = new java.io.PrintWriter(sw);
             throwable.printStackTrace(pw);
-            return sw.toString();
+            return LogCrashAddSystemInfoPrefix + sw;
         }
 
     }
