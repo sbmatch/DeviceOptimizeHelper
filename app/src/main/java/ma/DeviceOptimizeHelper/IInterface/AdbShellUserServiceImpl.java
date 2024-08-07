@@ -13,19 +13,12 @@ import com.rosan.dhizuku.shared.DhizukuVariables;
 import ma.DeviceOptimizeHelper.IUserService;
 import ma.DeviceOptimizeHelper.Utils.ContextUtils;
 
-public class AdbShellUserServiceImpl implements AbstractIUserServiceFactory{
-
-    @Override
-    public void createIUserService() {
-
-    }
-
-    public static class UserService extends IUserService.Stub {
+public class AdbShellUserServiceImpl extends IUserService.Stub {
         Context context;
         DevicePolicyManager devicePolicyManager;
 
         @Keep
-        public UserService() {
+        public AdbShellUserServiceImpl() {
             this.context = ContextUtils.getContext();
             this.devicePolicyManager = (DevicePolicyManager) context.getSystemService(Context.DEVICE_POLICY_SERVICE);
         }
@@ -67,5 +60,4 @@ public class AdbShellUserServiceImpl implements AbstractIUserServiceFactory{
         public void addUserRestriction(ComponentName who, String key) throws RemoteException {
             devicePolicyManager.addUserRestriction(who, key);
         }
-    }
 }
