@@ -1,13 +1,14 @@
 package ma.DeviceOptimizeHelper.Utils;
 
 import android.content.Intent;
+import android.os.IInterface;
 
 import java.util.List;
 
 public class AppRunningControlManager {
-    private Object appRunningControlManager;
+    private IInterface appRunningControlManager;
     public AppRunningControlManager(Object manager){
-        appRunningControlManager = manager;
+        appRunningControlManager = (IInterface) ReflectUtil.getObjectField(manager,"mService");
     }
 
     public void setBlackListEnable(boolean isEnable){
