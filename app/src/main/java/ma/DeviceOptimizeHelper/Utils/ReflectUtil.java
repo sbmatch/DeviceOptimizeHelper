@@ -72,6 +72,14 @@ public class ReflectUtil {
         } catch (Throwable e) { throw new RuntimeException(e); }
     }
 
+    public static Object getObjectField(Object obj, String fieldName) {
+        try {
+            Field declaredField = obj.getClass().getDeclaredField(fieldName);
+            declaredField.setAccessible(true);
+            return declaredField.get(obj);
+        } catch (Throwable e) { throw new RuntimeException(e); }
+    }
+
     public static Object getValueByField(Field field, Object obj) {
         try {
             if (!field.isAccessible()) field.setAccessible(true);
