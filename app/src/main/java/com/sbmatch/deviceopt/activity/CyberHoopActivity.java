@@ -30,16 +30,13 @@ import com.sbmatch.deviceopt.Interface.ShizukuUserServiceFactory;
 import com.sbmatch.deviceopt.Utils.ReflectUtil;
 import com.sbmatch.deviceopt.Utils.SystemServiceWrapper.ServiceManager;
 import com.sbmatch.deviceopt.Utils.ToastUtils;
-import com.sbmatch.deviceopt.ViewModel.InterfaceViewModel;
 import com.tencent.mmkv.MMKV;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 
 import ma.DeviceOptimizeHelper.IUserService;
 import ma.DeviceOptimizeHelper.R;
-import rikka.lifecycle.ViewModelLazy;
 import rikka.material.preference.MaterialSwitchPreference;
 import rikka.preference.MainSwitchPreference;
 import rikka.preference.SimpleMenuPreference;
