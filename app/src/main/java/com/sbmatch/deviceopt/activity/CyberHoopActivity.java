@@ -29,6 +29,7 @@ import com.sbmatch.deviceopt.Interface.OnUserServiceCallbackListener;
 import com.sbmatch.deviceopt.Interface.ShizukuUserServiceFactory;
 import com.sbmatch.deviceopt.Utils.ReflectUtil;
 import com.sbmatch.deviceopt.Utils.SystemServiceWrapper.ServiceManager;
+import com.sbmatch.deviceopt.Utils.SystemServiceWrapper.UserManager;
 import com.sbmatch.deviceopt.Utils.ToastUtils;
 import com.tencent.mmkv.MMKV;
 
@@ -258,6 +259,10 @@ public class CyberHoopActivity extends AppCompatActivity implements Shizuku.OnRe
             }else {
                 ReflectUtil.callObjectMethod2(userService, "clearUserRestriction", null, "no_install_apps");
             }
+
+            mMainHandler.postDelayed(() -> UserManager.getALLUserRestrictionsWithReflect().forEach(item -> {
+                if (UserManager.get(requireContext()).hasUserRestriction(item.toString())) Log.i(getTag(), "hasUserRestriction: "+ item);
+            }), 150);
 
             mDisableRunPackages.forEach(item -> {
                 ReflectUtil.callObjectMethod2(userService, "setBlockUninstallForUser", item ,isChecked);

@@ -3,9 +3,8 @@
 //
 package com.sbmatch.deviceopt.Utils;
 
-import android.util.Log;
-
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -61,21 +60,19 @@ public class ReflectUtil {
         return result;
     }
 
-    private static Object callObjectMethod(Object obj, String methodName, Object... args){
-        try {
-            Method declaredMethod = Arrays.stream(obj.getClass().getDeclaredMethods())
-                    .filter(method -> methodName.equals(method.getName()))
-                    .findFirst()
-                    .orElse(null);
+    private static Object callObjectMethod(Object obj, String methodName, Object... args) throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+        Method declaredMethod = Arrays.stream(obj.getClass().getDeclaredMethods())
+                .filter(method -> methodName.equals(method.getName()))
+                .findFirst()
+                .orElse(null);
 
-            // 检查方法是否找到
-            if (declaredMethod == null) {
-                throw new NoSuchMethodException("Method " + methodName + " not found in " + obj.getClass().getName());
-            }
+        // 检查方法是否找到
+        if (declaredMethod == null) {
+            throw new NoSuchMethodException("Method " + methodName + " not found in " + obj.getClass().getName());
+        }
 
-            declaredMethod.setAccessible(true);
-            return declaredMethod.invoke(obj, args);
-        }catch (Throwable e){ throw new RuntimeException(e); }
+        declaredMethod.setAccessible(true);
+        return declaredMethod.invoke(obj, args);
     }
 
 
@@ -93,10 +90,12 @@ public class ReflectUtil {
             Method declaredMethod = obj.getClass().getDeclaredMethod(methodName, getParameterTypes(args));
             declaredMethod.setAccessible(true);
             return declaredMethod.invoke(obj, args);
-
         }catch (Throwable e){
-            Log.e("ReflectUtils", "try reflect call method "+methodName+" fail.\n"+e);
-            return callObjectMethod(obj, methodName, args);
+            try {
+                return callObjectMethod(obj, methodName, args);
+            }catch (Exception e2){
+                throw new RuntimeException(e2.getCause());
+            }
         }
     }
 
