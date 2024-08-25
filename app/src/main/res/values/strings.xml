@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">Android组策略管理器</string>
-    <string name="title_activity_settings">Android组策略管理器</string>
+    <string name="cyberhoop_page">赛博紧箍咒</string>
     <string name="no_add_clone_profile">禁止添加克隆配置文件</string>
     <string name="no_set_user_icon">禁止设置用户头像</string>
     <string name="no_usb_file_transfer">禁止通过USB传输文件</string>
@@ -82,4 +82,5 @@
     <string name="share_runtime_logs">抓取日志</string>
     <string name="request_sync_account_access">请求移除同步账户</string>
     <string name="abouts">关于</string>
+    <string name="setting">设置</string>
 </resources>
