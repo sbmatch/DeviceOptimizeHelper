@@ -11,9 +11,7 @@ interface IDevicePolicyManager{
     void setKeepUninstalledPackages(in ComponentName admin, in String callerPackage, in List<String> packageList);
     List<String> getKeepUninstalledPackages(in ComponentName admin, in String callerPackage);
 
-    void setOrganizationName(in ComponentName admin, in CharSequence title);
-    CharSequence getOrganizationName(in ComponentName admin);
-    CharSequence getDeviceOwnerOrganizationName();
+    CharSequence getOrganizationName(in ComponentName admin, String callerPackageName);
 
     void setUninstallBlocked(in ComponentName admin, in String callerPackage, in String packageName, boolean uninstallBlocked);
     boolean isUninstallBlocked(in ComponentName admin, in String packageName);
@@ -30,7 +28,4 @@ interface IDevicePolicyManager{
     void setFactoryResetProtectionPolicy(in ComponentName who, in FactoryResetProtectionPolicy policy);
     FactoryResetProtectionPolicy getFactoryResetProtectionPolicy(in ComponentName who);
     boolean isFactoryResetProtectionPolicySupported();
-
-    void setApplicationRestrictions(in ComponentName who, in String callerPackage, in String packageName, in Bundle settings);
-    Bundle getApplicationRestrictions(in ComponentName who, in String callerPackage, in String packageName);
 }
