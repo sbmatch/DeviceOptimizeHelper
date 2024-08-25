@@ -35,11 +35,6 @@ import java.util.List;
 public class ParceledListSlice<T extends Parcelable> implements Parcelable {
     private static String TAG = "ParceledListSlice";
     private static boolean DEBUG = false;
-
-    /*
-     * TODO get this number from somewhere else. For now set it to a quarter of
-     * the 1MB limit.
-     */
     private static final int MAX_IPC_SIZE = 256 * 1024;
     private static final int MAX_FIRST_IPC_SIZE = MAX_IPC_SIZE / 2;
 
