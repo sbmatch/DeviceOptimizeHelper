@@ -54,7 +54,9 @@ public class ShizukuUserServiceFactory implements AbstractIUserServiceFactory {
 
         @Override
         public void onServiceDisconnected(ComponentName name) {
-            userServiceIBinder.unlinkToDeath(deathRecipient, 0);
+            try {
+                bindUserService();
+            }catch (Throwable ignored){}
         }
     };
 
@@ -70,6 +72,9 @@ public class ShizukuUserServiceFactory implements AbstractIUserServiceFactory {
 
     @Override
     public void unbindUserService() {
+        try {
+            userServiceIBinder.unlinkToDeath(deathRecipient, 0);
+        }catch (Throwable ignored){}
         Shizuku.unbindUserService(userServiceArgs, connection, true);
     }
 }
