@@ -18,8 +18,8 @@ interface IUserService {
     void setApplicationHidden(String packageName, boolean state) = 22;
     void setOrganizationName(String name) = 23;
 
-    void clearUserRestriction(in ComponentName who, in String key) = 29;
-    void addUserRestriction(in ComponentName who, in String key) = 30;
+    void clearUserRestriction(String key) = 29;
+    void addUserRestriction(String key) = 30;
 
     // AppRunningControlManager
     void setBlackListEnable(boolean isEnable) = 40;
