@@ -6,7 +6,6 @@ import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
@@ -15,8 +14,6 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
@@ -35,12 +32,11 @@ import com.rosan.dhizuku.api.DhizukuRequestPermissionListener;
 import com.sbmatch.deviceopt.Interface.DhizukuUserServiceFactory;
 import com.sbmatch.deviceopt.Interface.OnUserServiceCallbackListener;
 import com.sbmatch.deviceopt.Utils.CommandExecutor;
+import com.sbmatch.deviceopt.Utils.ContextUtil;
 import com.sbmatch.deviceopt.Utils.FilesUtils;
 import com.sbmatch.deviceopt.Utils.NotificationHelper;
 import com.sbmatch.deviceopt.Utils.ReflectUtil;
-import com.sbmatch.deviceopt.Utils.SystemServiceWrapper.ActivityManager;
 import com.sbmatch.deviceopt.Utils.SystemServiceWrapper.DevicePolicyManager;
-import com.sbmatch.deviceopt.Utils.SystemServiceWrapper.ServiceManager;
 import com.sbmatch.deviceopt.Utils.SystemServiceWrapper.UserManager;
 import com.sbmatch.deviceopt.Utils.ToastUtils;
 import com.sbmatch.deviceopt.activity.CyberHoopActivity;
@@ -59,7 +55,6 @@ public class MainActivity extends AppCompatActivity implements OnUserServiceCall
     private static final ArraySet<MaterialSwitchPreference> switchPreferenceArraySet = new ArraySet<>();
     private static final CommandExecutor commandExecutor = CommandExecutor.getInstance();
     private final DhizukuUserServiceFactory dhizukuUserServiceFactory = DhizukuUserServiceFactory.get();
-    private static final ActivityManager am = ServiceManager.getActivityManager;
     private static IUserService userService;
     public int count;
     public boolean dialogShown = false;
@@ -150,10 +145,10 @@ public class MainActivity extends AppCompatActivity implements OnUserServiceCall
         dhizukuUserServiceFactory.unbindUserService();
     }
 
-    private final ActivityResultLauncher<Intent> getSyncAccounts = registerForActivityResult(
-            new ActivityResultContracts.StartActivityForResult(), result -> {
-
-            });
+//    private final ActivityResultLauncher<Intent> getSyncAccounts = registerForActivityResult(
+//            new ActivityResultContracts.StartActivityForResult(), result -> {
+//
+//            });
 
 
     public static Handler getMainUIHandle() {
@@ -204,12 +199,12 @@ public class MainActivity extends AppCompatActivity implements OnUserServiceCall
             for (MaterialSwitchPreference compat : switchPreferenceArraySet) {
                 try {
                     if (z) {
-                        userService.addUserRestriction(Dhizuku.getOwnerComponent(), compat.getKey());
+                        userService.addUserRestriction(compat.getKey());
                         runOnUiThread(() -> {
                             compat.setChecked(true);
                         });
                     } else {
-                        userService.clearUserRestriction(Dhizuku.getOwnerComponent(), compat.getKey());
+                        userService.clearUserRestriction(compat.getKey());
                         runOnUiThread(() -> {
                             compat.setChecked(false);
                         });
@@ -241,8 +236,10 @@ public class MainActivity extends AppCompatActivity implements OnUserServiceCall
                 @Override
                 public void onRequestPermission(int grantResult) {
                     if (grantResult == PackageManager.PERMISSION_GRANTED) {
+                        // 获得所有DelegatedScopes授权委托
                         String[] delegatedScopes = DevicePolicyManager.getDelegationScopesWithReflect().toArray(new String[0]);
                         Dhizuku.setDelegatedScopes(delegatedScopes);
+                        // 绑定 Dhizuku UserService
                         dhizukuUserServiceFactory.bindUserService();
                         ToastUtils.toast("Dhizuku 已授权");
                     }
@@ -273,9 +270,8 @@ public class MainActivity extends AppCompatActivity implements OnUserServiceCall
 
     public static class HeaderFragment extends PreferenceFragmentCompat {
         private Handler handler;
-        private final UserManager userManager = ServiceManager.getUserManager;
         private PreferenceScreen preferenceScreen;
-
+        private final UserManager userManager = UserManager.get(ContextUtil.getContext());
         public HeaderFragment(){
 
         }
@@ -337,7 +333,7 @@ public class MainActivity extends AppCompatActivity implements OnUserServiceCall
             preferenceScreen.addPreference(preferenceCategory);
 
             // 动态创建SwitchPreference
-            for (Object key : userManager.getALLUserRestrictionsWithReflect()) {
+            for (Object key : UserManager.getALLUserRestrictionsWithReflect()) {
                 MaterialSwitchPreference switchPreferenceCompat = new MaterialSwitchPreference(requireContext());
                 switchPreferenceCompat.setKey((String) key);
                 switchPreferenceCompat.setTitle((CharSequence) key);
@@ -375,16 +371,6 @@ public class MainActivity extends AppCompatActivity implements OnUserServiceCall
         }
     }
 
-
-    private static class ServiceThread2 extends HandlerThread {
-        public ServiceThread2(String name) {
-            super(name);
-        }
-        @Override
-        public synchronized void start() {
-            super.start();
-        }
-    }
 
      public static int getResIdReflect(String key) {
         //获取R.string.class对象

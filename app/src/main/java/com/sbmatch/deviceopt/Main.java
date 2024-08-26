@@ -40,9 +40,7 @@ public class Main {
     private static Handler handler;
 
     private static MultiJarClassLoader classLoader;
-    static final PackageManager packageManager = ServiceManager.getPackageManager;
-
-    static final UserManager userManager = ServiceManager.getUserManager;
+    static final PackageManager packageManager = ServiceManager.getPm();
 
     static ArrayList<String> exemptList = new ArrayList<>();
 
