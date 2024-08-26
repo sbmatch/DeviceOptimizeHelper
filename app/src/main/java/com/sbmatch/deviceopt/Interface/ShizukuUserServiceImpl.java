@@ -1,13 +1,12 @@
 package com.sbmatch.deviceopt.Interface;
 
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.pm.SuspendDialogInfo;
 import android.os.RemoteException;
-import android.util.Log;
 
 import androidx.annotation.Keep;
 
+import com.sbmatch.deviceopt.Utils.ReflectUtil;
 import com.sbmatch.deviceopt.Utils.SystemServiceWrapper.ActivityManager;
 import com.sbmatch.deviceopt.Utils.SystemServiceWrapper.AppRunningControlManager;
 import com.sbmatch.deviceopt.Utils.SystemServiceWrapper.PackageManager;
@@ -20,22 +19,18 @@ import ma.DeviceOptimizeHelper.IUserService;
 
 public class ShizukuUserServiceImpl extends IUserService.Stub {
         Context mContext;
-        UserManager userManager;
+        UserManager um;
         AppRunningControlManager runningControlManager;
         PackageManager packageManager;
         ActivityManager activityManager;
         private static final String TAG = ShizukuUserServiceImpl.class.getSimpleName();
-
-        public ShizukuUserServiceImpl(){
-                Log.i(TAG, "constructor");
-        }
         @Keep
         public ShizukuUserServiceImpl(Context context) {
             this.mContext = context;
-            this.userManager = ServiceManager.getUserManager;
+            this.um = UserManager.get(context);
             this.runningControlManager = ServiceManager.getAppRunningControlManager();
-            this.packageManager = ServiceManager.getPackageManager;
-            this.activityManager = ServiceManager.getActivityManager;
+            this.packageManager = ServiceManager.getPm();
+            this.activityManager = ServiceManager.getAm();
         }
 
         @Override
@@ -59,13 +54,13 @@ public class ShizukuUserServiceImpl extends IUserService.Stub {
         }
 
         @Override
-        public void clearUserRestriction(ComponentName who, String key) throws RemoteException {
-                userManager.setUserRestriction(key, false);
+        public void clearUserRestriction(String key) throws RemoteException {
+                um.setUserRestriction(key, false);
         }
 
         @Override
-        public void addUserRestriction(ComponentName who, String key) throws RemoteException {
-                userManager.setUserRestriction(key, true);
+        public void addUserRestriction(String key) throws RemoteException {
+                um.setUserRestriction(key, true);
         }
 
         @Override
