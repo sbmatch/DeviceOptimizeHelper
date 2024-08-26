@@ -4,10 +4,9 @@ import android.content.ComponentName;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.SuspendDialogInfo;
-import android.os.Binder;
 import android.os.Build;
-import android.os.Bundle;
 import android.os.IInterface;
+import android.os.Process;
 import android.util.ArraySet;
 
 import com.sbmatch.deviceopt.Utils.ContextUtil;
@@ -110,14 +109,12 @@ public class PackageManager {
     }
 
     public String[] setPackagesSuspendedAsUser(String[] packageNames, boolean suspended, SuspendDialogInfo dialogInfo){
-        int callingUid = Binder.getCallingUid();  // 获取调用者的 UID
+        int callingUid = Process.myUid();  // 获取调用者的 UID
         String resultCallingPackage = (callingUid == 2000)
                 ? "com.android.shell"
                 : (callingUid == 1000)
                 ? "android"
                 : getNameForUid(callingUid);
-
-        System.out.println(callingUid + " "+resultCallingPackage + " "+dialogInfo);
 
         switch (Build.VERSION.SDK_INT){
             case 35:
