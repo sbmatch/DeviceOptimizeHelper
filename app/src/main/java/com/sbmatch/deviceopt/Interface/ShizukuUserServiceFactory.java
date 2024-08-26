@@ -6,6 +6,7 @@ import android.os.IBinder;
 import android.os.RemoteException;
 import android.util.Log;
 
+import com.sbmatch.deviceopt.Utils.ContextUtil;
 import com.sbmatch.deviceopt.Utils.ToastUtils;
 
 import ma.DeviceOptimizeHelper.BuildConfig;
@@ -22,10 +23,9 @@ public class ShizukuUserServiceFactory implements AbstractIUserServiceFactory {
     private final IBinder.DeathRecipient deathRecipient = () -> {
         ToastUtils.toast(TAG +": 服务死亡");
         userServiceIBinder = null;
-        bindUserService();
     };
 
-    private final Shizuku.UserServiceArgs userServiceArgs = new Shizuku.UserServiceArgs(new ComponentName(BuildConfig.APPLICATION_ID, ShizukuUserServiceImpl.class.getName()))
+    private final Shizuku.UserServiceArgs userServiceArgs = new Shizuku.UserServiceArgs(new ComponentName(ContextUtil.getContext(), ShizukuUserServiceImpl.class))
             .daemon(false)
             .processNameSuffix("service")
             .debuggable(BuildConfig.DEBUG)
