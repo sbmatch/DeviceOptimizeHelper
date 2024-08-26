@@ -41,12 +41,12 @@ public class DhizukuUserServiceImpl extends IUserService.Stub {
     }
 
     @Override
-    public void clearUserRestriction(ComponentName who, String key) throws RemoteException {
+    public void clearUserRestriction(String key) throws RemoteException {
         devicePolicyManager.clearUserRestriction(key);
     }
 
     @Override
-    public void addUserRestriction(ComponentName who, String key) throws RemoteException {
+    public void addUserRestriction(String key) throws RemoteException {
         devicePolicyManager.addUserRestriction(key);
     }
 
