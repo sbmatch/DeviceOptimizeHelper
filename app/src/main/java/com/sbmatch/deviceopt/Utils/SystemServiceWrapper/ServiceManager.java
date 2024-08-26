@@ -53,12 +53,22 @@ public class ServiceManager {
         }
     }
 
-    public final static ActivityManager getActivityManager = new ActivityManager(getServiceInterface("activity", "android.app.IActivityManager"));
-    public final static UserManager getUserManager = new UserManager(getServiceInterface("user", "android.os.IUserManager"));
-    public final static PackageManager getPackageManager = new PackageManager(getServiceInterface("package", "android.content.pm.IPackageManager"));
+    private final static ActivityManager am = new ActivityManager(getServiceInterface("activity", "android.app.IActivityManager"));
+    private final static PackageManager pm = new PackageManager(getServiceInterface("package", "android.content.pm.IPackageManager"));
+    private final static DevicePolicyManager dpm = new DevicePolicyManager(getServiceInterface("device_policy", "android.app.admin.IDevicePolicyManager"));
 
-    //public final static NotificationManager getNotificationManager = new NotificationManager(getService("notification","android.app.INotificationManager"));
-    public final static DevicePolicyManager getDevicePolicyManager = new DevicePolicyManager(getServiceInterface("device_policy", "android.app.admin.IDevicePolicyManager"));
+    public static ActivityManager getAm() {
+        return am;
+    }
+
+    public static DevicePolicyManager getDpm() {
+        return dpm;
+    }
+
+    public static PackageManager getPm() {
+        return pm;
+    }
+
     public static AppRunningControlManager getAppRunningControlManager() {
         if (FilesUtils.isFileExists("/system/system_ext/framework/miui-framework.jar")) {
             try {
