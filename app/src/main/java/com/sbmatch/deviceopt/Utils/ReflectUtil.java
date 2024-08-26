@@ -60,19 +60,19 @@ public class ReflectUtil {
         return result;
     }
 
-    private static Object callObjectMethod(Object obj, String methodName, Object... args) throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+    private static Object callObjectMethod(Object obj, String methodName, Object... args) throws InvocationTargetException, IllegalAccessException {
         Method declaredMethod = Arrays.stream(obj.getClass().getDeclaredMethods())
                 .filter(method -> methodName.equals(method.getName()))
                 .findFirst()
                 .orElse(null);
 
         // 检查方法是否找到
-        if (declaredMethod == null) {
-            throw new NoSuchMethodException("Method " + methodName + " not found in " + obj.getClass().getName());
+        if (declaredMethod != null) {
+            declaredMethod.setAccessible(true);
+            return declaredMethod.invoke(obj, args);
         }
 
-        declaredMethod.setAccessible(true);
-        return declaredMethod.invoke(obj, args);
+        return null;
     }
 
 
@@ -94,7 +94,7 @@ public class ReflectUtil {
             try {
                 return callObjectMethod(obj, methodName, args);
             }catch (Exception e2){
-                throw new RuntimeException(e2.getCause());
+                throw new RuntimeException(e2);
             }
         }
     }
