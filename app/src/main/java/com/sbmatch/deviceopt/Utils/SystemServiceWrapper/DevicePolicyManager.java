@@ -1,93 +1,118 @@
 package com.sbmatch.deviceopt.Utils.SystemServiceWrapper;
 
+import android.app.admin.IDevicePolicyManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.pm.SuspendDialogInfo;
 import android.os.IInterface;
 
 import com.rosan.dhizuku.api.Dhizuku;
+import com.rosan.dhizuku.api.DhizukuBinderWrapper;
 import com.sbmatch.deviceopt.Utils.ContextUtil;
-import com.sbmatch.deviceopt.Utils.ReflectUtil;
+import com.sbmatch.deviceopt.Utils.ReflectUtils;
 
 import java.util.Collection;
 
 public class DevicePolicyManager {
-    private IInterface manager;
     private static DevicePolicyManager devicePolicyManager;
     private android.app.admin.DevicePolicyManager dpm;
     private static ComponentName adminComponent;
 
-    public DevicePolicyManager(IInterface manager){
-        this.manager = manager;
+    private DevicePolicyManager(String targetPackage){
+        android.app.admin.DevicePolicyManager dpm2 = (android.app.admin.DevicePolicyManager)
+                ContextUtil.createPackageContext(targetPackage).getSystemService(Context.DEVICE_POLICY_SERVICE);
+        IInterface anInterface = (IInterface) ReflectUtils.getObjectField(dpm2, "mService");
+        switch (targetPackage){
+            case "com.rosan.dhizuku": //适配Dhizuku
+                if (anInterface instanceof DhizukuBinderWrapper)  dpm = dpm2;
+                ReflectUtils.setObjectField(dpm2,
+                        "mService",
+                        IDevicePolicyManager.Stub.asInterface(Dhizuku.binderWrapper(anInterface.asBinder())));
+                dpm = dpm2;
+                break;
+            default:
+
+        }
+
+    }
+    public static DevicePolicyManager get(){
+        adminComponent = getDeviceOwnerComponent();
+        devicePolicyManager = new DevicePolicyManager(getDeviceOwnerComponent().getPackageName());
+        return devicePolicyManager;
+    }
+
+    public static DevicePolicyManager get(Context mContext){
+        devicePolicyManager = new DevicePolicyManager(mContext);
+        return devicePolicyManager;
     }
 
     private DevicePolicyManager(Context context){
-        this.dpm = (android.app.admin.DevicePolicyManager) context.getSystemService(Context.DEVICE_POLICY_SERVICE);
-    }
-    public static DevicePolicyManager get(Context context){
-        if (devicePolicyManager == null) {
-            devicePolicyManager = new DevicePolicyManager(context);
-            if (adminComponent == null) adminComponent = devicePolicyManager.getDeviceOwnerComponentOnUser();
-        }
-        return devicePolicyManager;
-    }
-    public static DevicePolicyManager get(){
-        if (devicePolicyManager == null) devicePolicyManager = new DevicePolicyManager();
-        return devicePolicyManager;
+        dpm = (android.app.admin.DevicePolicyManager) context.getSystemService(Context.DEVICE_POLICY_SERVICE);
     }
 
-    private DevicePolicyManager(){
-        this.dpm = (android.app.admin.DevicePolicyManager) ContextUtil.currentApplication().getSystemService(Context.DEVICE_POLICY_SERVICE);
-    }
 
     public static Collection<Object> getDelegationScopesWithReflect(){
-        return ReflectUtil.getFieldsByPrefixMatch(android.app.admin.DevicePolicyManager.class, "DELEGATION_").values();
+        return ReflectUtils.getFieldsByPrefixMatch(android.app.admin.DevicePolicyManager.class, "DELEGATION_").values();
+    }
+
+    public void setApplicationHidden(String packageName, boolean state) {
+        dpm.setApplicationHidden(adminComponent, packageName, state);
     }
 
     public void setOrganizationName(String name) {
-        if (manager != null) ReflectUtil.callObjectMethod2(manager,
-                "setOrganizationName",
-                adminComponent,
-                adminComponent.getPackageName(),
-                name);
-        if (dpm != null) dpm.setOrganizationName(adminComponent, name);
+        dpm.setOrganizationName(adminComponent, name);
     }
 
-    public void addUserRestriction(String key) {
-        if (manager != null) ReflectUtil.callObjectMethod2(manager, "setUserRestriction", adminComponent, adminComponent.getPackageName(), key, true, true);
-        if (dpm != null) dpm.addUserRestriction(adminComponent, key);
+    public CharSequence getOrganizationName(){
+        return (CharSequence) ReflectUtils.callObjectMethod2(dpm, "getDeviceOwnerOrganizationName");
     }
 
-    public void clearUserRestriction(String key) {
-        if (manager != null) ReflectUtil.callObjectMethod2(manager, "setUserRestriction", adminComponent, adminComponent.getPackageName(), key, false, true);
-        if (dpm != null) dpm.clearUserRestriction(adminComponent, key);
+    public boolean addUserRestriction(String key) {
+        dpm.addUserRestriction(adminComponent, key);
+        return UserManager.get().hasUserRestriction(key);
+    }
+
+    public boolean clearUserRestriction(String key) {
+        dpm.clearUserRestriction(adminComponent, key);
+        return UserManager.get().hasUserRestriction(key);
     }
 
     public void setUninstallBlocked(String packageName, boolean blockUninstall) {
-        if (dpm != null) dpm.setUninstallBlocked(adminComponent, packageName, blockUninstall);
-        if (manager != null) ReflectUtil.callObjectMethod2(manager, "setUninstallBlocked", adminComponent, adminComponent.getPackageName(), packageName, blockUninstall);
+        dpm.setUninstallBlocked(adminComponent, packageName, blockUninstall);
     }
 
     public boolean isUninstallBlocked(String packageName) {
-        if (dpm != null) return dpm.isUninstallBlocked(adminComponent, packageName);
-        if (manager != null) return (boolean) ReflectUtil.callObjectMethod2(manager, "isUninstallBlocked", packageName);
-        return false;
+        return dpm.isUninstallBlocked(adminComponent, packageName);
     }
     public String[] setPackagesSuspended(String[] packageNames, boolean suspended, SuspendDialogInfo dialogInfo) {
-        if (dpm != null) return dpm.setPackagesSuspended(adminComponent, packageNames, suspended);
-        if (manager != null) return (String[]) ReflectUtil.callObjectMethod2(manager, "setPackagesSuspended", adminComponent, adminComponent.getPackageName(), packageNames, suspended);
-        return new String[0];
+        return dpm.setPackagesSuspended(adminComponent, packageNames, suspended);
     }
     
     public boolean isPackageSuspended(String packageName) {
-        if (dpm != null) return (boolean) ReflectUtil.callObjectMethod2(dpm,"isPackageSuspended", adminComponent, packageName);
-        if (manager != null) return (boolean) ReflectUtil.callObjectMethod2(manager,"isPackageSuspended", adminComponent, adminComponent.getPackageName(), packageName);
-        return false;
+        return (boolean) ReflectUtils.callObjectMethod2(dpm,"isPackageSuspended", adminComponent, packageName);
     }
 
-    public ComponentName getDeviceOwnerComponentOnUser(){
-        if (dpm != null) return (ComponentName) ReflectUtil.callObjectMethod2(dpm, "getDeviceOwnerComponentOnCallingUser");
-        if (manager != null) return (ComponentName) ReflectUtil.callObjectMethod2(manager, "getDeviceOwnerComponent", true);
-        return adminComponent;
+    public static ComponentName getDeviceOwnerComponent(){
+        return (ComponentName) ReflectUtils.callObjectMethod2(ServiceManager.getServiceInterface("device_policy", "android.app.admin.IDevicePolicyManager"), "getDeviceOwnerComponent", true);
+    }
+
+    public boolean setPermissionGrantState(String packageName,String permission, int grantState){
+        return dpm.setPermissionGrantState(adminComponent, packageName, permission, grantState);
+    }
+
+    public void setScreenCaptureDisabled(boolean disabled){
+        dpm.setScreenCaptureDisabled(adminComponent, disabled);
+    }
+
+    public boolean getScreenCaptureDisabled() {
+        return dpm.getScreenCaptureDisabled(adminComponent);
+    }
+
+    public void setCameraDisabled(boolean disabled){
+        dpm.setCameraDisabled(adminComponent, disabled);
+    }
+
+    public boolean getCameraDisabled(){
+        return dpm.getCameraDisabled(adminComponent);
     }
 }
