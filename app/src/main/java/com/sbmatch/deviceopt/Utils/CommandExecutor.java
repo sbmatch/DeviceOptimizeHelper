@@ -1,85 +1,117 @@
 package com.sbmatch.deviceopt.Utils;
 
+import android.util.Log;
+
+import com.kongzue.dialogx.dialogs.PopTip;
+import com.sbmatch.deviceopt.AppGlobals;
+import com.tencent.mmkv.MMKV;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 
 public class CommandExecutor {
-
-    private static CommandExecutor instance;
+    private ProcessBuilder processBuilder;
+    private Process process;
 
     private CommandExecutor() {
-        // 私有构造函数，以防止类的实例化
+
     }
 
-    public static CommandExecutor getInstance() {
-        // 如果instance为空，则创建一个新的CommandExecutor实例
-        if (instance == null) {
-            instance = new CommandExecutor();
-        }
-        // 返回CommandExecutor实例
-        return instance;
+    public static MMKV getMMkv(){
+        return MMKV.mmkvWithID("CommandExecutor", MMKV.MULTI_PROCESS_MODE);
+    }
+
+    public static CommandExecutor get() {
+        return new CommandExecutor();
     }
 
 
     public interface CommandResultListener {
         void onSuccess(String output);
 
-        void onError(String error, Exception e);
+        void onError(String error);
     }
 
-    public void executeCommand(final String command, final CommandResultListener listener, final boolean useRoot, final boolean switchToSystem) {
-        new Thread(() -> {
+    public void executeCommand(String command, CommandResultListener listener, boolean useRoot) {
+
+        processBuilder = useRoot ? new ProcessBuilder("su", "-c", command) : new ProcessBuilder("sh", "-c", command);
+
+        StringBuilder output = new StringBuilder();
+        StringBuilder errorOutput = new StringBuilder();
+
+        Thread h1 = new Thread(() -> {
+
             try {
-                //Log.d("开始执行指令（commandexecutor）", "指令: " + command + "\n" + "权限：useRoot=" + useRoot + "\n" + "切换权限：switchToSystem=" + switchToSystem);
-                Process process;
-                // 这里先切换权限
-                if (useRoot) {
-                    if (switchToSystem) {
-                        process = Runtime.getRuntime().exec(new String[]{"su", "system"});
-                    } else {
-                        process = Runtime.getRuntime().exec(new String[]{"su"});
-                    }
-                } else {
-                    process = Runtime.getRuntime().exec(new String[]{"sh"});
-                }
-                // 这里跑命令
+
+                process = processBuilder.start();
                 OutputStream outputStream = process.getOutputStream();
-                outputStream.write((command + "\n").getBytes());
+                outputStream.write(("""
+
+                        exit
+                        """).getBytes(StandardCharsets.UTF_8));
                 outputStream.flush();
                 outputStream.close();
 
                 BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
                 BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
-                StringBuilder output = new StringBuilder();
-                StringBuilder errorOutput = new StringBuilder();
-                String line;
 
-                while ((line = reader.readLine()) != null) {
-                    output.append(line).append("\n");
-                }
+                new Thread(() -> {
+                    String line;
+                    try {
+                        while ((line = reader.readLine()) != null) {
+                            output.append(line).append("\n");
+                        }
+                        getMMkv().encode("command_success", String.valueOf(output));
+                        reader.close();
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }).start();
 
-                while ((line = errorReader.readLine()) != null) {
-                    errorOutput.append(line).append("\n");
-                }
+                new Thread(() -> {
+                    String errorLine;
+                    try {
+                        while ((errorLine = errorReader.readLine()) != null) {
+                            errorOutput.append(errorLine).append("\n");
+                        }
+                        getMMkv().encode("command_failure", String.valueOf(errorOutput));
+                        errorReader.close();
+                    }catch (IOException e){
+                        throw new RuntimeException(e);
+                    }
+                }).start();
 
+                // Wait for the process to finish
                 int exitCode = process.waitFor();
 
+                getMMkv().encode("execStatusCode", exitCode);
+
                 // 如果结果为0，则调用listener的onSuccess方法
-                if (exitCode == 0) {
-                    //Log.d("执行指令成功（commandexecutor）", "结果：" + output);
-                    listener.onSuccess(output.toString());
-                } else {
-                    // 如果结果不为0，则调用listener的onError方法
-                    //Log.d("执行指令失败（commandexecutor）", "结果：" + errorOutput);
-                    Exception exception = new Exception("Command execution error");
-                    listener.onError(errorOutput.toString(), exception);
+                if (exitCode == 0 ){
+                    if (listener != null) {
+                        listener.onSuccess(output.toString());
+                    }
                 }
+
+                // 如果结果不为0，则调用listener的onError方法
+                if (exitCode != 0){
+                    if (listener != null){
+                        listener.onError(errorOutput.toString());
+                    }
+                }
+
             } catch (IOException | InterruptedException e) {
-                e.printStackTrace();
-                listener.onError(e.getMessage(), e);
+                getMMkv().encode("hasException", Log.getStackTraceString(e));
+                AppGlobals.sMainHandler.post(() -> {
+                    PopTip.show(getMMkv().decodeString("hasException")).showLong();
+                });
             }
-        }).start();
+        });
+
+        h1.start();
+
     }
 }
