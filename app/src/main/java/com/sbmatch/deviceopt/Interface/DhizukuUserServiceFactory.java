@@ -1,72 +1,67 @@
 package com.sbmatch.deviceopt.Interface;
 
+import android.app.ActivityThread;
 import android.content.ComponentName;
 import android.content.ServiceConnection;
 import android.os.IBinder;
 import android.os.RemoteException;
-import android.util.Log;
 
 import com.rosan.dhizuku.api.Dhizuku;
 import com.rosan.dhizuku.api.DhizukuUserServiceArgs;
-import com.sbmatch.deviceopt.Utils.ContextUtil;
-import com.sbmatch.deviceopt.Utils.ToastUtils;
+
+import java.util.logging.Logger;
 
 public class DhizukuUserServiceFactory implements AbstractIUserServiceFactory {
-
-    private static DhizukuUserServiceFactory dhizukuUserServiceFactory;
-    private OnUserServiceCallbackListener callbackListener;
+    private OnBinderCallbackListener callback;
     private final static String TAG = DhizukuUserServiceFactory.class.getSimpleName();
-
-    public DhizukuUserServiceFactory() {
-        Log.i(TAG, "************* Dhizuku 用户服务工厂************");
+    private final Logger logger = Logger.getLogger(TAG);
+    private DhizukuUserServiceFactory() {
+        if (!Dhizuku.isPermissionGranted()) {
+            throw new RuntimeException("Dhizuku permission not granted!");
+        }
     }
 
-    public static DhizukuUserServiceFactory get() {
-        if (dhizukuUserServiceFactory == null) dhizukuUserServiceFactory = new DhizukuUserServiceFactory();
-        return dhizukuUserServiceFactory;
+
+    public static DhizukuUserServiceFactory getInstance(){
+        return new DhizukuUserServiceFactory();
     }
 
-    private final IBinder.DeathRecipient deathRecipient = () -> {
-        ToastUtils.toast(TAG +": 服务死亡");
-    };
-
-    private final DhizukuUserServiceArgs dhizukuUserServiceArgs = new DhizukuUserServiceArgs(new ComponentName(ContextUtil.getContext(), DhizukuUserServiceImpl.class));
+    private final DhizukuUserServiceArgs dhizukuUserServiceArgs = new DhizukuUserServiceArgs(new ComponentName(ActivityThread.currentApplication().getBaseContext(), DhizukuUserServiceImpl.class));
     private final ServiceConnection connection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
-
-            if (callbackListener != null && service != null && service.pingBinder()) {
-                Log.i(TAG, " Dhizuku 用户服务已连接");
-                callbackListener.onUserServiceReady(service);
+            if (callback != null && service != null) {
+                logger.info( "Dhizuku 用户服务已连接!");
                 try {
-                    service.linkToDeath(deathRecipient, 0);
+                    callback.onUserServiceReady(service, name.getClassName());
                 } catch (RemoteException e) {
                     throw new RuntimeException(e);
                 }
-
             }
         }
 
         @Override
         public void onServiceDisconnected(ComponentName name) {
-            Log.e("Dhizuku", name + " 断开连接");
+            logger.severe( "Dhizuku 用户服务断开连接 "+name.getClassName());
+            try {
+                callback.onUserServiceDisconnected(name.getClassName());
+            } catch (RemoteException e) {
+                throw new RuntimeException(e);
+            }
         }
     };
 
-    public void setOnCallbackListener(OnUserServiceCallbackListener mOnCallbackListener) {
-        Log.i(TAG, "设置回调监听器: "+mOnCallbackListener);
-        this.callbackListener = mOnCallbackListener;
-    }
 
     @Override
-    public void bindUserService() {
-        Log.i(TAG, "**********尝试绑定用户服务*************");
-        Dhizuku.bindUserService(dhizukuUserServiceArgs, connection);
+    public boolean bindUserService(OnBinderCallbackListener callbackListener) {
+        logger.info( "+++++++++++++++尝试绑定用户服务++++++++++++++");
+        callback = callbackListener;
+        return Dhizuku.bindUserService(dhizukuUserServiceArgs, connection);
     }
 
     @Override
     public void unbindUserService() {
-        Log.i(TAG, "**********尝试解绑用户服务*************");
+        logger.severe("***************解绑用户服务*****************");
         Dhizuku.unbindUserService(connection);
     }
 }
