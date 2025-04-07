@@ -1,5 +1,7 @@
 /.idea
 /.gradle
-/app/debug
-/local.properties
-/app/.cxx
+app/release
+app/src/main/jniLibs
+local.properties
+app/.cxx
+app/google-services.json
