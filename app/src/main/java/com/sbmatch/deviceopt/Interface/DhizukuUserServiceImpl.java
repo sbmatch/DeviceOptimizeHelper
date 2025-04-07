@@ -9,8 +9,6 @@ import android.os.RemoteException;
 
 import androidx.annotation.Keep;
 
-import com.rosan.dhizuku.api.Dhizuku;
-
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -19,7 +17,7 @@ import ma.DeviceOptimizeHelper.IUserService;
 public class DhizukuUserServiceImpl extends IUserService.Stub {
     DevicePolicyManager devicePolicyManager;
     private final Logger logger = Logger.getLogger("DhizukuUserServiceImpl");
-    private final static ComponentName admin = Dhizuku.getOwnerComponent();
+    private final static ComponentName admin = com.sbmatch.deviceopt.utils.SystemServiceWrapper.DevicePolicyManager.getDeviceOwnerComponent();
     @Keep
     public DhizukuUserServiceImpl(Context context) {
         devicePolicyManager = (DevicePolicyManager) context.getSystemService(Context.DEVICE_POLICY_SERVICE);

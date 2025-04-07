@@ -1,4 +1,4 @@
-package com.sbmatch.deviceopt.Utils;
+package com.sbmatch.deviceopt.utils;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;

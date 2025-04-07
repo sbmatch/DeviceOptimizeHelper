@@ -8,19 +8,18 @@ import android.os.RemoteException;
 
 import com.rosan.dhizuku.api.Dhizuku;
 import com.rosan.dhizuku.api.DhizukuUserServiceArgs;
+import com.sbmatch.deviceopt.AppGlobals;
 
 import java.util.logging.Logger;
 
 public class DhizukuUserServiceFactory implements AbstractIUserServiceFactory {
     private OnBinderCallbackListener callback;
-    private final static String TAG = DhizukuUserServiceFactory.class.getSimpleName();
-    private final Logger logger = Logger.getLogger(TAG);
+    private final static String TAG = "DhizukuUserServiceFactory";
     private DhizukuUserServiceFactory() {
         if (!Dhizuku.isPermissionGranted()) {
-            throw new RuntimeException("Dhizuku permission not granted!");
+            AppGlobals.getLogger(TAG).severe("Dhizuku permission not granted!");
         }
     }
-
 
     public static DhizukuUserServiceFactory getInstance(){
         return new DhizukuUserServiceFactory();
@@ -31,8 +30,12 @@ public class DhizukuUserServiceFactory implements AbstractIUserServiceFactory {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
             if (callback != null && service != null) {
-                logger.info( "Dhizuku 用户服务已连接!");
+                AppGlobals.getLogger(TAG).info( "Dhizuku 用户服务已连接!");
                 try {
+                    service.linkToDeath(() -> {
+                        AppGlobals.getLogger(TAG).severe( "Dhizuku UserService Remote Process is Die， So exec unbindUserService method -->"+name.getClassName());
+                        unbindUserService();
+                    },0);
                     callback.onUserServiceReady(service, name.getClassName());
                 } catch (RemoteException e) {
                     throw new RuntimeException(e);
@@ -42,7 +45,7 @@ public class DhizukuUserServiceFactory implements AbstractIUserServiceFactory {
 
         @Override
         public void onServiceDisconnected(ComponentName name) {
-            logger.severe( "Dhizuku 用户服务断开连接 "+name.getClassName());
+            AppGlobals.getLogger(TAG).severe( "##############Dhizuku 用户服务断开连接 "+name.getClassName());
             try {
                 callback.onUserServiceDisconnected(name.getClassName());
             } catch (RemoteException e) {
@@ -54,14 +57,33 @@ public class DhizukuUserServiceFactory implements AbstractIUserServiceFactory {
 
     @Override
     public boolean bindUserService(OnBinderCallbackListener callbackListener) {
-        logger.info( "+++++++++++++++尝试绑定用户服务++++++++++++++");
         callback = callbackListener;
         return Dhizuku.bindUserService(dhizukuUserServiceArgs, connection);
     }
 
     @Override
     public void unbindUserService() {
-        logger.severe("***************解绑用户服务*****************");
+        Dhizuku.stopUserService(dhizukuUserServiceArgs);
         Dhizuku.unbindUserService(connection);
     }
+
+    /**
+     * Use example:
+     * DhizukuUserServiceFactory serviceFactory = DhizukuUserServiceFactory.getInstance();
+     *
+     * serviceFactory.bindUserService(new OnBinderCallbackListener() {
+     *                 @Override
+     *                 public void onUserServiceReady(IBinder service, String ImplClass) throws RemoteException {
+     *
+     *                     IUserService userService = IUserService.Stub.asInterface(service);
+     *                     AppGlobals.getLogger("DhizukuUserServiceFactory").info("call isPackageSuspended method: "+userService.isPackageSuspended("android"));
+     *                     serviceFactory.unbindUserService();
+     *                 }
+     *
+     *                 @Override
+     *                 public void onUserServiceDisconnected(String ImplClass) throws RemoteException {
+     *                    AppGlobals.getLogger("DhizukuUserServiceFactory").severe("UserService disconnected: "+ ImplClass);
+     *                 }
+     *             });
+     */
 }

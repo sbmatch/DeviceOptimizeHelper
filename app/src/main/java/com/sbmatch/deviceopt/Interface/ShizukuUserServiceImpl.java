@@ -6,12 +6,11 @@ import android.os.RemoteException;
 
 import androidx.annotation.Keep;
 
-import com.sbmatch.deviceopt.Utils.ReflectUtil;
-import com.sbmatch.deviceopt.Utils.SystemServiceWrapper.ActivityManager;
-import com.sbmatch.deviceopt.Utils.SystemServiceWrapper.AppRunningControlManager;
-import com.sbmatch.deviceopt.Utils.SystemServiceWrapper.PackageManager;
-import com.sbmatch.deviceopt.Utils.SystemServiceWrapper.ServiceManager;
-import com.sbmatch.deviceopt.Utils.SystemServiceWrapper.UserManager;
+import com.sbmatch.deviceopt.utils.SystemServiceWrapper.ActivityManager;
+import com.sbmatch.deviceopt.utils.SystemServiceWrapper.AppRunningControlManager;
+import com.sbmatch.deviceopt.utils.SystemServiceWrapper.PackageManager;
+import com.sbmatch.deviceopt.utils.SystemServiceWrapper.ServiceManager;
+import com.sbmatch.deviceopt.utils.SystemServiceWrapper.UserManager;
 
 import java.util.List;
 
@@ -29,8 +28,8 @@ public class ShizukuUserServiceImpl extends IUserService.Stub {
             this.mContext = context;
             this.um = UserManager.get(context);
             this.runningControlManager = ServiceManager.getAppRunningControlManager();
-            this.packageManager = ServiceManager.getPm();
-            this.activityManager = ServiceManager.getAm();
+            this.packageManager = ServiceManager.getPackageManager();
+            this.activityManager = ServiceManager.getActivityManager();
         }
 
         @Override

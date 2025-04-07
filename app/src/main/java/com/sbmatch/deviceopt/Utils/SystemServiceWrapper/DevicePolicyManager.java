@@ -1,15 +1,17 @@
-package com.sbmatch.deviceopt.Utils.SystemServiceWrapper;
+package com.sbmatch.deviceopt.utils.SystemServiceWrapper;
 
-import android.app.admin.IDevicePolicyManager;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.pm.SuspendDialogInfo;
-import android.os.IInterface;
+import android.os.Binder;
+import android.os.Build;
+import android.os.UserHandle;
 
-import com.rosan.dhizuku.api.Dhizuku;
-import com.rosan.dhizuku.api.DhizukuBinderWrapper;
-import com.sbmatch.deviceopt.Utils.ContextUtil;
-import com.sbmatch.deviceopt.Utils.ReflectUtils;
+import com.kongzue.dialogx.dialogs.PopNotification;
+import com.sbmatch.deviceopt.utils.ReflectUtils;
+import com.sbmatch.deviceopt.utils.dhizuku.DPMHelperKt;
 
 import java.util.Collection;
 
@@ -19,26 +21,26 @@ public class DevicePolicyManager {
     private static ComponentName adminComponent;
 
     private DevicePolicyManager(String targetPackage){
-        android.app.admin.DevicePolicyManager dpm2 = (android.app.admin.DevicePolicyManager)
-                ContextUtil.createPackageContext(targetPackage).getSystemService(Context.DEVICE_POLICY_SERVICE);
-        IInterface anInterface = (IInterface) ReflectUtils.getObjectField(dpm2, "mService");
+
         switch (targetPackage){
             case "com.rosan.dhizuku": //适配Dhizuku
-                if (anInterface instanceof DhizukuBinderWrapper)  dpm = dpm2;
-                ReflectUtils.setObjectField(dpm2,
-                        "mService",
-                        IDevicePolicyManager.Stub.asInterface(Dhizuku.binderWrapper(anInterface.asBinder())));
-                dpm = dpm2;
+                dpm = DPMHelperKt.binderWrapperDevicePolicyManager();
                 break;
             default:
 
         }
 
     }
+
     public static DevicePolicyManager get(){
-        adminComponent = getDeviceOwnerComponent();
-        devicePolicyManager = new DevicePolicyManager(getDeviceOwnerComponent().getPackageName());
-        return devicePolicyManager;
+        try {
+            adminComponent = getDeviceOwnerComponent();
+            devicePolicyManager = new DevicePolicyManager(getDeviceOwnerComponent().getPackageName());
+            return devicePolicyManager;
+        }catch (Throwable e) {
+            PopNotification.show("此设备上没有已激活DeviceOwner的应用程序。").showLong().iconError();
+            return null;
+        }
     }
 
     public static DevicePolicyManager get(Context mContext){
@@ -64,7 +66,11 @@ public class DevicePolicyManager {
     }
 
     public CharSequence getOrganizationName(){
-        return (CharSequence) ReflectUtils.callObjectMethod2(dpm, "getDeviceOwnerOrganizationName");
+        try {
+            return (CharSequence) ReflectUtils.callObjectMethod2(dpm, "getDeviceOwnerOrganizationName");
+        }catch (Throwable e){
+            return null;
+        }
     }
 
     public boolean addUserRestriction(String key) {
@@ -93,7 +99,9 @@ public class DevicePolicyManager {
     }
 
     public static ComponentName getDeviceOwnerComponent(){
-        return (ComponentName) ReflectUtils.callObjectMethod2(ServiceManager.getServiceInterface("device_policy", "android.app.admin.IDevicePolicyManager"), "getDeviceOwnerComponent", true);
+       try {
+           return (ComponentName) ReflectUtils.callObjectMethod2(ServiceManager.getServiceInterface("device_policy", "android.app.admin.IDevicePolicyManager"), "getDeviceOwnerComponent", true);
+       }catch (Throwable e) {return null;}
     }
 
     public boolean setPermissionGrantState(String packageName,String permission, int grantState){
@@ -106,6 +114,14 @@ public class DevicePolicyManager {
 
     public boolean getScreenCaptureDisabled() {
         return dpm.getScreenCaptureDisabled(adminComponent);
+    }
+
+    public boolean bindDeviceAdminService(Intent serviceIntent, ServiceConnection conn,
+                   Context.BindServiceFlags flags){
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            return dpm.bindDeviceAdminServiceAsUser(adminComponent, serviceIntent, conn, flags, UserHandle.getUserHandleForUid(Binder.getCallingUid()));
+        }
+        return false;
     }
 
     public void setCameraDisabled(boolean disabled){

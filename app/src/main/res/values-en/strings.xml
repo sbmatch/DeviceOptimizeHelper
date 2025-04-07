@@ -66,7 +66,7 @@
     <string name="no_config_location">Disable toggling location through settings</string>
     <string name="no_config_date_time">Disable configuring time and date</string>
     <string name="no_camera">Disable camera</string>
-    <string name="no_fun">Disable having fun</string>
+    <string name="no_fun">Disable System easter egg</string>
     <string name="no_sms">Disable SMS</string>
     <string name="no_content_suggestions">Disable getting text content on the screen</string>
     <string name="disallow_config_private_dns">Disable configuring private DNS</string>
@@ -84,4 +84,7 @@
     <string name="share_runtime_logs">Share runtime logs</string>
     <string name="request_sync_account_access">Request to remove synchronous account</string>
     <string name="setting">Settings</string>
+    <string name="_2025_sbmatch">© 2025 sbmatch</string>
+    <string name="welcome_useme">Welcome %s</string>
+    <string name="privacy_policy_desc">%s requires an internet connection, and Dhizuku permissions is used to provide services to you. By clicking **Agree**, you agree to the above content and the [Privacy Policy](https://www.mpcloud.top/privacypage_index).</string>
 </resources>

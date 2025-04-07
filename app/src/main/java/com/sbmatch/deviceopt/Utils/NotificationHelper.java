@@ -1,6 +1,7 @@
-package com.sbmatch.deviceopt.Utils;
+package com.sbmatch.deviceopt.utils;
 
 import android.app.Activity;
+import android.app.ActivityThread;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -22,7 +23,7 @@ public class NotificationHelper {
         this.notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
     }
     private NotificationHelper() {
-        this.notificationManager = (NotificationManager) ContextUtil.getContext().getSystemService(Context.NOTIFICATION_SERVICE);
+        this.notificationManager = (NotificationManager) ActivityThread.currentApplication().getSystemService(Context.NOTIFICATION_SERVICE);
     }
 
     public static NotificationHelper getInstance() {
@@ -44,15 +45,30 @@ public class NotificationHelper {
         return null;
     }
 
+    public static class NotificationConfig {
+        public String channelId;
+        public String title;
+        public String content;
+        public int notificationId;
+        public boolean autoCancel;
+        public Intent intent;
+        public Uri soundUri;
+        public String category;
+    }
+
     // 推送通知
     public void showNotification(String channelId, String title, String content, int notificationId, boolean autoCancel, Intent intent, Uri soundUri, String category) {
-        PendingIntent pendingIntent = PendingIntent.getActivity(ContextUtil.getContext(), 0, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(ContextUtil.getContext(), channelId)
+
+        Context context = ActivityThread.currentApplication();
+
+        PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, channelId)
                 .setSmallIcon(android.R.drawable.ic_dialog_info) // 设置通知图标
                 .setContentTitle(title) // 设置通知标题
-                .setContentText(content)
-                .setStyle(new NotificationCompat.BigTextStyle().setSummaryText(content)) // 设置通知内容
+                .setStyle(new NotificationCompat.BigTextStyle())
+                .setContentText(content)// 设置通知内容
                 .setAutoCancel(autoCancel) // 点击后是否自动取消
                 .setContentIntent(pendingIntent) // 设置点击动作
                 .setSound(soundUri) // 设置通知声音
@@ -80,7 +96,7 @@ public class NotificationHelper {
     // 检查是否拥有指定权限
 
     public boolean hasPostPermission() {
-        return ContextCompat.checkSelfPermission(ContextUtil.getContext(), "android.permission.POST_NOTIFICATIONS") == PackageManager.PERMISSION_GRANTED;
+        return ContextCompat.checkSelfPermission(ActivityThread.currentApplication(), "android.permission.POST_NOTIFICATIONS") == PackageManager.PERMISSION_GRANTED;
     }
 
     // 请求权限

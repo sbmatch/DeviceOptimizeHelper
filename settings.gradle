@@ -2,6 +2,7 @@ pluginManagement {
     repositories {
         google()
         mavenCentral()
+        maven { url 'https://jitpack.io' }
         maven { url 'https://maven.aliyun.com/repository/public/' }
         maven { url 'https://maven.aliyun.com/repository/central' }
         maven { url 'https://maven.aliyun.com/repository/jcenter' }
@@ -11,12 +12,16 @@ pluginManagement {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
+        maven { url 'https://repo1.maven.org/maven2'}
+        maven { url 'https://jitpack.io' }
         google()
         mavenCentral()
-        maven { url 'https://maven.aliyun.com/repository/public/' }
+        maven { url 'https://maven.aliyun.com/repository/public' }
         maven { url 'https://maven.aliyun.com/repository/central' }
         maven { url 'https://maven.aliyun.com/repository/jcenter' }
     }
 }
 rootProject.name = "DeviceOptimizeHelper"
 include ':app'
+include ':HiMiuiX'
+include ':hidden-api'

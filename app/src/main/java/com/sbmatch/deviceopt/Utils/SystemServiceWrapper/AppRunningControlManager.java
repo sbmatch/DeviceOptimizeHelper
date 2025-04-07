@@ -1,10 +1,10 @@
-package com.sbmatch.deviceopt.Utils.SystemServiceWrapper;
+package com.sbmatch.deviceopt.utils.SystemServiceWrapper;
 
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.IInterface;
 
-import com.sbmatch.deviceopt.Utils.ReflectUtil;
+import com.sbmatch.deviceopt.utils.ReflectUtils;
 
 import java.util.List;
 
@@ -16,7 +16,7 @@ public class AppRunningControlManager {
 
     @SuppressLint("WrongConstant")
     public AppRunningControlManager(Object manager){
-        appRunningControlManager = (IInterface) ReflectUtil.getObjectField(manager,"mService");
+        appRunningControlManager = (IInterface) ReflectUtils.getObjectField(manager,"mService");
         Intent intent = new Intent(ACTION_APP_RUNNING_BLOCK);
         this.mDisAllowRunningHandleIntent = intent;
         intent.setPackage(PACKAGE_SECURITY_CORE);
@@ -24,14 +24,14 @@ public class AppRunningControlManager {
     }
 
     public void setBlackListEnable(boolean isEnable){
-        ReflectUtil.callObjectMethod2(appRunningControlManager, "setBlackListEnable", isEnable);
+        ReflectUtils.callObjectMethod2(appRunningControlManager, "setBlackListEnable", isEnable);
     }
 
     public void setDisallowRunningList(List<String> list){
-        ReflectUtil.callObjectMethod2(appRunningControlManager, "setDisallowRunningList", list, this.mDisAllowRunningHandleIntent);
+        ReflectUtils.callObjectMethod2(appRunningControlManager, "setDisallowRunningList", list, this.mDisAllowRunningHandleIntent);
     }
 
     public List<String> getNotDisallowList(){
-        return (List<String>) ReflectUtil.callObjectMethod2(appRunningControlManager, "getNotDisallowList");
+        return (List<String>) ReflectUtils.callObjectMethod2(appRunningControlManager, "getNotDisallowList");
     }
 }

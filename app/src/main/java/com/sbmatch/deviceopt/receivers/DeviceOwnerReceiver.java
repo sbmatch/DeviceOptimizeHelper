@@ -1,4 +1,4 @@
-package com.DeviceOptimizeHelper.cyberhoop.receivers;
+package com.sbmatch.deviceopt.receivers;
 
 import android.app.admin.DeviceAdminReceiver;
 import android.content.Context;

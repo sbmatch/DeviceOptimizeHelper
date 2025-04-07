@@ -1,12 +1,12 @@
-package com.sbmatch.deviceopt.Utils.SystemServiceWrapper;
+package com.sbmatch.deviceopt.utils.SystemServiceWrapper;
 
 import android.annotation.SuppressLint;
 import android.os.IBinder;
 import android.os.IInterface;
 import android.util.Log;
 
-import com.sbmatch.deviceopt.Utils.FilesUtils;
-import com.sbmatch.deviceopt.Utils.ReflectUtil;
+import com.sbmatch.deviceopt.utils.FilesUtils;
+import com.sbmatch.deviceopt.utils.ReflectUtils;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -55,24 +55,22 @@ public class ServiceManager {
 
     private final static ActivityManager am = new ActivityManager(getServiceInterface("activity", "android.app.IActivityManager"));
     private final static PackageManager pm = new PackageManager(getServiceInterface("package", "android.content.pm.IPackageManager"));
-    private final static DevicePolicyManager dpm = new DevicePolicyManager(getServiceInterface("device_policy", "android.app.admin.IDevicePolicyManager"));
+    private final static AppOpsManager appops = new AppOpsManager(getServiceInterface("appops", "com.android.internal.app.IAppOpsService"));
 
-    public static ActivityManager getAm() {
+    public static ActivityManager getActivityManager() {
         return am;
     }
 
-    public static DevicePolicyManager getDpm() {
-        return dpm;
-    }
-
-    public static PackageManager getPm() {
+    public static PackageManager getPackageManager() {
         return pm;
     }
+
+    public static AppOpsManager getAppOpsManager() { return appops; }
 
     public static AppRunningControlManager getAppRunningControlManager() {
         if (FilesUtils.isFileExists("/system/system_ext/framework/miui-framework.jar")) {
             try {
-                appRunningControlManager = ReflectUtil.callStaticObjectMethod(Class.forName("miui.security.AppRunningControlManager"), "getInstance");
+                appRunningControlManager = ReflectUtils.callStaticObjectMethod(Class.forName("miui.security.AppRunningControlManager"), "getInstance");
             } catch (ClassNotFoundException e) {
                 Log.e("ServiceManager", e.getMessage(), e.getCause());
             }

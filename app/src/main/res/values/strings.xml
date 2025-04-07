@@ -15,19 +15,19 @@
     <string name="no_network_reset">禁止重置网络</string>
     <string name="no_share_location">禁止位置共享</string>
     <string name="no_user_switch">禁止切换用户</string>
-    <string name="no_control_apps">禁止控制应用: 禁止卸载, 禁用, 强制停止, 清除数据, 清除缓存</string>
+    <string name="no_control_apps">禁止控制应用</string>
     <string name="no_sharing_admin_configured_wifi">禁止分享管理员配置的WIFI</string>
     <string name="no_bluetooth">禁用蓝牙</string>
     <string name="no_wifi_tethering">禁用WIFI热点</string>
     <string name="no_install_apps">禁止安装应用</string>
-    <string name="no_install_unknown_sources">禁止主用户“安装未知来源应用”</string>
+    <string name="no_install_unknown_sources">禁止“安装未知来源应用”</string>
     <string name="no_install_unknown_sources_globally">禁止所有用户“安装未知来源应用”</string>
     <string name="no_uninstall_apps">禁止卸载应用</string>
     <string name="no_add_managed_profile">禁止添加托管配置文件</string>
     <string name="no_create_windows">禁止创建悬浮窗</string>
     <string name="no_set_wallpaper">禁止设置墙纸</string>
     <string name="no_content_capture">禁止截屏</string>
-    <string name="no_config_mobile_networks">禁止配置APN</string>
+    <string name="no_config_mobile_networks">禁止配置移动网络</string>
     <string name="disallow_microphone_toggle">禁止切换麦克风</string>
     <string name="no_change_wifi_state">禁止改变WIFI状态</string>
     <string name="no_autofill">禁止自动填充</string>
@@ -50,31 +50,31 @@
     <string name="no_remove_user">禁止删除用户</string>
     <string name="disallow_unmute_device">禁止取消全局静音</string>
     <string name="no_config_credentials">禁止配置用户证书</string>
-    <string name="no_config_locale">禁止更改设备语言</string>
+    <string name="no_config_locale">禁止配置设备语言</string>
     <string name="no_oem_unlock">禁止OEM解锁</string>
     <string name="no_modify_accounts">禁止更改同步账户</string>
     <string name="no_record_audio">禁止录音</string>
     <string name="no_physical_media">禁止挂载物理外部介质</string>
     <string name="no_config_brightness">禁止调节亮度</string>
-    <string name="no_cross_profile_copy_paste">禁止通过写入剪贴板</string>
+    <string name="no_cross_profile_copy_paste">禁止工作空间从剪贴板粘贴</string>
     <string name="no_ambient_display">禁止主动显示</string>
     <string name="no_factory_reset">禁止恢复出厂设置</string>
-    <string name="no_unmute_microphone">禁止调整麦克风音量并静音麦克风</string>
+    <string name="no_unmute_microphone">禁止调整麦克风音量</string>
     <string name="no_config_tethering">禁止配置WIFI热点</string>
     <string name="disallow_biometric">禁用生物识别</string>
-    <string name="no_config_location">禁止通过设置开关定位</string>
+    <string name="no_config_location">禁止配置位置</string>
     <string name="no_config_date_time">禁止配置时间与日期</string>
     <string name="no_camera">禁用相机</string>
-    <string name="no_fun">禁止体验快乐</string>
+    <string name="no_fun">禁用系统彩蛋</string>
     <string name="no_sms">禁用短信</string>
-    <string name="no_content_suggestions">禁止获取屏幕上的文字内容</string>
+    <string name="no_content_suggestions">禁止内容建议</string>
     <string name="disallow_config_private_dns">禁止配置私人DNS</string>
     <string name="no_unified_password">禁止与主用户设置相同锁屏密码</string>
     <string name="no_ultra_wideband_radio">禁止使用超宽带(UWB)</string>
     <string name="disallow_config_default_apps">禁止配置默认应用</string>
-    <string name="no_grant_admin">禁止管理员向其他用户授予admin权限</string>
+    <string name="no_grant_admin">禁止授予管理员</string>
     <string name="no_cellular_2g">禁止2G网络(防伪基站)</string>
-    <string name="no_connect_data_network">禁止蜂窝网络</string>
+    <string name="no_connect_data_network">禁止连接蜂窝网络</string>
     <string name="no_usb_debugger">禁止Usb调试</string>
     <string name="disallow_all_policy">禁用所有限制</string>
     <string name="enable_all_policy">启用所有限制</string>
@@ -83,4 +83,15 @@
     <string name="request_sync_account_access">请求移除同步账户</string>
     <string name="abouts">关于</string>
     <string name="setting">设置</string>
+    <!-- -
+    This is an ad unit ID for an interstitial test ad. Replace with your own interstitial ad unit id.
+    For more information, see https://support.google.com/admob/answer/3052638
+<!- -->
+    <string name="interstitial_ad_unit_id" translatable="false">YOUR_INTERSTITIAL_AD_UNIT_ID</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment" translatable="false">Hello blank fragment</string>
+    <string name="title_activity_splash" translatable="false">SplashActivity</string>
+    <string name="_2025_sbmatch">© 2025 sbmatch</string>
+    <string name="welcome_useme">欢迎使用%s</string>
+    <string name="privacy_policy_desc">“%s” 需联网、Dhizuku等权限用于为您提供服务。点击“同意”，即视为同意上述内容及[隐私政策](https://www.mpcloud.top/privacypage_index)。</string>
 </resources>

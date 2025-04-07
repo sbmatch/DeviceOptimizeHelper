@@ -1,31 +1,40 @@
 package com.sbmatch.deviceopt.Interface;
 
+import android.app.ActivityThread;
 import android.content.ComponentName;
 import android.content.ServiceConnection;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.util.Log;
 
-import com.sbmatch.deviceopt.Utils.ContextUtil;
-import com.sbmatch.deviceopt.Utils.ToastUtils;
+import com.sbmatch.deviceopt.BuildConfig;
+import com.sbmatch.deviceopt.utils.ToastUtils;
 
-import ma.DeviceOptimizeHelper.BuildConfig;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import rikka.shizuku.Shizuku;
 
 public class ShizukuUserServiceFactory implements AbstractIUserServiceFactory {
-    private OnUserServiceCallbackListener userServiceCallbackListener;
     private IBinder userServiceIBinder;
+    private OnBinderCallbackListener callback;
     private final static String TAG = ShizukuUserServiceFactory.class.getSimpleName();
-    public ShizukuUserServiceFactory(){
+    private final AtomicBoolean isBind = new AtomicBoolean(false);
+    private ShizukuUserServiceFactory(){
 
     }
 
+    public static ShizukuUserServiceFactory get() {
+        return new ShizukuUserServiceFactory();
+    }
+
     private final IBinder.DeathRecipient deathRecipient = () -> {
-        ToastUtils.toast(TAG +": 服务死亡");
+        ToastUtils.toast("RemoteIBinder is Died");
         userServiceIBinder = null;
+        isBind.set(false);
+        bindUserService(callback);
     };
 
-    private final Shizuku.UserServiceArgs userServiceArgs = new Shizuku.UserServiceArgs(new ComponentName(ContextUtil.getContext(), ShizukuUserServiceImpl.class))
+    private final Shizuku.UserServiceArgs userServiceArgs = new Shizuku.UserServiceArgs(new ComponentName(ActivityThread.currentApplication(), ShizukuUserServiceImpl.class))
             .daemon(false)
             .processNameSuffix("service")
             .debuggable(BuildConfig.DEBUG)
@@ -39,7 +48,12 @@ public class ShizukuUserServiceFactory implements AbstractIUserServiceFactory {
             res.append("onServiceConnected: ").append(componentName.getClassName()).append('\n');
             if (binder != null && binder.pingBinder()) {
                 userServiceIBinder = binder;
-                userServiceCallbackListener.onUserServiceReady(binder);
+                isBind.set(true);
+                try {
+                    callback.onUserServiceReady(binder, componentName.getClassName());
+                } catch (RemoteException e) {
+                    throw new RuntimeException(e);
+                }
                 try {
                     binder.linkToDeath(deathRecipient, 0);
                 } catch (RemoteException e) {
@@ -54,27 +68,24 @@ public class ShizukuUserServiceFactory implements AbstractIUserServiceFactory {
 
         @Override
         public void onServiceDisconnected(ComponentName name) {
-            try {
-                bindUserService();
-            }catch (Throwable ignored){}
+
         }
     };
 
 
-    public void setOnUserServiceCallbackListener(OnUserServiceCallbackListener callback) {
-        this.userServiceCallbackListener= callback;
-    }
-
     @Override
-    public void bindUserService() {
+    public boolean bindUserService(OnBinderCallbackListener callbackListener) {
+        this.callback = callbackListener;
         Shizuku.bindUserService(userServiceArgs, connection);
+        return isBind.get();
     }
 
     @Override
     public void unbindUserService() {
         try {
             userServiceIBinder.unlinkToDeath(deathRecipient, 0);
+            Shizuku.unbindUserService(userServiceArgs, connection, false);
         }catch (Throwable ignored){}
-        Shizuku.unbindUserService(userServiceArgs, connection, true);
+
     }
 }

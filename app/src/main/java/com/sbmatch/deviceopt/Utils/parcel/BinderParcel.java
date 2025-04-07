@@ -1,4 +1,4 @@
-package com.sbmatch.deviceopt.Utils.parcel;
+package com.sbmatch.deviceopt.utils.Parcel;
 
 import android.os.IBinder;
 import android.os.Parcel;

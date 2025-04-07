@@ -1,5 +1,6 @@
 package com.sbmatch.deviceopt.activity;
 
+import android.annotation.SuppressLint;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
@@ -19,13 +20,14 @@ import com.kongzue.baseframework.util.JumpParameter;
 import com.sbmatch.deviceopt.Interface.AbstractIUserServiceFactory;
 import com.sbmatch.deviceopt.Interface.OnBinderCallbackListener;
 import com.sbmatch.deviceopt.Interface.ShizukuUserServiceFactory;
-import com.sbmatch.deviceopt.Utils.ToastUtils;
+import com.sbmatch.deviceopt.R;
+import com.sbmatch.deviceopt.utils.ToastUtils;
 import com.sbmatch.deviceopt.fragment.CyberHoopFragment;
 
-import ma.DeviceOptimizeHelper.R;
 import rikka.shizuku.Shizuku;
 
 
+@SuppressLint("NonConstantResourceId")
 @Layout(R.layout.cyberhoop_activity)
 public class CyberHoopActivity extends BaseActivity implements Shizuku.OnRequestPermissionResultListener, OnBinderCallbackListener {
 

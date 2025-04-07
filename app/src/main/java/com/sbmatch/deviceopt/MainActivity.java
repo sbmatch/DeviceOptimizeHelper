@@ -4,9 +4,8 @@ import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.net.Uri;
 import android.os.Bundle;
-import android.os.IBinder;
-import android.os.RemoteException;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -20,63 +19,73 @@ import androidx.core.content.FileProvider;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.google.android.material.color.DynamicColors;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.hchen.himiuix.MiuiAlertDialog;
 import com.kongzue.baseframework.BaseActivity;
 import com.kongzue.baseframework.interfaces.FragmentLayout;
 import com.kongzue.baseframework.interfaces.Layout;
 import com.kongzue.baseframework.util.JumpParameter;
+import com.kongzue.dialogx.DialogX;
 import com.kongzue.dialogx.dialogs.BottomDialog;
 import com.kongzue.dialogx.dialogs.PopTip;
 import com.rosan.dhizuku.api.Dhizuku;
 import com.rosan.dhizuku.api.DhizukuRequestPermissionListener;
-import com.sbmatch.deviceopt.Interface.DhizukuUserServiceFactory;
-import com.sbmatch.deviceopt.Interface.OnBinderCallbackListener;
-import com.sbmatch.deviceopt.Utils.CloudCheckAppUpdateManager;
-import com.sbmatch.deviceopt.Utils.CommandExecutor;
-import com.sbmatch.deviceopt.Utils.FilesUtils;
-import com.sbmatch.deviceopt.Utils.NotificationHelper;
-import com.sbmatch.deviceopt.Utils.ReflectUtils;
-import com.sbmatch.deviceopt.Utils.SystemServiceWrapper.DevicePolicyManager;
+import com.sbmatch.deviceopt.utils.AppUpdateWithLanzouManager;
+import com.sbmatch.deviceopt.utils.CommandExecutor;
+import com.sbmatch.deviceopt.utils.FilesUtils;
+import com.sbmatch.deviceopt.utils.SystemServiceWrapper.DevicePolicyManager;
 import com.sbmatch.deviceopt.ViewModel.ViewModelUtils;
 import com.sbmatch.deviceopt.activity.CyberHoopActivity;
 import com.sbmatch.deviceopt.activity.SettingsActivity;
 import com.sbmatch.deviceopt.activity.base.BaseApplication;
 import com.sbmatch.deviceopt.fragment.UserRestrictFragment;
+import com.sbmatch.deviceopt.utils.dhizuku.DPMHelperKt;
 import com.tencent.mmkv.MMKV;
 
 import java.io.File;
 import java.util.Arrays;
-import java.util.logging.Logger;
-
-import ma.DeviceOptimizeHelper.BuildConfig;
-import ma.DeviceOptimizeHelper.IUserService;
-import ma.DeviceOptimizeHelper.R;
-
 @SuppressLint("NonConstantResourceId")
 @Layout(R.layout.main_activity)
 @FragmentLayout(R.id.user_restrict_policy)
 public class MainActivity extends BaseActivity {
     private final CommandExecutor commandExecutor = CommandExecutor.get();
-    private ViewModelUtils viewModelU;
+    private ViewModelUtils viewModel;
     private final Bundle bundle = new Bundle();
-    private final Logger logger = Logger.getGlobal();
-    private static final NotificationHelper notificationHelper = NotificationHelper.getInstance();
+    private final FirebaseAuth mAuth = FirebaseAuth.getInstance();
 
     @Override
     public void initViews() {
         setupActionBar();
         DynamicColors.applyToActivityIfAvailable(this);
-        // 让主题跟随系统
-        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
-
     }
 
     @Override
     public void initDatas(JumpParameter parameter) {
 
-        viewModelU = new ViewModelProvider(this).get(ViewModelUtils.class);
+        viewModel = new ViewModelProvider(this).get(ViewModelUtils.class);
 
-        CloudCheckAppUpdateManager.Init("https://giaosha.lanzoul.com/b07jrp2yf", "4d24");
+        MMKV.defaultMMKV().putBoolean("_isDhizukuPermissionGranted", false);
+
+        AppUpdateWithLanzouManager.Init("https://giaosha.lanzoul.com/b07jrp2yf", "4d24");
+
+        if (mAuth.getCurrentUser() == null) {
+            mAuth.signInAnonymously()
+                    .addOnCompleteListener(this, task -> {
+                        if (task.isSuccessful()) {
+                            FirebaseUser user = mAuth.getCurrentUser();
+                            // Sign in success, update UI with the signed-in user's information
+                            AppGlobals.getMMKV().encode("FirebaseAuth_signInAnonymously", "success");
+                            AppGlobals.getLogger().info("signInAnonymously:success,  userInfo "+user.getUid());
+
+                        } else {
+                            // If sign in fails, display a message to the user.
+                            AppGlobals.getMMKV().encode("FirebaseAuth_signInAnonymously", "failure" + task.getException());
+                            AppGlobals.getLogger().severe("signInAnonymously:failure"+task.getException());
+                            //updateUI(null);
+                        }
+                    });
+        }
 
         if (isLightMode()) setDarkStatusBarTheme(true);
 
@@ -87,43 +96,36 @@ public class MainActivity extends BaseActivity {
                     .commit();
         }
 
-        if (!Dhizuku.isPermissionGranted()) {
-            new MaterialAlertDialogBuilder(this)
-                    .setTitle("需要Dhizuku权限")
-                    .setMessage("本应用需要Dhizuku权限才能正常运行。Dhizuku权限允许应用执行一些系统级别的操作，例如禁用某些系统功能。\n\n请授予Dhizuku权限。")
-                    .setPositiveButton("前往授权", (dialog, which) -> {
-                        tryRequestsDhizukuPermission();
-                        dialog.dismiss();
-                    })
-                    .setNegativeButton("稍后再说", null)
-                    .setCancelable(false)
-                    .show();
-        }else {
-             DhizukuUserServiceFactory.getInstance().bindUserService(new OnBinderCallbackListener() {
-                @Override
-                public void onUserServiceReady(IBinder service, String ImplClass) throws RemoteException {
-                    logger.info("onUserServiceReady: "+ImplClass);
-                    IUserService userService = IUserService.Stub.asInterface(service);
-                    try {
-                        PopTip.show("invoke method isPackageSuspended "+userService.isPackageSuspended(BuildConfig.APPLICATION_ID));
-                    } catch (RemoteException e) {
-                        logger.severe(Log.getStackTraceString(e));
-                    }
-                }
-                @Override
-                public void onUserServiceDisconnected(String ImplClass) throws RemoteException {
-
-                }
-            });
-        }
-
-
-
     }
 
     @Override
     public void setEvents() {
 
+        if (!DPMHelperKt.dhizukuPermissionGranted()) {
+            showDhizukuPermissionDialog(isInstallApp("com.rosan.dhizuku"));
+        }else {
+            MMKV.defaultMMKV().putBoolean("_isDhizukuPermissionGranted", true);
+        }
+
+    }
+
+    private void showDhizukuPermissionDialog(boolean isFoundDhizuku) {
+        new MiuiAlertDialog(this)
+                .setTitle("需要Dhizuku权限")
+                .setMessage("本应用需要Dhizuku权限才能正常运行。Dhizuku权限允许应用执行一些系统级别的操作，例如禁用某些系统功能。\n\n请授予Dhizuku权限。")
+                .setPositiveButton(isFoundDhizuku ? "前往授权" : "前往下载", (dialog, which) -> {
+                    if (isFoundDhizuku){
+                        tryRequestsDhizukuPermission();
+                    }else {
+                        Intent intent = new Intent(Intent.ACTION_VIEW);
+                        intent.setData(Uri.parse("https://iamr0s.github.io/Dhizuku/"));
+                        startActivity(intent);
+                    }
+                    dialog.dismiss();
+                })
+                .setNegativeButton("稍后再说", null)
+                .setCanceledOnTouchOutside(false)
+                .show();
     }
 
     private void setupActionBar() {
@@ -140,9 +142,9 @@ public class MainActivity extends BaseActivity {
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        menu.add(Menu.NONE, 10000, 0, ReflectUtils.getResIdReflect("enable_all_policy"));
-        menu.add(Menu.NONE, 10001, 1, ReflectUtils.getResIdReflect("disallow_all_policy"));
-        menu.add(Menu.NONE, 10002, 2, ReflectUtils.getResIdReflect("share_runtime_logs"));
+        menu.add(Menu.NONE, 10000, 0, R.string.enable_all_policy);
+        menu.add(Menu.NONE, 10001, 1, R.string.disallow_all_policy);
+        menu.add(Menu.NONE, 10002, 2, R.string.share_runtime_logs);
 
         Intent cyberHoopActivity = new Intent(this, CyberHoopActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         //menu.add(Menu.NONE, 10010, 3, ReflectUtils.getResIdReflect("cyberhoop_page")).setIntent(cyberHoopActivity);
@@ -150,7 +152,7 @@ public class MainActivity extends BaseActivity {
         Intent settingActivity = new Intent(this, SettingsActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
-        menu.add(Menu.NONE, 10011, 10, ReflectUtils.getResIdReflect("setting")).setIntent(settingActivity);
+        menu.add(Menu.NONE, 10011, 10, R.string.setting).setIntent(settingActivity);
 
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.main_menu, menu);
@@ -182,8 +184,8 @@ public class MainActivity extends BaseActivity {
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
 
         switch (item.getItemId()) {
-            case 10000 -> viewModelU.savePreferenceSwitchNewStatus(true);
-            case 10001 -> viewModelU.savePreferenceSwitchNewStatus(false);
+            case 10000 -> viewModel.savePreferenceSwitchNewStatus(true);
+            case 10001 -> viewModel.savePreferenceSwitchNewStatus(false);
             case 10002 -> share_runtime_logs();
         }
         return super.onOptionsItemSelected(item);
@@ -230,8 +232,10 @@ public class MainActivity extends BaseActivity {
                         // 获得所有DelegatedScopes授权委托
                         String[] delegatedScopes = DevicePolicyManager.getDelegationScopesWithReflect().toArray(new String[0]);
                         Dhizuku.setDelegatedScopes(delegatedScopes);
-                        MMKV.defaultMMKV().putString("_execMode", "dpm");
+                        MMKV.defaultMMKV().putBoolean("_isDhizukuPermissionGranted", true);
+                        MMKV.defaultMMKV().putString("_execMode", "dhizuku");
                         AppGlobals.sMainHandler.post((() -> PopTip.show("已授权, 欢迎使用")));
+
                     }
                 }
             });
@@ -244,7 +248,7 @@ public class MainActivity extends BaseActivity {
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == 999 && Arrays.stream(grantResults).anyMatch(g -> g == 0)){
-            notificationHelper.createNotificationChannel("msgToast", "异常通知", 4, null);
+            //notificationHelper.createNotificationChannel("msgToast", "异常通知", 4, null);
         }
     }
 

@@ -1,8 +1,9 @@
-package com.sbmatch.deviceopt.Utils;
+package com.sbmatch.deviceopt.utils;
 
 import android.os.Handler;
 import android.os.Looper;
-import android.widget.Toast;
+
+import com.kongzue.dialogx.dialogs.PopTip;
 
 public class ToastUtils {
     private final static Handler handler = new Handler(Looper.getMainLooper());
@@ -14,7 +15,7 @@ public class ToastUtils {
         }
         if (builder.length() > 0) builder.setLength(builder.length() - 1);
         handler.post(() -> {
-            Toast.makeText(ContextUtil.getContext(), builder.toString(), Toast.LENGTH_SHORT).show();
+            PopTip.show(builder.toString());
         });
     }
 
@@ -26,7 +27,7 @@ public class ToastUtils {
         }
         if (builder.length() > 0) builder.setLength(builder.length() - 1);
         handler.post(() -> {
-            Toast.makeText(ContextUtil.getContext(), builder.toString(), Toast.LENGTH_LONG).show();
+            PopTip.show( builder.toString());
         });
     }
 

@@ -1,60 +1,53 @@
-package com.sbmatch.deviceopt.Utils;
+package com.sbmatch.deviceopt.utils;
 
 import android.annotation.SuppressLint;
-import android.app.Application;
+import android.app.ActivityThread;
+import android.app.ContextImpl;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.os.Process;
 
 import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
 
 public class ContextUtil {
     private ContextUtil() {
 
     }
 
-    private static Object getActivityThreadWithReflect(){
+    private static ActivityThread getActivityThread(){
         try {
             @SuppressLint("PrivateApi")
             Class<?> activityThreadClass = Class.forName("android.app.ActivityThread");
             Constructor<?> activityThreadConstructor = activityThreadClass.getDeclaredConstructor();
             activityThreadConstructor.setAccessible(true);
-            return activityThreadConstructor.newInstance();
+            return (ActivityThread) activityThreadConstructor.newInstance();
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
     }
 
-    public static Context getContext() {
+    public static ContextImpl getSystemContext() {
 
         // 如果调用方是系统进程则获取SystemContext
-        if (Process.myUid() == 0 || Process.myUid() == 1000){
-            try {
-                Object activityThread = getActivityThreadWithReflect();
-                Method getSystemContextMethod = activityThread.getClass().getDeclaredMethod("getSystemContext");
-                getSystemContextMethod.setAccessible(true);
-                return (Context) getSystemContextMethod.invoke(activityThread);
-            } catch (Throwable e) {
-                throw new RuntimeException(e);
-            }
+        if (Process.myUid() == Process.ROOT_UID || Process.myUid() == Process.SYSTEM_UID | Process.myUid() == Process.SHELL_UID){
+            return ActivityThread.systemMain().getSystemContext();
         }
-
-        return currentApplication();
+        return null;
     }
 
-    public static Application currentApplication(){
-        return (Application) ReflectUtil.callObjectMethod2(getActivityThreadWithReflect(), "currentApplication");
-    }
 
     public static Context createPackageContext(String packageName){
-        return (Context) ReflectUtil.callObjectMethod2(getContext(),"createPackageContext",packageName, Context.CONTEXT_INCLUDE_CODE | Context.CONTEXT_IGNORE_SECURITY);
+        try {
+            return ActivityThread.currentActivityThread().getApplication().createPackageContext(packageName, Context.CONTEXT_INCLUDE_CODE | Context.CONTEXT_IGNORE_SECURITY);
+        }catch (PackageManager.NameNotFoundException e){
+            throw new RuntimeException(e);
+        }
     }
 
     public static Context createContextAsUser(){
         int userId = UserHandle.myUserId();
-
-        return (Context) ReflectUtil.callObjectMethod2(
-                getContext(),
+        return (Context) ReflectUtils.callObjectMethod2(
+                getSystemContext(),
                 "createContextAsUser",
                 UserHandle.of(userId),
                 0);

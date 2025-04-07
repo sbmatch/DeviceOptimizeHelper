@@ -1,4 +1,4 @@
-package com.sbmatch.deviceopt.Utils;
+package com.sbmatch.deviceopt.utils;
 
 import android.util.Log;
 

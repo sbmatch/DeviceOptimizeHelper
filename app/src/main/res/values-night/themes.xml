@@ -1,15 +1,27 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
-    <style name="Theme.MyApplication" parent="Theme.Material3.DynamicColors.Dark.Rikka">
+    <style name="Theme.MyApplication" parent="Theme.Material3.DynamicColors.DayNight">
         <!-- Primary brand color. -->
 
         <!-- Customize your theme here. -->
         <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:windowTranslucentStatus">true</item>
-        <item name="android:fitsSystemWindows">true</item>
         <item name="android:windowLightStatusBar">true</item>
 
-        <item name="preferenceTheme">@style/PreferenceThemeOverlay.Rikka.Material3</item>
-        <item name="materialSwitchStyle">@style/Widget.Material3.CompoundButton.MaterialSwitch</item>
     </style>
+
+
+    <style name="Theme.MyApplication.Fullscreen" parent="Theme.MyApplication">
+        <item name="android:windowFullscreen">true</item>
+        <!-- 强制隐藏 ActionBar -->
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+
+    </style>
+
+    <style name="ThemeOverlay.DeviceOptimizeHelper.FullscreenContainer" parent="">
+        <item name="fullscreenBackgroundColor">?attr/backgroundColor</item>
+        <item name="fullscreenTextColor">?attr/colorPrimary</item>
+
+    </style>
+
 </resources>

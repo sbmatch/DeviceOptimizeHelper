@@ -1,0 +1,17 @@
+plugins {
+    id 'com.android.library' // Assuming this is a library module
+}
+
+android {
+    namespace = 'com.sbmatch.hidden_api'
+    compileSdk 34
+
+    defaultConfig {
+        minSdk 19
+        targetSdk 34
+    }
+}
+
+dependencies {
+    compileOnly 'androidx.annotation:annotation:latest.release' // Replace with actual version if needed
+}
