@@ -5,3 +5,5 @@ app/src/main/jniLibs
 local.properties
 app/.cxx
 app/google-services.json
+app/debug
+build
